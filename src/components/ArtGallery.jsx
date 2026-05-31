@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AnimateIn from './AnimateIn'
 
 const artworks = [
   { id: 1, title: 'Cosmic Nebula',    medium: 'Digital Art',          src: '/art/art1.png' },
@@ -19,46 +20,57 @@ export default function ArtGallery() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12">
         <div className="max-w-6xl mx-auto w-full">
           {/* Header */}
-          <div className="mb-8">
-            <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-              // 03 — Creative Work
-            </p>
-            <h2 className="font-display text-5xl md:text-7xl text-ink">
-              Gallery
-            </h2>
-            <p className="font-mono text-text-light text-xs mt-3 max-w-md leading-[1.8]">
-              A collection of digital artworks — click any piece to view it full size.
-            </p>
-          </div>
+          <AnimateIn direction="up">
+            <div className="mb-8">
+              <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
+                // 03 — Creative Work
+              </p>
+              <h2 className="font-display text-5xl md:text-7xl text-ink">
+                Gallery
+              </h2>
+              <p className="font-mono text-text-light text-xs mt-3 max-w-md leading-[1.8]">
+                A collection of digital artworks — click any piece to view it full size.
+              </p>
+            </div>
+          </AnimateIn>
 
           {/* Gallery grid — fixed row height to fit viewport */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" style={{ gridTemplateRows: 'repeat(2, 200px)' }}>
             {artworks.map((art, i) => (
-              <div
+              <AnimateIn
                 key={art.id}
-                id={`gallery-item-${art.id}`}
-                className={`gallery-card ${i === 0 ? 'lg:col-span-2 row-span-2' : ''}`}
-                onClick={() => setSelected(art)}
+                direction="up"
+                delay={i * 0.1}
+                className={i === 0 ? 'lg:col-span-2 row-span-2' : ''}
+                style={i === 0 ? { gridRow: 'span 2' } : undefined}
               >
-                <img
-                  src={art.src}
-                  alt={art.title}
-                  className="w-full h-full object-cover"
-                />
-                <div className="gallery-overlay">
-                  <div>
-                    <p className="font-sans text-cream font-bold text-sm uppercase tracking-wide">{art.title}</p>
-                    <p className="font-mono text-cream/70 text-[10px] mt-0.5 uppercase tracking-wider">{art.medium}</p>
+                <div
+                  id={`gallery-item-${art.id}`}
+                  className="gallery-card h-full"
+                  onClick={() => setSelected(art)}
+                >
+                  <img
+                    src={art.src}
+                    alt={art.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="gallery-overlay">
+                    <div>
+                      <p className="font-sans text-cream font-bold text-sm uppercase tracking-wide">{art.title}</p>
+                      <p className="font-mono text-cream/70 text-[10px] mt-0.5 uppercase tracking-wider">{art.medium}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </AnimateIn>
             ))}
           </div>
 
-          <p className="font-mono text-text-light text-[11px] text-center mt-4 tracking-wide">
-            Replace placeholders with your own artwork in{' '}
-            <code className="text-cobalt bg-cobalt-pale px-1.5 py-0.5 text-[10px]">/public/art/</code>
-          </p>
+          <AnimateIn direction="up" delay={0.5}>
+            <p className="font-mono text-text-light text-[11px] text-center mt-4 tracking-wide">
+              Replace placeholders with your own artwork in{' '}
+              <code className="text-cobalt bg-cobalt-pale px-1.5 py-0.5 text-[10px]">/public/art/</code>
+            </p>
+          </AnimateIn>
         </div>
       </div>
 

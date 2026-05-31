@@ -1,3 +1,5 @@
+import AnimateIn from './AnimateIn'
+
 const projects = [
   {
     title: 'Project Alpha',
@@ -53,83 +55,86 @@ export default function Projects() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12">
         <div className="max-w-6xl mx-auto w-full">
           {/* Header */}
-          <div className="mb-10">
-            <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-              // 02 — Work
-            </p>
-            <h2 className="font-display text-5xl md:text-7xl text-ink">
-              Projects
-            </h2>
-          </div>
+          <AnimateIn direction="up">
+            <div className="mb-10">
+              <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
+                // 02 — Work
+              </p>
+              <h2 className="font-display text-5xl md:text-7xl text-ink">
+                Projects
+              </h2>
+            </div>
+          </AnimateIn>
 
           {/* Cards */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {projects.map((project) => (
-              <article
-                key={project.title}
-                className="project-card flex flex-col"
-              >
-                {/* Card header */}
-                <div className="p-5 border-b-2 border-ink flex items-center justify-between">
-                  <span className="font-display text-4xl text-cobalt">{project.num}</span>
-                  <div className="flex gap-3">
-                    <a
-                      href={project.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-text-light hover:text-cobalt transition-colors"
-                      aria-label={`${project.title} on GitHub`}
-                    >
-                      <GitHubIcon />
-                    </a>
-                    <a
-                      href={project.live}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-text-light hover:text-cobalt transition-colors"
-                      aria-label={`${project.title} live demo`}
-                    >
-                      <ExternalIcon />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Card body */}
-                <div className="p-5 flex flex-col flex-1">
-                  <h3 className="font-sans text-base font-bold text-ink mb-2 uppercase tracking-wide">
-                    {project.title}
-                  </h3>
-                  <p className="font-mono text-text text-xs leading-[1.8] mb-4 flex-1">
-                    {project.description}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {project.tech.map((t) => (
-                      <span
-                        key={t}
-                        className="text-[10px] px-2 py-1 border border-ink/30 text-text-light font-mono uppercase tracking-wider"
+            {projects.map((project, i) => (
+              <AnimateIn key={project.title} direction="up" delay={i * 0.12}>
+                <article className="project-card flex flex-col h-full">
+                  {/* Card header */}
+                  <div className="p-5 border-b-2 border-ink flex items-center justify-between">
+                    <span className="font-display text-4xl text-cobalt">{project.num}</span>
+                    <div className="flex gap-3">
+                      <a
+                        href={project.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-light hover:text-cobalt transition-colors"
+                        aria-label={`${project.title} on GitHub`}
                       >
-                        {t}
-                      </span>
-                    ))}
+                        <GitHubIcon />
+                      </a>
+                      <a
+                        href={project.live}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-text-light hover:text-cobalt transition-colors"
+                        aria-label={`${project.title} live demo`}
+                      >
+                        <ExternalIcon />
+                      </a>
+                    </div>
                   </div>
-                </div>
-              </article>
+
+                  {/* Card body */}
+                  <div className="p-5 flex flex-col flex-1">
+                    <h3 className="font-sans text-base font-bold text-ink mb-2 uppercase tracking-wide">
+                      {project.title}
+                    </h3>
+                    <p className="font-mono text-text text-xs leading-[1.8] mb-4 flex-1">
+                      {project.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {project.tech.map((t) => (
+                        <span
+                          key={t}
+                          className="text-[10px] px-2 py-1 border border-ink/30 text-text-light font-mono uppercase tracking-wider"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              </AnimateIn>
             ))}
           </div>
 
           {/* All projects link */}
-          <div className="text-center mt-10">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors inline-flex items-center gap-2 group uppercase tracking-[0.15em]"
-            >
-              View all on GitHub
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
-            </a>
-          </div>
+          <AnimateIn direction="up" delay={0.4}>
+            <div className="text-center mt-10">
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors inline-flex items-center gap-2 group uppercase tracking-[0.15em]"
+              >
+                View all on GitHub
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </a>
+            </div>
+          </AnimateIn>
         </div>
       </div>
     </section>

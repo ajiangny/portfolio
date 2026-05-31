@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLenisContext } from '../App'
 
 const navLinks = [
   { label: 'Home',     href: '#hero'     },
@@ -12,6 +13,7 @@ export default function Navbar() {
   const [scrolled, setScrolled]   = useState(false)
   const [menuOpen, setMenuOpen]   = useState(false)
   const [activeSection, setActive] = useState('hero')
+  const lenisRef = useLenisContext()
 
   useEffect(() => {
     const onScroll = () => {
@@ -31,16 +33,16 @@ export default function Navbar() {
 
   const scrollTo = (e, href) => {
     e.preventDefault()
-    document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' })
+    lenisRef?.current?.scrollTo(href, { offset: 0, duration: 1.2 })
     setMenuOpen(false)
   }
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-2 border-ink ${
         scrolled
-          ? 'bg-cream/95 backdrop-blur-sm border-b-2 border-ink'
-          : 'bg-transparent'
+          ? 'bg-cream shadow-md'
+          : 'bg-cream'
       }`}
     >
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -53,8 +55,8 @@ export default function Navbar() {
           PORTFOLIO
         </a>
 
-        {/* Desktop links */}
-        <ul className="hidden md:flex items-center gap-8">
+        {/* Links (Forced Visible) */}
+        <ul className="flex items-center gap-4 md:gap-8 flex-wrap justify-end">
           {navLinks.map(({ label, href }) => {
             const id = href.slice(1)
             const active = activeSection === id
@@ -63,10 +65,10 @@ export default function Navbar() {
                 <a
                   href={href}
                   onClick={(e) => scrollTo(e, href)}
-                  className={`font-sans text-xs font-semibold uppercase tracking-[0.15em] transition-colors duration-200 ${
+                  className={`font-sans text-sm font-semibold uppercase tracking-[0.15em] transition-colors duration-200 ${
                     active
-                      ? 'text-cobalt border-b-2 border-cobalt pb-0.5'
-                      : 'text-ink/60 hover:text-cobalt'
+                      ? 'text-[#1B3A8C] border-b-2 border-[#1B3A8C] pb-0.5'
+                      : 'text-[#6b6b6b] hover:text-[#1B3A8C]'
                   }`}
                 >
                   {label}
@@ -75,41 +77,8 @@ export default function Navbar() {
             )
           })}
         </ul>
-
-        {/* Mobile hamburger */}
-        <button
-          id="nav-menu-toggle"
-          aria-label="Toggle menu"
-          className="md:hidden text-ink hover:text-cobalt transition-colors"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            {menuOpen
-              ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            }
-          </svg>
-        </button>
       </div>
 
-      {/* Mobile dropdown */}
-      {menuOpen && (
-        <div className="md:hidden bg-cream border-b-2 border-ink px-6 py-5">
-          <ul className="flex flex-col gap-5">
-            {navLinks.map(({ label, href }) => (
-              <li key={label}>
-                <a
-                  href={href}
-                  onClick={(e) => scrollTo(e, href)}
-                  className="font-sans text-sm font-semibold uppercase tracking-[0.12em] text-ink hover:text-cobalt transition-colors"
-                >
-                  {label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </nav>
   )
 }
