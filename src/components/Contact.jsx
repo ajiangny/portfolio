@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AnimateIn from './AnimateIn'
 
 const socials = [
   {
@@ -54,119 +55,125 @@ export default function Contact() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12">
         <div className="max-w-2xl mx-auto w-full">
           {/* Header */}
-          <div className="mb-10">
-            <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-              // 04 — Say Hello
-            </p>
-            <h2 className="font-display text-5xl md:text-7xl text-ink mb-3">
-              Contact
-            </h2>
-            <p className="font-mono text-text text-xs leading-[1.8]">
-              Have a project in mind, want to collaborate, or just want to say hi?
-              I'd love to hear from you.
-            </p>
-          </div>
+          <AnimateIn direction="up">
+            <div className="mb-10">
+              <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
+                // 04 — Say Hello
+              </p>
+              <h2 className="font-display text-5xl md:text-7xl text-ink mb-3">
+                Contact
+              </h2>
+              <p className="font-mono text-text text-xs leading-[1.8]">
+                Have a project in mind, want to collaborate, or just want to say hi?
+                I'd love to hear from you.
+              </p>
+            </div>
+          </AnimateIn>
 
           {/* Form */}
-          {status === 'sent' ? (
-            <div className="text-center py-12 border-2 border-ink bg-cream">
-              <div className="w-14 h-14 border-2 border-cobalt flex items-center justify-center mx-auto mb-4">
-                <svg className="w-7 h-7 text-cobalt" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+          <AnimateIn direction="up" delay={0.15}>
+            {status === 'sent' ? (
+              <div className="text-center py-12 border-2 border-ink bg-cream">
+                <div className="w-14 h-14 border-2 border-cobalt flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-cobalt" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="font-display text-2xl text-cobalt mb-2">Sent!</p>
+                <p className="font-mono text-text text-xs mb-6">Thanks for reaching out. I'll get back to you soon.</p>
+                <button
+                  onClick={() => setStatus('idle')}
+                  className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors uppercase tracking-widest"
+                >
+                  Send another →
+                </button>
               </div>
-              <p className="font-display text-2xl text-cobalt mb-2">Sent!</p>
-              <p className="font-mono text-text text-xs mb-6">Thanks for reaching out. I'll get back to you soon.</p>
-              <button
-                onClick={() => setStatus('idle')}
-                className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors uppercase tracking-widest"
-              >
-                Send another →
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={submit} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
+            ) : (
+              <form onSubmit={submit} className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="contact-name" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                      Name
+                    </label>
+                    <input
+                      id="contact-name"
+                      name="name"
+                      type="text"
+                      required
+                      placeholder="Jane Doe"
+                      value={form.name}
+                      onChange={handle}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-email" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                      Email
+                    </label>
+                    <input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      required
+                      placeholder="jane@example.com"
+                      value={form.email}
+                      onChange={handle}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label htmlFor="contact-name" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
-                    Name
+                  <label htmlFor="contact-message" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                    Message
                   </label>
-                  <input
-                    id="contact-name"
-                    name="name"
-                    type="text"
+                  <textarea
+                    id="contact-message"
+                    name="message"
+                    rows={5}
                     required
-                    placeholder="Jane Doe"
-                    value={form.name}
+                    placeholder="Tell me about your project or idea..."
+                    value={form.message}
                     onChange={handle}
-                    className="form-input"
+                    className="form-input resize-none"
                   />
                 </div>
-                <div>
-                  <label htmlFor="contact-email" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
-                    Email
-                  </label>
-                  <input
-                    id="contact-email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="jane@example.com"
-                    value={form.email}
-                    onChange={handle}
-                    className="form-input"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label htmlFor="contact-message" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
-                  Message
-                </label>
-                <textarea
-                  id="contact-message"
-                  name="message"
-                  rows={5}
-                  required
-                  placeholder="Tell me about your project or idea..."
-                  value={form.message}
-                  onChange={handle}
-                  className="form-input resize-none"
-                />
-              </div>
-
-              <button
-                id="contact-submit"
-                type="submit"
-                disabled={status === 'sending'}
-                className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {status === 'sending' ? 'Sending...' : 'Send Message'}
-              </button>
-            </form>
-          )}
+                <button
+                  id="contact-submit"
+                  type="submit"
+                  disabled={status === 'sending'}
+                  className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {status === 'sending' ? 'Sending...' : 'Send Message'}
+                </button>
+              </form>
+            )}
+          </AnimateIn>
 
           {/* Social links */}
-          <div className="mt-10 flex items-center gap-6 justify-center">
-            <div className="flex-1 h-[1.5px] bg-ink/15" />
-            <span className="font-mono text-text-light text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
-            <div className="flex-1 h-[1.5px] bg-ink/15" />
-          </div>
+          <AnimateIn direction="up" delay={0.3}>
+            <div className="mt-10 flex items-center gap-6 justify-center">
+              <div className="flex-1 h-[1.5px] bg-ink/15" />
+              <span className="font-mono text-text-light text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
+              <div className="flex-1 h-[1.5px] bg-ink/15" />
+            </div>
 
-          <div className="flex justify-center gap-4 mt-6">
-            {socials.map(({ label, href, icon }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                className="w-11 h-11 border-2 border-ink flex items-center justify-center text-text hover:text-cobalt hover:border-cobalt hover:bg-cobalt-pale transition-all duration-200"
-              >
-                {icon}
-              </a>
-            ))}
-          </div>
+            <div className="flex justify-center gap-4 mt-6">
+              {socials.map(({ label, href, icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="w-11 h-11 border-2 border-ink flex items-center justify-center text-text hover:text-cobalt hover:border-cobalt hover:bg-cobalt-pale transition-all duration-200"
+                >
+                  {icon}
+                </a>
+              ))}
+            </div>
+          </AnimateIn>
         </div>
       </div>
     </section>

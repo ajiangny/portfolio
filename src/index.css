@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'EastBlue';
+  src: url('/font/EastBlue.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
-  --font-display: 'Abril Fatface', serif;
+  --font-display: 'EastBlue', 'Abril Fatface', serif;
   --font-mono: 'Space Mono', monospace;
   --font-sans: 'DM Sans', sans-serif;
 
@@ -24,8 +32,17 @@
   padding: 0;
 }
 
-html {
-  scroll-behavior: smooth;
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
 }
 
 body {
@@ -72,13 +89,6 @@ body {
 @keyframes stampSpin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
-}
-
-/* ── Hero background pattern ─────────────────────── */
-.hero-dots {
-  background-image: radial-gradient(circle, var(--color-cobalt) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.06;
 }
 
 /* ── Gallery image hover ─────────────────────────── */
