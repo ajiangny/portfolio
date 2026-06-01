@@ -67,8 +67,8 @@ export default function Navbar() {
                   onClick={(e) => scrollTo(e, href)}
                   className={`font-sans text-sm font-semibold uppercase tracking-[0.15em] transition-colors duration-200 ${
                     active
-                      ? 'text-[#1B3A8C] border-b-2 border-[#1B3A8C] pb-0.5'
-                      : 'text-[#6b6b6b] hover:text-[#1B3A8C]'
+                      ? 'text-cobalt border-b-2 border-cobalt pb-0.5'
+                      : 'text-text-light hover:text-cobalt'
                   }`}
                 >
                   {label}
