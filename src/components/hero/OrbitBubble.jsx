@@ -5,7 +5,6 @@ import { ORBIT_DURATION, BLOB_SHAPES } from './orbitConstants'
 const NAV_LENGTH = 4 // kept in sync with navLinks in Hero
 
 const BLOB_ACTIVE = '54% 46% 58% 42% / 50% 52% 48% 50%'
-const BLOB_SHRUNK = '50% 50% 50% 50% / 26% 26% 26% 26%'
 const SHRINK_SCALES = [0.88, 0.44, 0.25]
 
 export default function OrbitBubble({
@@ -95,7 +94,7 @@ export default function OrbitBubble({
           className="flex items-center gap-1.5"
           style={{ pointerEvents: 'none' }}
         >
-          <span className="rounded-full bg-cream/40 flex-shrink-0" style={{ width: '4px', height: '4px' }} />
+          <span className="rounded-full bg-cream/40 shrink-0" style={{ width: '4px', height: '4px' }} />
           {label}
         </motion.span>
       </motion.span>
