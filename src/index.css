@@ -96,13 +96,13 @@ body {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid var(--color-ink);
+  border: 2px solid rgba(255,255,255,0.12);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .gallery-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 6px 6px 0 var(--color-ink);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.18);
 }
 
 .gallery-card img {

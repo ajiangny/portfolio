@@ -115,7 +115,7 @@ export default function About() {
 
   const panelOpacity = useTransform(progress, [0.429, 0.4375], [0, 1])
 
-  const labelX    = useTransform(progress, [0.43, 0.47], ['68vw', '0vw'])
+  const labelY    = useTransform(progress, [0.43, 0.47], ['-50px', '0px'])
   const headingX  = useTransform(progress, [0.439, 0.4775], ['68vw', '0vw'])
   const bodyX     = useTransform(progress, [0.448, 0.4825], ['68vw', '0vw'])
   const bioX      = useTransform(progress, [0.455, 0.4875], ['68vw', '0vw'])
@@ -300,6 +300,20 @@ export default function About() {
 
 
 
+        {/* ── Section Label ───────────────────────────────────────────────── */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+          <motion.p
+            className="font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
+            style={{
+              color: 'rgba(245,240,232,0.45)',
+              y: labelY,
+              opacity: labelO,
+            }}
+          >
+            About
+          </motion.p>
+        </div>
+
         {/* ── About — text panel ──────────────────────────────────────────── */}
         {/* Each child slides out from behind the profile photo in staggered   */}
         {/* order, creating a hierarchy cascade effect.                        */}
@@ -321,22 +335,6 @@ export default function About() {
             overflow: 'hidden',
           }}
         >
-          {/* 1 — Label (first out) */}
-          <motion.p
-            style={{
-              fontFamily: "'Space Mono', monospace",
-              fontSize: '10px',
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-              color: 'rgba(245,240,232,0.45)',
-              marginBottom: '14px',
-              x: labelX,
-              opacity: labelO,
-            }}
-          >
-            About
-          </motion.p>
-
           {/* 2 — Heading (second out) */}
           <motion.h2
             style={{
