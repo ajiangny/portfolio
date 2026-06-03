@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useAnimationFrame } from 'framer-motion'
-import { ORBIT_DURATION, BLOB_SHAPES } from './orbitConstants'
+import { ORBIT_DURATION} from './orbitConstants'
 
 const NAV_LENGTH = 4 // kept in sync with navLinks in Hero
 
@@ -58,7 +58,7 @@ export default function OrbitBubble({
     <a
       ref={posRef}
       href={href}
-      onClick={(e) => { e.preventDefault(); onNavigate(href) }}
+      onClick={(e) => { e.preventDefault(); onNavigate(href, e) }}
       className="absolute"
       style={{ transform: 'translate(-50%, -50%)' }}
       aria-label={`Go to ${label}`}

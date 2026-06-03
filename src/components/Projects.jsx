@@ -1,142 +1,466 @@
-import AnimateIn from './AnimateIn'
+import { useRef, useEffect, useState } from 'react'
+import { motion, useTransform, useSpring, useMotionValue } from 'framer-motion'
+import useScrollTimeline from '../hooks/useScrollTimeline'
+import ProjectsHalftone from './projects/ProjectsHalftone'
+import { works } from '../data/projectsData'
+import { GitHubIcon, ExternalIcon } from './icons'
+import StackIcon from 'tech-stack-icons'
 
-const projects = [
-  {
-    title: 'Project Alpha',
-    description:
-      'A full-stack web application that solves a real-world problem. Built with a modern React frontend and a scalable Node.js backend.',
-    tech: ['React', 'Node.js', 'MongoDB'],
-    github: 'https://github.com',
-    live: '#',
-    num: '01',
-  },
-  {
-    title: 'Project Beta',
-    description:
-      'A type-safe, performant web experience with server-side rendering and a clean, accessible design system.',
-    tech: ['TypeScript', 'Next.js', 'PostgreSQL'],
-    github: 'https://github.com',
-    live: '#',
-    num: '02',
-  },
-  {
-    title: 'Project Gamma',
-    description:
-      'Data-driven API with real-time analytics, authentication, and a dashboard powered by Python and FastAPI.',
-    tech: ['Python', 'FastAPI', 'Supabase'],
-    github: 'https://github.com',
-    live: '#',
-    num: '03',
-  },
-]
+const TECH_ICON_MAP = {
+  'React': { icon: 'react' },
+  'Tailwind CSS': { icon: 'tailwindcss' },
+  'Tailwind': { icon: 'tailwindcss' },
+  'Framer Motion': { icon: 'framer' },
+  'Vite': { icon: 'vitejs' },
+  'Python': { icon: 'python' },
+  'Photoshop': { custom: 'Ps', color: '#31A8FF' },
+  'Next.js': { icon: 'nextjs' },
+  'TypeScript': { custom: 'TS', color: '#3178C6' },
+  'Express': { custom: 'Ex', color: '#333333' },
+  'Three.js': { custom: 'T3', color: '#000000' },
+  'Gemini API': { custom: 'AI', color: '#1A73E8' },
+  'SQLite': { icon: 'mysql' },
+  'Flet': { custom: 'Fl', color: '#1B3A8C' },
+  'Figma': { icon: 'figma' },
+  'Illustrator': { custom: 'Ai', color: '#FF9A00' },
+  'Design': { custom: 'UI', color: '#E84545' },
+  'Automation scripts': { custom: 'Sh', color: '#4CAF50' }
+};
 
-function GitHubIcon() {
+const ProjectCard = ({ work, i, isActive, widthClass, translateX, scale, zIndexClass, cardOpacity, cardShadow, onClick, dragged, worksLength }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
+  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [10, -10]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-10, 10]);
+
+  const handleMouseMove = (e) => {
+    if (dragged) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
   return (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
-    </svg>
-  )
-}
+    <div 
+      onClick={onClick}
+      className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center transition-all duration-500 ${zIndexClass}`}
+      style={{ cursor: isActive ? 'auto' : 'pointer' }}
+    >
+      <motion.article 
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="group relative w-full aspect-video rounded-2xl border border-white/40 select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center shadow-[inset_0_0_20px_rgba(255,255,255,0.5)]"
+        animate={{
+          x: `${translateX}%`,
+          scale: scale,
+          opacity: cardOpacity,
+          boxShadow: cardShadow,
+        }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        style={{
+          rotateX,
+          rotateY,
+          transformStyle: "preserve-3d",
+          transformPerspective: 1000,
+        }}
+      >
+        <motion.span 
+          style={{ translateZ: 50 }}
+          className={`font-display text-6xl md:text-7xl lg:text-8xl transition-colors duration-500 ${isActive ? 'text-cobalt/40' : 'text-ink/20 group-hover:text-cobalt/40'}`}
+        >
+          {((i % worksLength) + 1).toString().padStart(2, '0')}
+        </motion.span>
+        
+        <motion.div 
+          style={{ translateZ: 30 }}
+          className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        >
+          {work.tech.map((t, index) => {
+            const mapped = TECH_ICON_MAP[t] || { custom: t.substring(0, 2).toUpperCase(), color: '#1B3A8C' };
+            return (
+              <div 
+                key={index}
+                className="group/icon w-8 h-8 rounded-full bg-white/50 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/80 transition-colors"
+                title={t}
+              >
+                {mapped.icon ? (
+                  <div className="w-4 h-4 grayscale opacity-70 group-hover/icon:grayscale-0 group-hover/icon:opacity-100 transition-all duration-300">
+                    <StackIcon name={mapped.icon} />
+                  </div>
+                ) : (
+                  <span className="font-bold text-[11px] opacity-70 group-hover/icon:opacity-100 transition-opacity duration-300" style={{ color: mapped.color }}>
+                    {mapped.custom}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </motion.div>
+      </motion.article>
 
-function ExternalIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
+      <div className={`mt-5 px-1 flex justify-between items-start transition-all duration-500 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+        <div className="flex-1 pr-4">
+          <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
+            {work.title}
+          </h3>
+          <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">
+            {work.subtitle}
+          </p>
+        </div>
+        
+        <div className="flex gap-3 shrink-0 mt-0.5">
+          {work.github && (
+            <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} on GitHub`}>
+              <GitHubIcon />
+            </a>
+          )}
+          {work.live && (
+            <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} live demo`}>
+              <ExternalIcon />
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
 export default function Projects() {
+  const containerRef = useRef(null)
+  
+  const [activeHeight, setActiveHeight] = useState(0)
+  
+  useEffect(() => {
+    setActiveHeight(window.innerHeight * 3)
+  }, [])
+  
+  const rawProgress = useScrollTimeline(containerRef, activeHeight)
+  const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
+
+  const headerY = useTransform(progress, [0, 0.15], [0, -40])
+
+  // Multiply works array to create a wide runway for seamless infinite scrolling
+  const infiniteWorks = [...works, ...works, ...works, ...works, ...works]
+  const scrollRef = useRef(null)
+  
+  const [activeIndex, setActiveIndex] = useState(works.length * 2)
+
+  useEffect(() => {
+    // Initial center position to allow scrolling left immediately
+    if (scrollRef.current && scrollRef.current.children.length > 0) {
+      setTimeout(() => {
+        const el = scrollRef.current
+        if (el && el.children[works.length * 2]) {
+          const target = el.children[works.length * 2];
+          el.scrollLeft = target.offsetLeft + (target.offsetWidth / 2) - (el.clientWidth / 2);
+        }
+      }, 100)
+    }
+  }, [])
+
+  const scrollTimeoutRef = useRef(null)
+
+  const isAnimatingRef = useRef(false);
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el || el.children.length === 0) return
+
+    // Determine the center element
+    const containerCenter = el.getBoundingClientRect().left + el.clientWidth / 2;
+    let closestIndex = 0;
+    let minDistance = Infinity;
+
+    Array.from(el.children).forEach((child, index) => {
+      const rect = child.getBoundingClientRect();
+      const childCenter = rect.left + rect.width / 2;
+      const distance = Math.abs(containerCenter - childCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    if (!isAnimatingRef.current) {
+      setActiveIndex(prev => prev !== closestIndex ? closestIndex : prev);
+    }
+
+    // Silent seamless jump logic when idle
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (!scrollRef.current || isDragging || isAnimatingRef.current) return
+      
+      const currentEl = scrollRef.current
+      const firstChild = currentEl.children[0];
+      const setFirstChild = currentEl.children[works.length];
+      if (!firstChild || !setFirstChild) return;
+      const setWidth = setFirstChild.offsetLeft - firstChild.offsetLeft;
+
+      // Center set is Set 3 (index 2 * works.length to 3 * works.length - 1)
+      const centerSetStart = works.length * 2;
+      const centerSetEnd = works.length * 3 - 1;
+
+      // If we've scrolled out of the center set, jump back to it silently
+      if (closestIndex < centerSetStart || closestIndex > centerSetEnd) {
+        const currentSet = Math.floor(closestIndex / works.length);
+        const setOffset = 2 - currentSet; // '2' is the index of Set 3
+        
+        const wasSnapping = currentEl.style.scrollSnapType;
+        currentEl.style.scrollSnapType = 'none'; // Disable snap momentarily
+        currentEl.scrollLeft += (setOffset * setWidth); // Silent jump
+        
+        // Re-enable snap on next frame
+        requestAnimationFrame(() => {
+          currentEl.style.scrollSnapType = wasSnapping;
+        });
+      }
+    }, 150)
+  }
+
+  // Mouse drag-to-scroll logic
+  const [isDragging, setIsDragging] = useState(false)
+  const [isSnapping, setIsSnapping] = useState(true)
+  const snapTimeoutRef = useRef(null)
+  
+  const [dragged, setDragged] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeftPos, setScrollLeftPos] = useState(0)
+
+  const onMouseDown = (e) => {
+    if (!scrollRef.current) return
+    setIsDragging(true)
+    setIsSnapping(false)
+    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current)
+    
+    setDragged(false)
+    setStartX(e.pageX - scrollRef.current.offsetLeft)
+    setScrollLeftPos(scrollRef.current.scrollLeft)
+  }
+
+  const onMouseMove = (e) => {
+    if (!isDragging || !scrollRef.current) return
+    e.preventDefault() // Prevent text selection
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const walk = (x - startX) * 1.5 // Scroll speed multiplier
+    if (Math.abs(walk) > 10) {
+      setDragged(true)
+    }
+    scrollRef.current.scrollLeft = scrollLeftPos - walk
+  }
+
+  const onMouseUpOrLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      
+      // Smoothly snap to the active card before re-enabling CSS snap
+      if (scrollRef.current && scrollRef.current.children[activeIndex]) {
+        isAnimatingRef.current = true;
+        scrollRef.current.children[activeIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+        setTimeout(() => { isAnimatingRef.current = false; }, 800);
+      }
+      
+      snapTimeoutRef.current = setTimeout(() => {
+        setIsSnapping(true)
+      }, 600) // Re-enable CSS snap after smooth scroll finishes
+    }
+  }
+
   return (
-    <section
+    <div
       id="projects"
-      className="min-h-screen flex flex-col border-t-2 border-ink bg-cream-light"
+      ref={containerRef}
+      className="bg-cream"
+      style={{ height: '300vh' }}
     >
-      <div className="flex-1 flex flex-col justify-center px-6 py-12">
-        <div className="max-w-6xl mx-auto w-full">
-          {/* Header */}
-          <AnimateIn direction="up">
-            <div className="mb-10">
-              <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-                // 02 — Work
-              </p>
-              <h2 className="font-display text-5xl md:text-7xl text-ink">
-                Projects
-              </h2>
-            </div>
-          </AnimateIn>
+      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center">
+        
+        {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
+        <ProjectsHalftone containerId="projects" />
 
-          {/* Cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {projects.map((project, i) => (
-              <AnimateIn key={project.title} direction="up" delay={i * 0.12}>
-                <article className="project-card flex flex-col h-full">
-                  {/* Card header */}
-                  <div className="p-5 border-b-2 border-ink flex items-center justify-between">
-                    <span className="font-display text-4xl text-cobalt">{project.num}</span>
-                    <div className="flex gap-3">
-                      <a
-                        href={project.github}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-text-light hover:text-cobalt transition-colors"
-                        aria-label={`${project.title} on GitHub`}
-                      >
-                        <GitHubIcon />
-                      </a>
-                      <a
-                        href={project.live}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-text-light hover:text-cobalt transition-colors"
-                        aria-label={`${project.title} live demo`}
-                      >
-                        <ExternalIcon />
-                      </a>
-                    </div>
-                  </div>
+        {/* All content - relative + z-[1] ensures it stacks above the canvas */}
+        <div className="relative flex flex-col justify-center h-full" style={{ zIndex: 1 }}>
 
-                  {/* Card body */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="font-sans text-base font-bold text-ink mb-2 uppercase tracking-wide">
-                      {project.title}
-                    </h3>
-                    <p className="font-mono text-text text-xs leading-[1.8] mb-4 flex-1">
-                      {project.description}
-                    </p>
+        {/* Header - Tied to timeline scroll */}
+        <motion.div 
+          className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
+          style={{ y: headerY }}
+        >
+          <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-3">
+            Projects
+          </p>
+          <h2 className="font-display text-5xl md:text-7xl text-ink">
+            Selected Projects
+          </h2>
+        </motion.div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {project.tech.map((t) => (
-                        <span
-                          key={t}
-                          className="text-[10px] px-2 py-1 border border-ink/30 text-text-light font-mono uppercase tracking-wider"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
+        {/* Native Horizontal Scroll Container */}
+        <div className="w-full mt-16 relative">
+          <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUpOrLeave}
+            onMouseLeave={onMouseUpOrLeave}
+            className={`flex items-center w-full overflow-x-auto custom-scrollbar-hide py-12 ${isSnapping ? 'snap-x snap-mandatory' : ''} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {infiniteWorks.map((work, i) => {
+              const isActive = activeIndex !== -1 && (activeIndex % works.length) === (i % works.length);
+              
+              // Calculate relative distance mathematically wrapped around the modulo space
+              let clampedRel = 99;
+              if (activeIndex !== -1) {
+                const aMod = activeIndex % works.length;
+                const bMod = i % works.length;
+                let diff = bMod - aMod;
+                const half = Math.floor(works.length / 2);
+                if (diff > half) diff -= works.length;
+                if (diff < -half) diff += works.length;
+                clampedRel = diff;
+              }
+              const distForStyle = Math.abs(clampedRel);
+              
+              // Uniform structural width
+              const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[40vw] xl:w-[32vw]';
+
+              let translateX = 0;
+              let scale = 1;
+              if (clampedRel === -1) { translateX = 35; scale = 0.8; }
+              else if (clampedRel === 1) { translateX = -35; scale = 0.8; }
+              else if (clampedRel <= -2) { translateX = 80; scale = 0.6; }
+              else if (clampedRel >= 2) { translateX = -80; scale = 0.6; }
+              
+              const cardOpacity = distForStyle === 0 ? 1 : distForStyle === 1 ? 0.6 : 0.3;
+              const cardShadow = distForStyle === 0 ? '0 20px 60px rgba(0,0,0,0.15)' : 'none';
+              
+              let zIndexClass = 'z-0';
+              if (distForStyle === 0) zIndexClass = 'z-30';
+              else if (distForStyle === 1) zIndexClass = 'z-20';
+              else if (distForStyle === 2) zIndexClass = 'z-10';
+
+              return (
+              <div 
+                key={`${work.title}-${i}`} 
+                onClick={(e) => {
+                  if (dragged) return
+                  if (!isActive) {
+                    setIsSnapping(false);
+                    isAnimatingRef.current = true;
+                    setActiveIndex(i);
+                    
+                    const el = scrollRef.current;
+                    const targetLeft = e.currentTarget.offsetLeft - (el.clientWidth / 2) + (e.currentTarget.offsetWidth / 2);
+                    el.scrollTo({ left: targetLeft, behavior: 'smooth' });
+                    
+                    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+                    snapTimeoutRef.current = setTimeout(() => {
+                      setIsSnapping(true);
+                      isAnimatingRef.current = false;
+                    }, 800);
+                  }
+                }}
+                className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center transition-all duration-500 ${zIndexClass}`}
+                style={{ 
+                  cursor: isActive ? 'auto' : 'pointer'
+                }}
+              >
+                {/* The visual card (thumbnail only) */}
+                <article 
+                  className="group relative w-full aspect-video rounded-2xl border border-white/40 select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center transition-all duration-500 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)]"
+                  style={{
+                    transform: `translateX(${translateX}%) scale(${scale})`,
+                    opacity: cardOpacity,
+                    boxShadow: cardShadow,
+                  }}
+                >
+                  <span className="font-display text-6xl md:text-7xl lg:text-8xl text-ink/20 group-hover:text-cobalt/40 transition-colors duration-500">
+                    {((i % works.length) + 1).toString().padStart(2, '0')}
+                  </span>
+                  
+                  {/* Category tag */}
+                  <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/50 backdrop-blur-md border border-white/20 font-mono text-[10px] uppercase tracking-wider text-ink/80 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    {work.tech[0]}
                   </div>
                 </article>
-              </AnimateIn>
-            ))}
-          </div>
 
-          {/* All projects link */}
-          <AnimateIn direction="up" delay={0.4}>
-            <div className="text-center mt-10">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors inline-flex items-center gap-2 group uppercase tracking-[0.15em]"
-              >
-                View all on GitHub
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </a>
-            </div>
-          </AnimateIn>
+                {/* The text content below the card */}
+                <div className={`mt-5 px-1 flex justify-between items-start transition-all duration-500 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
+                  <div className="flex-1 pr-4">
+                    <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
+                      {work.title}
+                    </h3>
+                    <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">
+                      {work.subtitle}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3 shrink-0 mt-0.5">
+                    {work.github && (
+                      <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} on GitHub`}>
+                        <GitHubIcon />
+                      </a>
+                    )}
+                    {work.live && (
+                      <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} live demo`}>
+                        <ExternalIcon />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )})}
+          </div>
         </div>
+        
+        {/* Progress Indicator */}
+        <motion.div 
+          className="absolute bottom-24 left-0 right-0 flex justify-center items-center gap-2 md:gap-3 pointer-events-none"
+        >
+          {works.map((_, index) => {
+            const isActive = activeIndex % works.length === index;
+            return (
+              <div 
+                key={`dot-${index}`} 
+                className={`rounded-full transition-all duration-500 ${isActive ? 'h-1.5 w-6 md:w-8 bg-cobalt' : 'h-1.5 w-1.5 bg-ink/20'}`}
+              />
+            )
+          })}
+        </motion.div>
+
+        {/* All work link */}
+        <motion.div 
+          className="absolute bottom-12 left-0 right-0 flex justify-center pointer-events-none"
+        >
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-cobalt hover:text-cobalt/80 text-sm md:text-base transition-colors inline-flex items-center gap-2 group uppercase tracking-[0.15em] border-b border-cobalt pb-1 pointer-events-auto"
+          >
+            View all on GitHub
+            <span className="group-hover:translate-x-2 transition-transform">→</span>
+          </a>
+        </motion.div>
+
+        </div>{/* end content wrapper */}
       </div>
-    </section>
+    </div>
   )
 }

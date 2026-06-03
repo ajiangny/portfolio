@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion'
-import { useLenisContext } from '../App'
+import { useTransitionContext } from '../context/TransitionContext'
 import HalftoneBg    from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
@@ -16,8 +16,15 @@ const navLinks = [
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
 export default function Hero() {
-  const lenisRef = useLenisContext()
-  const navigate = (href) => lenisRef?.current?.scrollTo(href, { duration: 1.2 })
+  const { navigate: transitionNavigate } = useTransitionContext()
+  
+  const navigate = (href, e) => {
+    if (href === '#about') {
+      transitionNavigate('#about', { offset: window.innerHeight * 3 }, e)
+    } else {
+      transitionNavigate(href, {}, e)
+    }
+  }
 
   const [hovIdx, setHovIdx] = useState(null)
   const isOrbitPausedRef    = useRef(false)
@@ -47,6 +54,10 @@ export default function Hero() {
   const smoothMouseX = useSpring(heroMouseX, { stiffness: 120, damping: 18 })
   const smoothMouseY = useSpring(heroMouseY, { stiffness: 120, damping: 18 })
 
+  // Heading parallax — subtle reverse motion for depth
+  const headingParallaxX = useTransform(smoothMouseX, (x) => x * -0.035)
+  const headingParallaxY = useTransform(smoothMouseY, (y) => y * -0.035)
+
   const trackMouse = (e) => {
     const r = e.currentTarget.getBoundingClientRect()
     heroMouseX.set(e.clientX - r.left - r.width  / 2)
@@ -64,16 +75,13 @@ export default function Hero() {
     >
       {/* Animated halftone dot field — fades on scroll */}
       <motion.div style={{ opacity: bgOpacity }} className="absolute inset-0 pointer-events-none">
-        <HalftoneBg />
+        <HalftoneBg containerId="hero" />
       </motion.div>
 
       {/* Name — pinned to top centre, flies up on scroll */}
       <motion.p
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        style={{ y: nameY, opacity: nameOpacity }}
-        transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
-        className="absolute top-8 left-1/2 -translate-x-1/2 font-sans text-cobalt/55 text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
+        style={{ y: nameY, opacity: nameOpacity, color: 'rgba(27, 58, 140, 0.55)', zIndex: 50 }}
+        className="absolute top-8 left-1/2 -translate-x-1/2 font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
       >
         Andrew Jiang
       </motion.p>
@@ -93,7 +101,9 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <ElasticHeading />
+            <motion.div style={{ x: headingParallaxX, y: headingParallaxY }}>
+              <ElasticHeading />
+            </motion.div>
           </motion.div>
         </motion.div>
 
