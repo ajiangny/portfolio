@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { motion, useTransform, useSpring, useMotionValue } from 'framer-motion'
+import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemplate } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import ProjectsHalftone from './projects/ProjectsHalftone'
 import { works } from '../data/projectsData'
@@ -16,7 +16,7 @@ const TECH_ICON_MAP = {
   'Photoshop': { custom: 'Ps', color: '#31A8FF' },
   'Next.js': { icon: 'nextjs' },
   'TypeScript': { custom: 'TS', color: '#3178C6' },
-  'Express': { custom: 'Ex', color: '#333333' },
+  'Express': { icon: 'expressjs' },
   'Three.js': { custom: 'T3', color: '#000000' },
   'Gemini API': { custom: 'AI', color: '#1A73E8' },
   'SQLite': { icon: 'mysql' },
@@ -27,115 +27,179 @@ const TECH_ICON_MAP = {
   'Automation scripts': { custom: 'Sh', color: '#4CAF50' }
 };
 
-const ProjectCard = ({ work, i, isActive, widthClass, translateX, scale, zIndexClass, cardOpacity, cardShadow, onClick, dragged, worksLength }) => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, cardOpacity, cardShadow, onClick, worksLength, distForStyle, clampedRel, globalSpringX, globalSpringY, progress }) => {
+  const isPrimary = distForStyle === 0;
 
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 30 });
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 30 });
+  // Transition scales and opacities
+  const blueOpacity = useTransform(progress, [0.60, 0.70], [0, 1]);
+  const borderOpacity = useTransform(progress, [0.60, 0.70], [0.4, 0]);
+  const borderStyle = useMotionTemplate`1px solid rgba(255,255,255,${borderOpacity})`;
+  const iconOpacity = useTransform(progress, [0.55, 0.60], [1, 0]);
+  const contentOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+  const flattenFactor = useTransform(progress, [0.60, 0.70], [1, 0]);
+  
+  // Fade out secondary cards after the primary card turns blue
+  const scrollFade = useTransform(progress, [0.70, 0.75], [1, 0]);
+  const secondaryFade = useTransform(scrollFade, (v) => isPrimary ? 1 : v);
 
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-10, 10]);
+  // --- Per-hover tilt (active card only) ---
+  const hoverX = useMotionValue(0);
+  const hoverY = useMotionValue(0);
+  const hoverXSpring = useSpring(hoverX, { stiffness: 300, damping: 30 });
+  const hoverYSpring = useSpring(hoverY, { stiffness: 300, damping: 30 });
+  const hoverRotateX = useTransform(hoverYSpring, [-0.5, 0.5], [12, -12]);
+  const hoverRotateY = useTransform(hoverXSpring, [-0.5, 0.5], [-12, 12]);
+
+  // --- Default resting tilt for inactive cards ---
+  // Left cards lean left, right cards lean right; further = more extreme
+  const defaultRotateY = distForStyle === 0 ? 0
+    : Math.sign(clampedRel) * (Math.abs(clampedRel) >= 2 ? 30 : 15);
+  const parallaxMag = distForStyle <= 1 ? 10 : 18;
+
+  // Mouse parallax is layered on top of the resting tilt
+  const globalRotateX = useTransform(globalSpringY, [-1, 1], [parallaxMag, -parallaxMag]);
+  const globalRotateY = useTransform(
+    globalSpringX, [-1, 1],
+    [-parallaxMag + defaultRotateY, parallaxMag + defaultRotateY]
+  );
+
+  // Active card uses hover tilt, others use global parallax + resting lean
+  const rotateX = useTransform(() => {
+    const r = distForStyle === 0 ? hoverRotateX.get() : globalRotateX.get();
+    return r * flattenFactor.get();
+  });
+  const rotateY = useTransform(() => {
+    const r = distForStyle === 0 ? hoverRotateY.get() : globalRotateY.get();
+    return r * flattenFactor.get();
+  });
 
   const handleMouseMove = (e) => {
-    if (dragged) return;
+    if (distForStyle !== 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
+    hoverX.set((e.clientX - rect.left) / rect.width - 0.5);
+    hoverY.set((e.clientY - rect.top) / rect.height - 0.5);
   };
 
   const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
+    hoverX.set(0);
+    hoverY.set(0);
   };
 
   return (
     <div 
       onClick={onClick}
-      className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center transition-all duration-500 ${zIndexClass}`}
+      className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center ${zIndexClass}`}
       style={{ cursor: isActive ? 'auto' : 'pointer' }}
     >
-      <motion.article 
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="group relative w-full aspect-video rounded-2xl border border-white/40 select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center shadow-[inset_0_0_20px_rgba(255,255,255,0.5)]"
-        animate={{
-          x: `${translateX}%`,
-          scale: scale,
-          opacity: cardOpacity,
-          boxShadow: cardShadow,
-        }}
-        transition={{ duration: 0.5, ease: "easeInOut" }}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-          transformPerspective: 1000,
+      <motion.div 
+        style={{ 
+          transformOrigin: 'center center', 
+          zIndex: isPrimary ? 50 : 10,
+          opacity: secondaryFade
         }}
       >
-        <motion.span 
-          style={{ translateZ: 50 }}
-          className={`font-display text-6xl md:text-7xl lg:text-8xl transition-colors duration-500 ${isActive ? 'text-cobalt/40' : 'text-ink/20 group-hover:text-cobalt/40'}`}
+        <motion.article 
+          id={isActiveIndex ? "primary-project-card" : undefined}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className="group relative w-full aspect-video rounded-2xl select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] z-10"
+          animate={{
+            x: `${translateX}%`,
+            scale: scale,
+            opacity: cardOpacity,
+            boxShadow: cardShadow,
+          }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          style={{
+            rotateX,
+            rotateY,
+            border: borderStyle,
+            transformStyle: "preserve-3d",
+            transformPerspective: 1000,
+            transformOrigin: 'center bottom',
+          }}
         >
-          {((i % worksLength) + 1).toString().padStart(2, '0')}
-        </motion.span>
-        
-        <motion.div 
-          style={{ translateZ: 30 }}
-          className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-        >
+          {/* Blue Overlay */}
+          <motion.div 
+            className="absolute inset-0 bg-cobalt pointer-events-none"
+            style={{ opacity: blueOpacity, zIndex: 0 }}
+          />
+
+          <motion.span 
+            style={{ translateZ: 50, opacity: contentOpacity }}
+            className={`relative font-display text-6xl md:text-7xl lg:text-8xl transition-colors duration-500 ${isActive ? 'text-cobalt/40' : 'text-ink/20 group-hover:text-cobalt/40'}`}
+          >
+            {((i % worksLength) + 1).toString().padStart(2, '0')}
+          </motion.span>
+          
+          <motion.div 
+            style={{ translateZ: 30, opacity: iconOpacity }}
+            className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          >
           {work.tech.map((t, index) => {
             const mapped = TECH_ICON_MAP[t] || { custom: t.substring(0, 2).toUpperCase(), color: '#1B3A8C' };
             return (
               <div 
                 key={index}
-                className="group/icon w-8 h-8 rounded-full bg-white/50 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/80 transition-colors"
+                className={`group/icon w-8 h-8 rounded-full backdrop-blur-md border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
                 title={t}
               >
                 {mapped.icon ? (
-                  <div className="w-4 h-4 grayscale opacity-70 group-hover/icon:grayscale-0 group-hover/icon:opacity-100 transition-all duration-300">
+                  <div className={`w-4 h-4 transition-all duration-300 ${isActive ? 'grayscale-0 opacity-100' : 'grayscale opacity-70 group-hover/icon:grayscale-0 group-hover/icon:opacity-100'}`}>
                     <StackIcon name={mapped.icon} />
                   </div>
                 ) : (
-                  <span className="font-bold text-[11px] opacity-70 group-hover/icon:opacity-100 transition-opacity duration-300" style={{ color: mapped.color }}>
+                  <span className={`font-bold text-[11px] transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
                     {mapped.custom}
                   </span>
                 )}
               </div>
             )
           })}
-        </motion.div>
-      </motion.article>
+          </motion.div>
+        </motion.article>
+      </motion.div>
 
-      <div className={`mt-5 px-1 flex justify-between items-start transition-all duration-500 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-        <div className="flex-1 pr-4">
-          <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
-            {work.title}
-          </h3>
-          <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">
-            {work.subtitle}
-          </p>
-        </div>
-        
-        <div className="flex gap-3 shrink-0 mt-0.5">
-          {work.github && (
-            <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} on GitHub`}>
-              <GitHubIcon />
-            </a>
-          )}
-          {work.live && (
-            <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} live demo`}>
-              <ExternalIcon />
-            </a>
-          )}
-        </div>
-      </div>
+      {/* Text reveals by sliding down from under the card */}
+      <motion.div className="relative z-20 overflow-hidden" style={{ marginTop: '0.8rem', opacity: contentOpacity }}>
+        <motion.div
+          className="pt-8 px-1 flex justify-between items-start"
+          initial={{ y: '-100%', opacity: 0 }}
+          animate={{
+            y: isActive ? 0 : '-100%',
+            opacity: isActive ? 1 : 0,
+          }}
+          transition={{ 
+            type: 'spring', 
+            stiffness: 280, 
+            damping: 28,
+            delay: isActive ? 0.45 : 0,
+          }}
+          style={{ pointerEvents: isActive ? 'auto' : 'none' }}
+        >
+          <div className="flex-1 pr-4">
+            <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
+              {work.title}
+            </h3>
+            <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">
+              {work.subtitle}
+            </p>
+          </div>
+          
+          <div className="flex gap-3 shrink-0 mt-0.5">
+            {work.github && (
+              <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} on GitHub`}>
+                <GitHubIcon />
+              </a>
+            )}
+            {work.live && (
+              <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} live demo`}>
+                <ExternalIcon />
+              </a>
+            )}
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   )
 }
@@ -146,13 +210,52 @@ export default function Projects() {
   const [activeHeight, setActiveHeight] = useState(0)
   
   useEffect(() => {
-    setActiveHeight(window.innerHeight * 3)
+    // A sticky top-0 h-screen inside a 300vh parent unpins when the section’s bottom
+    // exits the viewport: at scroll = offsetTop + (300vh - 100vh) = offsetTop + 200vh.
+    // So the sticky is only visible over 200vh of scroll travel.
+    // activeHeight must equal that travel so rawProgress 0→1 maps to the full visible range.
+    setActiveHeight(window.innerHeight * 2)
   }, [])
   
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
-  const headerY = useTransform(progress, [0, 0.15], [0, -40])
+  // Staggered Entry / Exit logic (Solid on entry, sliding up)
+  const headerY = useTransform(progress, [0, 0.10], [120, 0]);
+  const headerOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+
+  const carouselY = useTransform(progress, [0.05, 0.15], [150, 0]);
+
+  const bottomY = useTransform(progress, [0.10, 0.20], [100, 0]);
+  const bottomOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+
+  // Halftone wave: rises slightly at first, then floods the entire screen right as the card turns blue
+  const projectsWaveFront = useTransform(progress, [0, 0.65, 0.69, 0.85], [0, 0.20, 0.20, 1.5])
+
+  // Expanding Overlay logic
+  // By mapping the scale non-linearly (slowly to 5, then rapidly to 150),
+  // the visible part of the expansion is stretched over a much larger scroll distance!
+  const expandScale = useTransform(progress, [0.75, 0.92, 1.0], [0.5, 5, 150]);
+  const expandRadius = useTransform(progress, [0.75, 0.85], [16, 0]);
+  const expandOpacity = useTransform(progress, [0.70, 0.75], [0, 1]);
+
+  // Global mouse tracking for parallax tilt across all cards
+  const globalMouseX = useMotionValue(0);
+  const globalMouseY = useMotionValue(0);
+  const globalSpringX = useSpring(globalMouseX, { stiffness: 120, damping: 22 });
+  const globalSpringY = useSpring(globalMouseY, { stiffness: 120, damping: 22 });
+
+  const handleContainerMouseMove = (e) => {
+    const rect = scrollRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    globalMouseX.set((e.clientX - rect.left - rect.width / 2) / (rect.width / 2));
+    globalMouseY.set((e.clientY - rect.top - rect.height / 2) / (rect.height / 2));
+  };
+
+  const handleContainerMouseLeave = () => {
+    globalMouseX.set(0);
+    globalMouseY.set(0);
+  };
 
   // Multiply works array to create a wide runway for seamless infinite scrolling
   const infiniteWorks = [...works, ...works, ...works, ...works, ...works]
@@ -173,9 +276,44 @@ export default function Projects() {
     }
   }, [])
 
+  // Lock scrolling when transition begins
+  // Since overflowX is already hidden for native scroll, we just disable pointer events
+  useEffect(() => {
+    return progress.on('change', (v) => {
+      if (scrollRef.current) {
+        if (v > 0.75) {
+          scrollRef.current.style.pointerEvents = 'none';
+        } else {
+          scrollRef.current.style.pointerEvents = 'auto';
+        }
+      }
+    });
+  }, [progress]);
+
+  // Sync the expanding overlay to the active card's exact position
+  const overlayRef = useRef(null);
+  useEffect(() => {
+    let rafId;
+    const sync = () => {
+      const activeCard = document.getElementById('primary-project-card');
+      const overlay = overlayRef.current;
+      if (activeCard && overlay) {
+        const rect = activeCard.getBoundingClientRect();
+        overlay.style.top = `${rect.top}px`;
+        overlay.style.left = `${rect.left}px`;
+        overlay.style.width = `${rect.width}px`;
+        overlay.style.height = `${rect.height}px`;
+      }
+      rafId = requestAnimationFrame(sync);
+    };
+    sync();
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   const scrollTimeoutRef = useRef(null)
 
   const isAnimatingRef = useRef(false);
+  const animationRef = useRef(null); // tracks active FM scroll animation
 
   const handleScroll = () => {
     const el = scrollRef.current
@@ -204,7 +342,7 @@ export default function Projects() {
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
     
     scrollTimeoutRef.current = setTimeout(() => {
-      if (!scrollRef.current || isDragging || isAnimatingRef.current) return
+      if (!scrollRef.current || isAnimatingRef.current) return
       
       const currentEl = scrollRef.current
       const firstChild = currentEl.children[0];
@@ -221,65 +359,12 @@ export default function Projects() {
         const currentSet = Math.floor(closestIndex / works.length);
         const setOffset = 2 - currentSet; // '2' is the index of Set 3
         
-        const wasSnapping = currentEl.style.scrollSnapType;
-        currentEl.style.scrollSnapType = 'none'; // Disable snap momentarily
         currentEl.scrollLeft += (setOffset * setWidth); // Silent jump
-        
-        // Re-enable snap on next frame
-        requestAnimationFrame(() => {
-          currentEl.style.scrollSnapType = wasSnapping;
-        });
       }
     }, 150)
   }
 
-  // Mouse drag-to-scroll logic
-  const [isDragging, setIsDragging] = useState(false)
-  const [isSnapping, setIsSnapping] = useState(true)
-  const snapTimeoutRef = useRef(null)
-  
-  const [dragged, setDragged] = useState(false)
-  const [startX, setStartX] = useState(0)
-  const [scrollLeftPos, setScrollLeftPos] = useState(0)
 
-  const onMouseDown = (e) => {
-    if (!scrollRef.current) return
-    setIsDragging(true)
-    setIsSnapping(false)
-    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current)
-    
-    setDragged(false)
-    setStartX(e.pageX - scrollRef.current.offsetLeft)
-    setScrollLeftPos(scrollRef.current.scrollLeft)
-  }
-
-  const onMouseMove = (e) => {
-    if (!isDragging || !scrollRef.current) return
-    e.preventDefault() // Prevent text selection
-    const x = e.pageX - scrollRef.current.offsetLeft
-    const walk = (x - startX) * 1.5 // Scroll speed multiplier
-    if (Math.abs(walk) > 10) {
-      setDragged(true)
-    }
-    scrollRef.current.scrollLeft = scrollLeftPos - walk
-  }
-
-  const onMouseUpOrLeave = () => {
-    if (isDragging) {
-      setIsDragging(false)
-      
-      // Smoothly snap to the active card before re-enabling CSS snap
-      if (scrollRef.current && scrollRef.current.children[activeIndex]) {
-        isAnimatingRef.current = true;
-        scrollRef.current.children[activeIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-        setTimeout(() => { isAnimatingRef.current = false; }, 800);
-      }
-      
-      snapTimeoutRef.current = setTimeout(() => {
-        setIsSnapping(true)
-      }, 600) // Re-enable CSS snap after smooth scroll finishes
-    }
-  }
 
   return (
     <div
@@ -288,38 +373,61 @@ export default function Projects() {
       className="bg-cream"
       style={{ height: '300vh' }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center">
+      <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
         
         {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
-        <ProjectsHalftone containerId="projects" />
+        <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} />
 
         {/* All content - relative + z-[1] ensures it stacks above the canvas */}
         <div className="relative flex flex-col justify-center h-full" style={{ zIndex: 1 }}>
 
+        {/* Section Label */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+          <motion.p 
+            className="font-sans text-cobalt text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
+            style={{ y: headerY, opacity: headerOpacity }}
+          >
+            Projects
+          </motion.p>
+        </div>
+
         {/* Header - Tied to timeline scroll */}
         <motion.div 
           className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
-          style={{ y: headerY }}
+          style={{ y: headerY, opacity: headerOpacity }}
         >
-          <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-3">
-            Projects
-          </p>
-          <h2 className="font-display text-5xl md:text-7xl text-ink">
-            Selected Projects
+          <h2 className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink">
+            Featured Projects
           </h2>
         </motion.div>
 
         {/* Native Horizontal Scroll Container */}
-        <div className="w-full mt-16 relative">
+        <motion.div 
+          className="w-full mt-32 relative flex justify-center items-center"
+          style={{ y: carouselY }}
+        >
+          
+          {/* Expanding Blue Screen Overlay (synced to active card via DOM rect) */}
+          <div ref={overlayRef} className="fixed z-40 pointer-events-none flex items-center justify-center">
+            <motion.div
+              className="w-full h-full"
+              style={{
+                scale: expandScale,
+                borderRadius: expandRadius,
+                opacity: expandOpacity,
+                backgroundColor: '#1B3A8C',
+                transformOrigin: 'center center',
+              }}
+            />
+          </div>
+
           <div 
             ref={scrollRef}
             onScroll={handleScroll}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUpOrLeave}
-            onMouseLeave={onMouseUpOrLeave}
-            className={`flex items-center w-full overflow-x-auto custom-scrollbar-hide py-12 ${isSnapping ? 'snap-x snap-mandatory' : ''} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onMouseMove={handleContainerMouseMove}
+            onMouseLeave={handleContainerMouseLeave}
+            className="flex items-center w-full overflow-x-hidden custom-scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', overflowY: 'visible', paddingBlock: '10rem' }}
           >
             {infiniteWorks.map((work, i) => {
               const isActive = activeIndex !== -1 && (activeIndex % works.length) === (i % works.length);
@@ -337,15 +445,16 @@ export default function Projects() {
               }
               const distForStyle = Math.abs(clampedRel);
               
-              // Uniform structural width
-              const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[40vw] xl:w-[32vw]';
+              // Uniform width — active card appears larger via article scale, not DOM width
+              // (avoids layout reflow on every click which caused snappy jumping)
+              const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[38vw] xl:w-[28vw]';
 
               let translateX = 0;
-              let scale = 1;
-              if (clampedRel === -1) { translateX = 35; scale = 0.8; }
-              else if (clampedRel === 1) { translateX = -35; scale = 0.8; }
-              else if (clampedRel <= -2) { translateX = 80; scale = 0.6; }
-              else if (clampedRel >= 2) { translateX = -80; scale = 0.6; }
+              let scale = distForStyle === 0 ? 1.18 : 1;
+              if (clampedRel === -1) { translateX = 20; scale = 0.85; }
+              else if (clampedRel === 1) { translateX = -20; scale = 0.85; }
+              else if (clampedRel <= -2) { translateX = 45; scale = 0.7; }
+              else if (clampedRel >= 2) { translateX = -45; scale = 0.7; }
               
               const cardOpacity = distForStyle === 0 ? 1 : distForStyle === 1 ? 0.6 : 0.3;
               const cardShadow = distForStyle === 0 ? '0 20px 60px rgba(0,0,0,0.15)' : 'none';
@@ -356,82 +465,66 @@ export default function Projects() {
               else if (distForStyle === 2) zIndexClass = 'z-10';
 
               return (
-              <div 
-                key={`${work.title}-${i}`} 
-                onClick={(e) => {
-                  if (dragged) return
-                  if (!isActive) {
-                    setIsSnapping(false);
-                    isAnimatingRef.current = true;
-                    setActiveIndex(i);
-                    
-                    const el = scrollRef.current;
-                    const targetLeft = e.currentTarget.offsetLeft - (el.clientWidth / 2) + (e.currentTarget.offsetWidth / 2);
-                    el.scrollTo({ left: targetLeft, behavior: 'smooth' });
-                    
-                    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
-                    snapTimeoutRef.current = setTimeout(() => {
-                      setIsSnapping(true);
-                      isAnimatingRef.current = false;
-                    }, 800);
-                  }
-                }}
-                className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center transition-all duration-500 ${zIndexClass}`}
-                style={{ 
-                  cursor: isActive ? 'auto' : 'pointer'
-                }}
-              >
-                {/* The visual card (thumbnail only) */}
-                <article 
-                  className="group relative w-full aspect-video rounded-2xl border border-white/40 select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center transition-all duration-500 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)]"
-                  style={{
-                    transform: `translateX(${translateX}%) scale(${scale})`,
-                    opacity: cardOpacity,
-                    boxShadow: cardShadow,
-                  }}
-                >
-                  <span className="font-display text-6xl md:text-7xl lg:text-8xl text-ink/20 group-hover:text-cobalt/40 transition-colors duration-500">
-                    {((i % works.length) + 1).toString().padStart(2, '0')}
-                  </span>
-                  
-                  {/* Category tag */}
-                  <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/50 backdrop-blur-md border border-white/20 font-mono text-[10px] uppercase tracking-wider text-ink/80 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    {work.tech[0]}
-                  </div>
-                </article>
+                <ProjectCard
+                  key={`${work.title}-${i}`}
+                  work={work}
+                  i={i}
+                  isActive={isActive}
+                  isActiveIndex={i === activeIndex}
+                  widthClass={widthClass}
+                  translateX={translateX}
+                  scale={scale}
+                  zIndexClass={zIndexClass}
+                  cardOpacity={cardOpacity}
+                  cardShadow={cardShadow}
+                  worksLength={works.length}
+                  distForStyle={distForStyle}
+                  clampedRel={clampedRel}
+                  globalSpringX={globalSpringX}
+                  globalSpringY={globalSpringY}
+                  progress={progress}
+                  onClick={() => {
+                    if (!isActive) {
+                      isAnimatingRef.current = true;
+                      setActiveIndex(i);
 
-                {/* The text content below the card */}
-                <div className={`mt-5 px-1 flex justify-between items-start transition-all duration-500 ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-                  <div className="flex-1 pr-4">
-                    <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
-                      {work.title}
-                    </h3>
-                    <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">
-                      {work.subtitle}
-                    </p>
-                  </div>
-                  
-                  <div className="flex gap-3 shrink-0 mt-0.5">
-                    {work.github && (
-                      <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} on GitHub`}>
-                        <GitHubIcon />
-                      </a>
-                    )}
-                    {work.live && (
-                      <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors pointer-events-auto" aria-label={`${work.title} live demo`}>
-                        <ExternalIcon />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )})}
+                      // Cancel any running animation
+                      if (animationRef.current) { animationRef.current.stop(); animationRef.current = null; }
+
+                      // Wait for React to repaint, then spring-animate scrollLeft
+                      requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                          const el = scrollRef.current;
+                          const target = el?.children[i];
+                          if (!el || !target) return;
+
+                          const targetLeft = target.offsetLeft - (el.clientWidth / 2) + (target.offsetWidth / 2);
+
+                          animationRef.current = animate(el.scrollLeft, targetLeft, {
+                            type: 'spring',
+                            stiffness: 350,
+                            damping: 38,
+                            restDelta: 0.5,
+                            onUpdate: (v) => { el.scrollLeft = v; },
+                            onComplete: () => {
+                              animationRef.current = null;
+                              isAnimatingRef.current = false;
+                            },
+                          });
+                        });
+                      });
+                    }
+                  }}
+                />
+              )
+            })}
           </div>
-        </div>
+        </motion.div>
         
         {/* Progress Indicator */}
         <motion.div 
-          className="absolute bottom-24 left-0 right-0 flex justify-center items-center gap-2 md:gap-3 pointer-events-none"
+          className="absolute bottom-60 left-0 right-0 flex justify-center items-center gap-2 md:gap-3 pointer-events-none"
+          style={{ y: bottomY, opacity: bottomOpacity }}
         >
           {works.map((_, index) => {
             const isActive = activeIndex % works.length === index;
@@ -446,20 +539,43 @@ export default function Projects() {
 
         {/* All work link */}
         <motion.div 
-          className="absolute bottom-12 left-0 right-0 flex justify-center pointer-events-none"
+          className="absolute bottom-42 left-0 right-0 flex justify-center pointer-events-none"
+          style={{ y: bottomY, opacity: bottomOpacity }}
         >
-          <a
+          <motion.a
             href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-cobalt hover:text-cobalt/80 text-sm md:text-base transition-colors inline-flex items-center gap-2 group uppercase tracking-[0.15em] border-b border-cobalt pb-1 pointer-events-auto"
+            className="font-mono text-cobalt text-sm md:text-base inline-flex items-center gap-2 uppercase tracking-[0.15em] pointer-events-auto relative pb-1"
+            whileHover="hover"
+            initial="initial"
           >
-            View all on GitHub
-            <span className="group-hover:translate-x-2 transition-transform">→</span>
-          </a>
+            <span>View all on GitHub</span>
+            <motion.span 
+              variants={{
+                initial: { x: 0 },
+                hover: { x: 8 }
+              }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              →
+            </motion.span>
+            
+            {/* Premium Animated Underline */}
+            <div className="absolute left-0 right-0 bottom-0 h-px bg-cobalt/30" />
+            <motion.div 
+              className="absolute left-0 right-0 bottom-0 h-[2px] bg-cobalt origin-left"
+              variants={{
+                initial: { scaleX: 0 },
+                hover: { scaleX: 1 }
+              }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+            />
+          </motion.a>
         </motion.div>
 
         </div>{/* end content wrapper */}
+
       </div>
     </div>
   )

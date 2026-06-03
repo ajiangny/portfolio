@@ -8,12 +8,13 @@ const BASE_OPACITY = 0.08        // slightly higher than About since cobalt is s
 const HOVER_R      = 160         // cursor influence radius (px)
 const HOVER_R2     = HOVER_R * HOVER_R
 const HOVER_BOOST  = 4.5         // extra radius at cursor centre (px)
+const HALF_CELL    = GRID / 2 - 0.5
 
 const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
   `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
 )
 
-export default function ProjectsHalftone({ containerId }) {
+export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp, waveHeight: waveHeightProp = 0.25 }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
@@ -25,8 +26,6 @@ export default function ProjectsHalftone({ containerId }) {
     const ctx    = canvas.getContext('2d')
     let w = 0, h = 0
     let needsRedraw = true
-
-    const HALF_CELL = GRID / 2 - 0.5
 
     function buildCells(W, H) {
       let globalOffsetY = 0
@@ -72,7 +71,39 @@ export default function ProjectsHalftone({ containerId }) {
         }
       }
 
-      cellsRef.current = { data, count, cols, rows, offCanvas }
+      // Pre-render sprite sheets for all dot sizes/opacities
+      const LEVELS = 60
+      const spriteCanvas = document.createElement('canvas')
+      spriteCanvas.width = LEVELS * GRID
+      spriteCanvas.height = GRID
+      const sCtx = spriteCanvas.getContext('2d')
+
+      const rowSpriteCanvas = document.createElement('canvas')
+      rowSpriteCanvas.width = cols * GRID
+      rowSpriteCanvas.height = LEVELS * GRID
+      const rsCtx = rowSpriteCanvas.getContext('2d')
+
+      for (let lvl = 0; lvl < LEVELS; lvl++) {
+        const inf = lvl / (LEVELS - 1)
+        const finalRadius = Math.min(DOT_R_MIN + HOVER_BOOST * inf, HALF_CELL)
+        const oi = Math.round(Math.min(0.99, BASE_OPACITY + inf * 0.5) * 100)
+
+        sCtx.beginPath()
+        sCtx.arc(lvl * GRID + GRID / 2, GRID / 2, finalRadius, 0, Math.PI * 2)
+        sCtx.fillStyle = FILL_CACHE[oi]
+        sCtx.fill()
+
+        rsCtx.fillStyle = FILL_CACHE[oi]
+        const sy = lvl * GRID
+        for (let col = 0; col < cols; col++) {
+          const cx = col * GRID
+          rsCtx.beginPath()
+          rsCtx.arc(cx + GRID / 2, sy + GRID / 2, finalRadius, 0, Math.PI * 2)
+          rsCtx.fill()
+        }
+      }
+
+      cellsRef.current = { data, count, cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY }
       needsRedraw = true
     }
 
@@ -85,6 +116,8 @@ export default function ProjectsHalftone({ containerId }) {
 
     let hoverStrength = 0
     let lastMoveTime = 0
+    let lastWaveFront = -1
+    let lastWaveHeight = -1
 
     function draw() {
       if (!isVisible.current) {
@@ -95,9 +128,13 @@ export default function ProjectsHalftone({ containerId }) {
       const bag = cellsRef.current
       if (!bag || w === 0 || h === 0) return
 
+      // Read current wave position and height from motion value props
+      const waveFront = waveFrontProp ? waveFrontProp.get() : 0
+      const waveHeight = typeof waveHeightProp === 'number' ? waveHeightProp : (waveHeightProp ? waveHeightProp.get() : 0.25)
+
       const { x: mx, y: my } = mouseRef.current
       const hasMouse = mx > -9000
-      const { data, cols, rows, offCanvas } = bag
+      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY } = bag
 
       const now = performance.now()
       if (now - lastMoveTime > 60) {
@@ -106,7 +143,8 @@ export default function ProjectsHalftone({ containerId }) {
         hoverStrength = Math.min(1, hoverStrength + 0.15)
       }
 
-      if (!hasMouse && hoverStrength <= 0) {
+      // Skip redraw if nothing has changed
+      if (!hasMouse && hoverStrength <= 0 && waveFront === lastWaveFront && waveHeight === lastWaveHeight) {
         if (needsRedraw) {
           ctx.clearRect(0, 0, w, h)
           ctx.drawImage(offCanvas, 0, 0)
@@ -116,38 +154,102 @@ export default function ProjectsHalftone({ containerId }) {
       }
 
       needsRedraw = true
+      lastWaveFront = waveFront
+      lastWaveHeight = waveHeight
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(offCanvas, 0, 0)
 
-      // Only redraw dots near the cursor
-      const minCol = Math.max(0, Math.floor((mx - HOVER_R) / GRID))
-      const maxCol = Math.min(cols - 1, Math.ceil((mx + HOVER_R) / GRID))
-      const minRow = Math.max(0, Math.floor((my - HOVER_R) / GRID))
-      const maxRow = Math.min(rows - 1, Math.ceil((my + HOVER_R) / GRID))
+      drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight)
+    }
 
-      for (let row = minRow; row <= maxRow; row++) {
-        for (let col = minCol; col <= maxCol; col++) {
-          const idx = (row * cols + col) * 4
-          const cx = data[idx]
-          const cy = data[idx + 1]
-          const dx = cx - mx
-          const dy = cy - my
-          const d2 = dx * dx + dy * dy
+    function drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight) {
+      let startRow = rows
+      let endRow = -1
 
-          if (d2 < HOVER_R2) {
-            let radius = data[idx + 2]
-            const dist = Math.sqrt(d2)
-            const influence = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
-            radius = Math.min(radius + HOVER_BOOST * influence, HALF_CELL)
-            const oi = Math.round(Math.min(0.99, BASE_OPACITY + influence * 0.5) * 100)
+      if (hoverStrength > 0) {
+        startRow = Math.min(startRow, Math.max(0, Math.floor((my - HOVER_R) / GRID)))
+        endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil((my + HOVER_R) / GRID)))
+      }
 
-            // Clear the base dot so alpha doesn't stack
-            ctx.clearRect(cx - radius - 1, cy - radius - 1, radius * 2 + 2, radius * 2 + 2)
+      // The wave travels up from the bottom to waveHeight of the screen height
+      let waveY = h + 100
+      if (waveFront > 0) {
+        waveY = h * (1 - waveFront)
+        startRow = Math.min(startRow, Math.max(0, Math.floor(waveY / GRID)))
+        endRow = Math.max(endRow, rows - 1)
+      }
 
-            ctx.beginPath()
-            ctx.arc(cx, cy, radius, 0, Math.PI * 2)
-            ctx.fillStyle = FILL_CACHE[oi]
-            ctx.fill()
+      for (let row = startRow; row <= endRow; row++) {
+        const rowY = (row - 1) * GRID - globalOffsetY
+
+        let waveInf = 0
+        if (waveFront > 0) {
+          const normalizedY = 1 - (rowY / h)
+          const depth = waveFront - normalizedY
+          waveInf = Math.max(0, Math.min(1, depth / waveHeight))
+        }
+
+        let startCol = 0
+        let endCol = cols - 1
+
+        if (waveFront === 0 || rowY < waveY) {
+          startCol = Math.max(0, Math.floor((mx - HOVER_R) / GRID))
+          endCol = Math.min(cols - 1, Math.ceil((mx + HOVER_R) / GRID))
+        }
+
+        const hoverStartCol = Math.max(startCol, Math.floor((mx - HOVER_R) / GRID))
+        const hoverEndCol = Math.min(endCol, Math.ceil((mx + HOVER_R) / GRID))
+
+        // 1. Draw non-hovered wave dots using drawImage row sprites
+        if (waveInf > 0) {
+          const level = Math.max(0, Math.min(LEVELS - 1, Math.round(waveInf * (LEVELS - 1))))
+          const sy = level * GRID
+
+          if (hoverStrength > 0 && hoverStartCol <= endCol && hoverEndCol >= startCol) {
+            // Draw left chunk
+            if (startCol < hoverStartCol) {
+              const startX = startCol * GRID
+              const width = (hoverStartCol - startCol) * GRID
+              ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
+            }
+            // Draw right chunk
+            if (endCol > hoverEndCol) {
+              const startX = (hoverEndCol + 1) * GRID
+              const width = (endCol - hoverEndCol) * GRID
+              ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
+            }
+          } else {
+            // Draw full chunk
+            const startX = startCol * GRID
+            const width = (endCol - startCol + 1) * GRID
+            ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
+          }
+        }
+
+        // 2. Draw hovered dots individually (compositing hover + wave influence)
+        if (hoverStrength > 0) {
+          const validHoverStart = Math.max(startCol, hoverStartCol)
+          const validHoverEnd = Math.min(endCol, hoverEndCol)
+
+          for (let col = validHoverStart; col <= validHoverEnd; col++) {
+            const cx = (col - 1) * GRID
+            const dx = cx - mx
+            const dy = rowY - my
+            const d2 = dx * dx + dy * dy
+
+            let hoverInf = 0
+            if (d2 < HOVER_R2) {
+              const dist = Math.sqrt(d2)
+              hoverInf = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
+            }
+
+            const totalInf = Math.max(hoverInf, waveInf)
+
+            if (totalInf > 0) {
+              const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))))
+              const sx = level * GRID
+              ctx.drawImage(spriteCanvas, sx, 0, GRID, GRID, cx - GRID / 2, rowY - GRID / 2, GRID, GRID)
+            }
           }
         }
       }
@@ -175,6 +277,7 @@ export default function ProjectsHalftone({ containerId }) {
     const io = new IntersectionObserver(([entry]) => {
       isVisible.current = entry.isIntersecting
       if (entry.isIntersecting && !rafRef.current) {
+        lastWaveFront = -1 // Force redraw on enter
         rafRef.current = requestAnimationFrame(draw)
       }
     })

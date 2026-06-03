@@ -79,18 +79,25 @@ export default function Contact() {
       <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center px-6">
         <div className="max-w-2xl mx-auto w-full relative">
           
+          {/* Section Label */}
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+            <motion.p 
+              className="font-sans text-cobalt text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
+              style={{ y: headerY, opacity: headerOpacity }}
+            >
+              Contact
+            </motion.p>
+          </div>
+
           {/* Header */}
           <motion.div 
-            className="mb-10 flex flex-col items-center text-center"
+            className="mb-10 flex flex-col items-center text-center mt-6"
             style={{ y: headerY, opacity: headerOpacity }}
           >
-            <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-              // 04 — Say Hello
-            </p>
-            <h2 className="font-display text-5xl md:text-7xl text-ink mb-3">
+            <h2 className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink mb-3">
               Contact
             </h2>
-            <p className="font-mono text-text text-xs leading-[1.8] max-w-md">
+            <p className="font-mono text-text text-sm leading-[1.9] max-w-md">
               Have a project in mind, want to collaborate, or just want to say hi?
               I'd love to hear from you.
             </p>
@@ -120,7 +127,7 @@ export default function Contact() {
               <form onSubmit={submit} className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="contact-name" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                    <label htmlFor="contact-name" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
                       Name
                     </label>
                     <input
@@ -135,7 +142,7 @@ export default function Contact() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="contact-email" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                    <label htmlFor="contact-email" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
                       Email
                     </label>
                     <input
@@ -152,7 +159,7 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="font-mono text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                  <label htmlFor="contact-message" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
                     Message
                   </label>
                   <textarea

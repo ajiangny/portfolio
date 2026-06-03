@@ -5,7 +5,7 @@ import PageTransition     from './components/PageTransition'
 import Hero             from './components/Hero'
 import About            from './components/About'
 import Projects         from './components/Projects'
-import ArtGallery       from './components/ArtGallery'
+import Gallery          from './components/Gallery'
 import Contact          from './components/Contact'
 import AnimateIn        from './components/AnimateIn'
 
@@ -20,10 +20,8 @@ function App() {
           <main>
             <Hero />
             <About />
-
-            {/* ── OLD PORTFOLIO — pending redesign ────────────────── */}
             <Projects />
-            <ArtGallery />
+            <Gallery />
             <Contact />
           </main>
           <footer className="border-t-2 border-ink py-8 text-center bg-cream">
