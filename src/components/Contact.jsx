@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import AnimateIn from './AnimateIn'
+import { useRef, useEffect, useState } from 'react'
+import { motion, useTransform, useSpring } from 'framer-motion'
+import useScrollTimeline from '../hooks/useScrollTimeline'
 
 const socials = [
   {
@@ -35,6 +36,27 @@ export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState('idle')
 
+  const containerRef = useRef(null)
+  const [activeHeight, setActiveHeight] = useState(0)
+  
+  useEffect(() => {
+    setActiveHeight(window.innerHeight)
+  }, [])
+  
+  const rawProgress = useScrollTimeline(containerRef, activeHeight)
+  const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
+
+  // Cinematic Assembly Transforms
+  const headerY = useTransform(progress, [0, 0.6], ['-30vh', '0vh'])
+  const headerOpacity = useTransform(progress, [0, 0.5], [0, 1])
+  
+  const formY = useTransform(progress, [0.2, 0.8], ['30vh', '0vh'])
+  const formOpacity = useTransform(progress, [0.2, 0.7], [0, 1])
+  const formScale = useTransform(progress, [0.2, 0.8], [0.9, 1])
+
+  const socialOpacity = useTransform(progress, [0.5, 1], [0, 1])
+  const socialScale = useTransform(progress, [0.5, 1], [0.8, 1])
+
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -48,32 +70,38 @@ export default function Contact() {
   }
 
   return (
-    <section
+    <div
       id="contact"
-      className="min-h-screen flex flex-col border-t-2 border-ink bg-cream-light"
+      ref={containerRef}
+      className="border-t-2 border-ink bg-cream-light"
+      style={{ height: '200vh' }}
     >
-      <div className="flex-1 flex flex-col justify-center px-6 py-12">
-        <div className="max-w-2xl mx-auto w-full">
+      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center px-6">
+        <div className="max-w-2xl mx-auto w-full relative">
+          
           {/* Header */}
-          <AnimateIn direction="up">
-            <div className="mb-10">
-              <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
-                // 04 — Say Hello
-              </p>
-              <h2 className="font-display text-5xl md:text-7xl text-ink mb-3">
-                Contact
-              </h2>
-              <p className="font-mono text-text text-xs leading-[1.8]">
-                Have a project in mind, want to collaborate, or just want to say hi?
-                I'd love to hear from you.
-              </p>
-            </div>
-          </AnimateIn>
+          <motion.div 
+            className="mb-10 flex flex-col items-center text-center"
+            style={{ y: headerY, opacity: headerOpacity }}
+          >
+            <p className="font-mono text-cobalt text-xs tracking-[0.3em] uppercase mb-2">
+              // 04 — Say Hello
+            </p>
+            <h2 className="font-display text-5xl md:text-7xl text-ink mb-3">
+              Contact
+            </h2>
+            <p className="font-mono text-text text-xs leading-[1.8] max-w-md">
+              Have a project in mind, want to collaborate, or just want to say hi?
+              I'd love to hear from you.
+            </p>
+          </motion.div>
 
           {/* Form */}
-          <AnimateIn direction="up" delay={0.15}>
+          <motion.div 
+            style={{ y: formY, opacity: formOpacity, scale: formScale }}
+          >
             {status === 'sent' ? (
-              <div className="text-center py-12 border-2 border-ink bg-cream">
+              <div className="text-center py-12 border-2 border-ink bg-cream shadow-sm">
                 <div className="w-14 h-14 border-2 border-cobalt flex items-center justify-center mx-auto mb-4">
                   <svg className="w-7 h-7 text-cobalt" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -135,7 +163,7 @@ export default function Contact() {
                     placeholder="Tell me about your project or idea..."
                     value={form.message}
                     onChange={handle}
-                    className="form-input resize-none"
+                    className="form-input resize-none custom-scrollbar"
                   />
                 </div>
 
@@ -149,17 +177,19 @@ export default function Contact() {
                 </button>
               </form>
             )}
-          </AnimateIn>
+          </motion.div>
 
           {/* Social links */}
-          <AnimateIn direction="up" delay={0.3}>
+          <motion.div 
+            style={{ opacity: socialOpacity, scale: socialScale }}
+          >
             <div className="mt-10 flex items-center gap-6 justify-center">
               <div className="flex-1 h-[1.5px] bg-ink/15" />
               <span className="font-mono text-text-light text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
               <div className="flex-1 h-[1.5px] bg-ink/15" />
             </div>
 
-            <div className="flex justify-center gap-4 mt-6">
+            <div className="flex justify-center gap-4 mt-6 pointer-events-auto">
               {socials.map(({ label, href, icon }) => (
                 <a
                   key={label}
@@ -173,9 +203,10 @@ export default function Contact() {
                 </a>
               ))}
             </div>
-          </AnimateIn>
+          </motion.div>
+
         </div>
       </div>
-    </section>
+    </div>
   )
 }
