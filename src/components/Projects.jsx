@@ -185,7 +185,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
       </motion.div>
 
       {/* Text reveals by sliding down from under the card */}
-      <motion.div className="relative z-20 overflow-hidden" style={{ marginTop: '0.8rem', opacity: contentOpacity }}>
+      <motion.div className="relative z-20 overflow-hidden" style={{ marginTop: '0.8rem', opacity: globalContentOpacity }}>
         <motion.div
           className="pt-8 px-1 flex justify-between items-start"
           initial={{ y: '-100%', opacity: 0 }}
