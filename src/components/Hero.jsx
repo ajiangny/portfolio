@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion'
+import { useRef, useState, useEffect } from 'react'
+import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionValueEvent, animate } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import HalftoneBg    from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
@@ -15,19 +15,34 @@ const navLinks = [
 
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
+const HOVER_COLORS = [
+  { rgb: [14, 165, 233] },   // About: saturated sky blue
+  { rgb: [245, 240, 232] },  // Projects: cream
+  { rgb: [0, 0, 0] },        // Gallery: black
+  { rgb: [245, 240, 232] },  // Contact: cream (inverse of Gallery)
+]
+
 export default function Hero() {
-  const { navigate: transitionNavigate } = useTransitionContext()
+  const { navigate: transitionNavigate, isActive } = useTransitionContext()
+  const isTransitionActiveRef = useRef(isActive)
   
-  const navigate = (href, e) => {
+  useEffect(() => {
+    isTransitionActiveRef.current = isActive
+  }, [isActive])
+  
+  const navigate = (href, e, clickedIdx) => {
+    let colorStr = 'var(--color-cobalt)'
+    if (clickedIdx !== undefined && clickedIdx !== null) {
+      const col = HOVER_COLORS[clickedIdx].rgb
+      colorStr = `rgb(${col[0]}, ${col[1]}, ${col[2]})`
+    }
+
     if (href === '#about') {
-      transitionNavigate('#about', { offset: window.innerHeight * 3 }, e)
+      transitionNavigate('#about', { offset: window.innerHeight * 3 }, e, colorStr)
     } else if (href === '#projects') {
-      // #projects is a 300vh sticky container. progress=0 is the top edge,
-      // progress≈0.5 is where all entry animations finish and cards are fully visible.
-      // That maps to scrollTop = offsetTop + 1×innerHeight.
-      transitionNavigate('#projects', { offset: window.innerHeight }, e)
+      transitionNavigate('#projects', { offset: window.innerHeight }, e, colorStr)
     } else {
-      transitionNavigate(href, {}, e)
+      transitionNavigate(href, {}, e, colorStr)
     }
   }
 
@@ -41,6 +56,85 @@ export default function Hero() {
     offset: ['start start', 'end start'],
   })
 
+  // ── Dynamic Cobalt Hover Colors ──────────────────────────────────────────
+  const colorState = useRef({
+    r: 27, g: 58, b: 140,
+    bgR: 245, bgG: 240, bgB: 232,
+    txtR: 245, txtG: 240, txtB: 232
+  })
+  const colorRgbValue = useMotionValue('27,58,140')
+  const animationRef = useRef(null)
+
+  const updateColor = (latestScroll, hoverIndex) => {
+    let target = {
+      r: 27, g: 58, b: 140,
+      bgR: 245, bgG: 240, bgB: 232,
+      txtR: 245, txtG: 240, txtB: 232
+    }
+
+    if (!isTransitionActiveRef.current && latestScroll <= 0.05 && hoverIndex !== null) {
+      const col = HOVER_COLORS[hoverIndex].rgb
+      target.r = col[0]
+      target.g = col[1]
+      target.b = col[2]
+
+      if (hoverIndex === 1) { // Projects (Cream blob)
+        // Swap background to cobalt, and blob text to cobalt
+        target.bgR = 27; target.bgG = 58; target.bgB = 140;
+        target.txtR = 27; target.txtG = 58; target.txtB = 140;
+      } else if (hoverIndex === 3) { // Contact (Cream blob, inverse of Gallery)
+        // Swap background to black, and blob text to black
+        target.bgR = 0; target.bgG = 0; target.bgB = 0;
+        target.txtR = 0; target.txtG = 0; target.txtB = 0;
+      }
+    }
+
+    if (animationRef.current) animationRef.current.stop()
+
+    const startObj = { ...colorState.current }
+    const lerp = (start, end, p) => start + (end - start) * p
+
+    animationRef.current = animate(0, 1, {
+      duration: 0.4,
+      ease: "easeOut",
+      onUpdate: (p) => {
+        const r = Math.round(lerp(startObj.r, target.r, p))
+        const g = Math.round(lerp(startObj.g, target.g, p))
+        const b = Math.round(lerp(startObj.b, target.b, p))
+        const bgR = Math.round(lerp(startObj.bgR, target.bgR, p))
+        const bgG = Math.round(lerp(startObj.bgG, target.bgG, p))
+        const bgB = Math.round(lerp(startObj.bgB, target.bgB, p))
+        const txtR = Math.round(lerp(startObj.txtR, target.txtR, p))
+        const txtG = Math.round(lerp(startObj.txtG, target.txtG, p))
+        const txtB = Math.round(lerp(startObj.txtB, target.txtB, p))
+
+        colorState.current = { r, g, b, bgR, bgG, bgB, txtR, txtG, txtB }
+
+        const rgbStr = `${r},${g},${b}`
+        colorRgbValue.set(rgbStr)
+
+        document.documentElement.style.setProperty('--color-cobalt-rgb', rgbStr)
+        document.documentElement.style.setProperty('--color-cobalt', `rgb(${r}, ${g}, ${b})`)
+        document.documentElement.style.setProperty('--color-hero-bg', `rgb(${bgR}, ${bgG}, ${bgB})`)
+        document.documentElement.style.setProperty('--color-cobalt-text', `rgb(${txtR}, ${txtG}, ${txtB})`)
+      }
+    })
+  }
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => updateColor(latest, hovIdx))
+  
+  useEffect(() => {
+    updateColor(scrollYProgress.get(), hovIdx)
+  }, [hovIdx])
+
+  useEffect(() => {
+    return () => {
+      document.documentElement.style.removeProperty('--color-cobalt')
+      document.documentElement.style.removeProperty('--color-cobalt-rgb')
+      document.documentElement.style.removeProperty('--color-hero-bg')
+      document.documentElement.style.removeProperty('--color-cobalt-text')
+    }
+  }, [])
   // Heading: scale up + rise + fade
   const headingScale   = useTransform(scrollYProgress, [0, 0.55], [1, 1.18])
   const headingY       = useTransform(scrollYProgress, [0, 0.55], [0, -70])
@@ -74,18 +168,19 @@ export default function Hero() {
     <section
       ref={heroRef}
       id="hero"
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-cream"
+      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+      style={{ backgroundColor: 'var(--color-hero-bg, var(--color-cream))' }}
       onMouseMove={trackMouse}
       onMouseLeave={resetMouse}
     >
       {/* Animated halftone dot field — fades on scroll */}
       <motion.div style={{ opacity: bgOpacity }} className="absolute inset-0 pointer-events-none">
-        <HalftoneBg containerId="hero" />
+        <HalftoneBg containerId="hero" colorRgbValue={colorRgbValue} />
       </motion.div>
 
       {/* Name — pinned to top centre, flies up on scroll */}
       <motion.p
-        style={{ y: nameY, opacity: nameOpacity, color: 'rgba(27, 58, 140, 0.55)', zIndex: 50 }}
+        style={{ y: nameY, opacity: nameOpacity, color: 'rgba(var(--color-cobalt-rgb), 0.55)', zIndex: 50 }}
         className="absolute top-8 left-1/2 -translate-x-1/2 font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
       >
         Andrew Jiang
@@ -139,7 +234,7 @@ export default function Hero() {
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
         style={{
           height: '140px',
-          background: 'linear-gradient(to bottom, transparent 0%, #1B3A8C 100%)',
+          background: 'linear-gradient(to bottom, transparent 0%, var(--color-cobalt) 100%)',
         }}
       />
     </section>

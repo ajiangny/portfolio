@@ -4,25 +4,19 @@ import { useEffect, useRef } from 'react'
 const GRID        = 18          // px between dot centres
 const DOT_R_MIN   = 0.6         // radius at very top (px)
 const DOT_R_MAX   = 8.5         // radius at very bottom — cells are 9px half, so nearly solid
-const DOT_COLOR   = '27,58,140' // cobalt RGB
-const DOT_OPACITY_TOP = 0.06    // opacity at the very top
-const DOT_OPACITY_BOT = 1   // opacity at the very bottom
-const HOVER_R         = 180     // cursor influence radius (px)
-const HOVER_R2        = HOVER_R * HOVER_R
-const HOVER_BOOST     = 6       // extra radius at cursor centre (px)
-
-// Pre-cache every fill-style string — zero allocations per frame
-const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
-  `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
-)
-
-export default function HalftoneBg({ containerId }) {
+export default function HalftoneBg({ containerId, colorRgbValue }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
 
   // Pre-baked cell data — rebuilt only on resize
   const cellsRef = useRef(null)
+
+  const DOT_OPACITY_TOP = 0.06
+  const DOT_OPACITY_BOT = 1
+  const HOVER_R         = 180
+  const HOVER_R2        = HOVER_R * HOVER_R
+  const HOVER_BOOST     = 6
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -69,10 +63,10 @@ export default function HalftoneBg({ containerId }) {
           data[i++] = baseR
           data[i++] = opac
           
-          const oi = Math.round(Math.min(0.99, opac) * 100)
+          const oi = Math.max(0, Math.min(1, opac))
           offCtx.beginPath()
           offCtx.arc(cx, cy, baseR, 0, Math.PI * 2)
-          offCtx.fillStyle = FILL_CACHE[oi]
+          offCtx.fillStyle = `rgba(255, 255, 255, ${oi.toFixed(3)})`
           offCtx.fill()
         }
       }
@@ -102,6 +96,7 @@ export default function HalftoneBg({ containerId }) {
       const hasMouse = mx > -9000
       const { data, cols, rows, offCanvas } = bag
 
+      const rgbStr = colorRgbValue ? colorRgbValue.get() : '27,58,140'
       const now = performance.now()
       if (now - lastMoveTime > 60) {
         hoverStrength = Math.max(0, hoverStrength - 0.03)
@@ -120,7 +115,15 @@ export default function HalftoneBg({ containerId }) {
 
       needsRedraw = true
       ctx.clearRect(0, 0, w, h)
+      
+      // Draw white base dots
       ctx.drawImage(offCanvas, 0, 0)
+      
+      // Tint base dots to current color
+      ctx.globalCompositeOperation = 'source-in'
+      ctx.fillStyle = `rgb(${rgbStr})`
+      ctx.fillRect(0, 0, w, h)
+      ctx.globalCompositeOperation = 'source-over'
 
       const minCol = Math.max(0, Math.floor((mx - HOVER_R) / GRID))
       const maxCol = Math.min(cols - 1, Math.ceil((mx + HOVER_R) / GRID))
@@ -149,7 +152,7 @@ export default function HalftoneBg({ containerId }) {
                
                ctx.beginPath()
                ctx.arc(cx, cy, radius, 0, TAU)
-               ctx.fillStyle = FILL_CACHE[oi]
+               ctx.fillStyle = `rgba(${rgbStr}, ${Math.min(1, baseOpac + influence * 0.4).toFixed(3)})`
                ctx.fill()
             }
          }
@@ -183,7 +186,7 @@ export default function HalftoneBg({ containerId }) {
       window.removeEventListener('mouseleave', handleLeave)
       ro.disconnect()
     }
-  }, [])
+  }, [containerId, colorRgbValue])
 
   return (
     <>
@@ -202,7 +205,7 @@ export default function HalftoneBg({ containerId }) {
           position: 'absolute',
           bottom: 0, left: 0, right: 0,
           height: '22%',
-          background: 'linear-gradient(to bottom, transparent, #1B3A8C 90%)',
+          background: `linear-gradient(to bottom, transparent, var(--color-cobalt) 90%)`,
           pointerEvents: 'none',
         }}
       />

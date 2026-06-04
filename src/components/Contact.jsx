@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, useTransform, useSpring } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
+import ElasticHeading from './hero/ElasticHeading'
 
 const socials = [
   {
@@ -38,18 +39,18 @@ export default function Contact() {
 
   const containerRef = useRef(null)
   const [activeHeight, setActiveHeight] = useState(0)
-  
+
   useEffect(() => {
     setActiveHeight(window.innerHeight)
   }, [])
-  
+
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
   // Cinematic Assembly Transforms
   const headerY = useTransform(progress, [0, 0.6], ['-30vh', '0vh'])
   const headerOpacity = useTransform(progress, [0, 0.5], [0, 1])
-  
+
   const formY = useTransform(progress, [0.2, 0.8], ['30vh', '0vh'])
   const formOpacity = useTransform(progress, [0.2, 0.7], [0, 1])
   const formScale = useTransform(progress, [0.2, 0.8], [0.9, 1])
@@ -77,10 +78,10 @@ export default function Contact() {
       style={{ height: '200vh' }}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center px-6">
-        
+
         {/* Section Label (Screen Relative) */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
-          <motion.p 
+          <motion.p
             className="font-sans text-cream/40 text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
             style={{ y: headerY, opacity: headerOpacity }}
           >
@@ -91,13 +92,16 @@ export default function Contact() {
         <div className="max-w-2xl w-full relative">
 
           {/* Header */}
-          <motion.div 
+          <motion.div
             className="mb-14 flex flex-col items-center text-center w-full"
             style={{ y: headerY, opacity: headerOpacity }}
           >
-            <h2 className="font-display text-[clamp(40px,6vw,80px)] leading-[0.95] text-cream mb-6">
-              Thank You for Visiting!
-            </h2>
+            <ElasticHeading
+              text="Thank You for Visiting!"
+              as="h2"
+              className="font-display text-[clamp(40px,6vw,80px)] leading-[0.95] text-cream mb-6"
+              style={{}}
+            />
             <p className="font-mono text-cream/70 text-sm leading-[1.9] max-w-md mx-auto">
               Have a project in mind, want to collaborate, or just want to say hi?
               I'd love to hear from you.
@@ -105,7 +109,7 @@ export default function Contact() {
           </motion.div>
 
           {/* Form */}
-          <motion.div 
+          <motion.div
             style={{ y: formY, opacity: formOpacity, scale: formScale }}
             className="w-full"
           >
@@ -191,13 +195,13 @@ export default function Contact() {
           </motion.div>
 
           {/* Social links */}
-          <motion.div 
+          <motion.div
             style={{ opacity: socialOpacity, scale: socialScale }}
           >
             <div className="mt-16 flex items-center gap-6 justify-center">
-              <div className="flex-1 h-[1px] bg-cream/10" />
+              <div className="flex-1 h-px bg-cream/10" />
               <span className="font-mono text-cream/40 text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
-              <div className="flex-1 h-[1px] bg-cream/10" />
+              <div className="flex-1 h-px bg-cream/10" />
             </div>
 
             <div className="flex justify-center gap-5 mt-8 pointer-events-auto">

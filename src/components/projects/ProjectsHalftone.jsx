@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { motion, useTransform, useMotionTemplate, useMotionValue } from 'framer-motion'
 
 // ── Constants — same grid/size as About, but cobalt dots on cream bg ─────────
 const GRID         = 18          // px between dot centres
@@ -14,7 +15,7 @@ const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
   `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
 )
 
-export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp, waveHeight: waveHeightProp = 0.25 }) {
+export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp, waveHeight: waveHeightProp = 0.25, lineWaveFront: lineWaveFrontProp, lineWaveHeight = 0.15, fadeProgress }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
@@ -137,6 +138,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
     let lastMoveTime = 0
     let lastWaveFront = -1
     let lastWaveHeight = -1
+    let lastLineWaveFront = -1
     let lastDrawTime = 0
 
     function draw() {
@@ -156,6 +158,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       // Read current wave position and height from motion value props
       const waveFront = waveFrontProp ? waveFrontProp.get() : 0
       const waveHeight = typeof waveHeightProp === 'number' ? waveHeightProp : (waveHeightProp ? waveHeightProp.get() : 0.25)
+      const lineWaveFront = lineWaveFrontProp ? lineWaveFrontProp.get() : 0
 
       const { x: mx, y: my } = mouseRef.current
       const hasMouse = mx > -9000
@@ -168,7 +171,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       }
 
       // Skip redraw if nothing has changed
-      if (!hasMouse && hoverStrength <= 0 && waveFront === lastWaveFront && waveHeight === lastWaveHeight) {
+      if (!hasMouse && hoverStrength <= 0 && waveFront === lastWaveFront && waveHeight === lastWaveHeight && lineWaveFront === lastLineWaveFront) {
         if (needsRedraw) {
           if (waveFront === 0) {
             ctx.clearRect(0, 0, w, h)
@@ -182,15 +185,16 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       needsRedraw = true
       lastWaveFront = waveFront
       lastWaveHeight = waveHeight
+      lastLineWaveFront = lineWaveFront
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(offCanvas, 0, 0)
 
-      drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists)
+      drawDynamicDots(waveFront, lineWaveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists)
     }
 
-    function drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists) {
+    function drawDynamicDots(waveFront, lineWaveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists) {
       // Early exit: if the wave has fully saturated the screen, draw all rows at max level
-      if (waveFront >= 1.0 + waveHeight && hoverStrength <= 0) {
+      if (waveFront >= 1.0 + waveHeight && hoverStrength <= 0 && lineWaveFront <= -1) {
         const maxLevel = LEVELS - 1;
         const sy = maxLevel * GRID;
         const fullWidth = cols * GRID;
@@ -227,7 +231,17 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
           }
           i++;
 
-          const totalInf = Math.max(hoverInf, waveInf);
+          let lineInf = 0;
+          if (lineWaveFront > -lineWaveHeight && lineWaveFront < 1.0 + lineWaveHeight) {
+            const lineNormalizedDist = row / rows;
+            const depth = Math.abs(lineWaveFront - lineNormalizedDist);
+            if (depth < lineWaveHeight) {
+              // smooth ease out from the center of the line wave
+              lineInf = Math.pow(1 - (depth / lineWaveHeight), 2);
+            }
+          }
+
+          const totalInf = Math.max(hoverInf, waveInf, lineInf);
 
           if (totalInf > 0) {
             const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))));
@@ -261,6 +275,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       isVisible.current = entry.isIntersecting
       if (entry.isIntersecting && !rafRef.current) {
         lastWaveFront = -1 // Force redraw on enter
+        lastLineWaveFront = -1
         rafRef.current = requestAnimationFrame(draw)
       }
     })
@@ -277,8 +292,15 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
     }
   }, [])
 
+  // When the thumbnails start fading away (progress 0.55 -> 0.63),
+  // turn the halftone into grayscale
+  const fallbackProgress = useMotionValue(0)
+  const validProgress = fadeProgress || fallbackProgress
+  const grayValue = useTransform(validProgress, [0.55, 0.63], [0, 1])
+  const filterStyle = useMotionTemplate`grayscale(${grayValue})`
+
   return (
-    <canvas
+    <motion.canvas
       ref={canvasRef}
       style={{
         position: 'absolute',
@@ -286,6 +308,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
+        filter: filterStyle,
       }}
     />
   )

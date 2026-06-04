@@ -3,6 +3,7 @@ import { motion, useTransform, useSpring, useMotionValue, animate } from 'framer
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
 import GalleryHalftone from './gallery/GalleryHalftone'
+import ElasticHeading from './hero/ElasticHeading'
 
 // ─── Artwork data ─────────────────────────────────────────────────
 const baseArtworks = [
@@ -130,7 +131,7 @@ function ViewAllCard({ index, revealProgress, exitProgress, className }) {
       whileHover={{ y: -5 }}
       className={`relative w-full h-full overflow-hidden rounded-xl cursor-pointer group bg-cream/5 border border-cream/10 flex flex-col items-center justify-center ${className || ''}`}
     >
-      <div className="absolute inset-0 bg-cobalt/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"></div>
+      <div className="absolute inset-0 bg-cream/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"></div>
       
       <div className="relative z-10 flex flex-col items-center justify-center h-12 overflow-hidden w-full">
         <p className="font-sans text-cream font-bold text-lg uppercase tracking-wide group-hover:-translate-y-10 transition-transform duration-500 absolute">
@@ -280,18 +281,21 @@ export default function Gallery() {
 
         {/* Big heading */}
         <div className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none z-20">
-          <motion.h2
-            className="font-display leading-[0.9] text-cream whitespace-nowrap"
+          <motion.div
             style={{
-              fontSize: 'clamp(56px,7vw,96px)',
               scale: headingScale,
               y: headingY,
               opacity: headingO,
               transformOrigin: 'center top',
             }}
           >
-            Recent Works
-          </motion.h2>
+            <ElasticHeading
+              text="Recent Works"
+              as="h2"
+              className="font-display leading-[0.9] text-cream whitespace-nowrap"
+              style={{ fontSize: 'clamp(56px,7vw,96px)' }}
+            />
+          </motion.div>
         </div>
 
         {/* Bento grid — Fixed to the screen, flips in place */}
@@ -328,8 +332,8 @@ export default function Gallery() {
       </motion.div>
 
       {/* ── Sticky pin frame ─────────────────────────────────────────── */}
-      <div className="sticky top-0 h-screen overflow-hidden bg-cobalt">
-        {/* Empty blue background scrolls up behind the fixed Grid and pins */}
+      <div className="sticky top-0 h-screen overflow-hidden bg-black">
+        {/* Empty black background scrolls up behind the fixed Grid and pins */}
       </div>
     </div>
   )

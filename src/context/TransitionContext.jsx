@@ -6,12 +6,19 @@ const TransitionContext = createContext()
 export function TransitionProvider({ children }) {
   const [isActive, setIsActive] = useState(false)
   const [clickPos, setClickPos] = useState({ x: 0, y: 0 })
+  const [transitionColor, setTransitionColor] = useState('var(--color-cobalt)')
   const lenisRef = useLenisContext()
   const isTransitioning = useRef(false)
 
-  const navigate = useCallback((href, options = {}, e = null) => {
+  const navigate = useCallback((href, options = {}, e = null, colorStr = null) => {
     if (isTransitioning.current) return
     isTransitioning.current = true
+
+    if (colorStr) {
+      setTransitionColor(colorStr)
+    } else {
+      setTransitionColor('var(--color-cobalt)')
+    }
 
     let clientX
     let clientY
@@ -47,7 +54,7 @@ export function TransitionProvider({ children }) {
   }, [lenisRef])
 
   return (
-    <TransitionContext.Provider value={{ isActive, navigate, clickPos }}>
+    <TransitionContext.Provider value={{ isActive, navigate, clickPos, transitionColor }}>
       {children}
     </TransitionContext.Provider>
   )
