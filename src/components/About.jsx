@@ -7,6 +7,7 @@ import { LEFT_COL, CENTER_COL, RIGHT_COL, MAIN_SKILLS, OTHER_SKILLS, DOT_BG } fr
 import ArtColumn from './about/ArtColumn'
 import SkillIcon from './about/SkillIcon'
 import ElasticHeading from './hero/ElasticHeading'
+import SectionNav from './SectionNav'
 
 // ─── SVG Gradient Map (duotone) ───────────────────────────────────────────────
 function DuotoneDefs() {
@@ -333,17 +334,15 @@ export default function About() {
 
 
         {/* ── Section Label ───────────────────────────────────────────────── */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
-          <motion.p
-            className="font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+          <SectionNav
+            currentSection="About"
             style={{
-              color: 'rgba(245,240,232,0.45)',
               y: labelY,
               opacity: labelO,
             }}
-          >
-            About
-          </motion.p>
+            defaultTextColor="rgba(245,240,232,0.45)"
+          />
         </div>
 
         {/* ── About — text panel ──────────────────────────────────────────── */}

@@ -13,7 +13,7 @@ const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
   `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
 )
 
-export default function GalleryHalftone({ pulseProgress: pulseProgressProp, headerOpacity: headerOpacityProp }) {
+export default function GalleryHalftone({ pulseProgress: pulseProgressProp, headerOpacity: headerOpacityProp, containerId }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
@@ -27,6 +27,20 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
     let needsRedraw = true
 
     function buildCells(W, H) {
+      let globalOffsetY = 0
+      if (containerId) {
+        const el = document.getElementById(containerId)
+        if (el) {
+          let current = el
+          let top = 0
+          while (current) {
+            top += current.offsetTop
+            current = current.offsetParent
+          }
+          globalOffsetY = top % GRID
+        }
+      }
+
       const cols  = Math.ceil(W / GRID) + 2
       const rows  = Math.ceil(H / GRID) + 2
 
@@ -38,7 +52,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           const cx = (col - 1) * GRID
-          const cy = (row - 1) * GRID
+          const cy = (row - 1) * GRID - globalOffsetY
 
           const oi = Math.round(Math.min(0.99, BASE_OPACITY) * 100)
           offCtx.beginPath()
@@ -81,7 +95,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
         }
       }
 
-      cellsRef.current = { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS }
+      cellsRef.current = { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY }
       needsRedraw = true
     }
 
@@ -121,7 +135,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
 
       const { x: mx, y: my } = mouseRef.current
       const hasMouse = mx > -9000
-      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS } = bag
+      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY } = bag
 
       if (now - lastMoveTime > 60) {
         hoverStrength = Math.max(0, hoverStrength - 0.03)
@@ -143,10 +157,10 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(offCanvas, 0, 0)
 
-      drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS)
+      drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY)
     }
 
-    function drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS) {
+    function drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY) {
       const maxDist = Math.sqrt((w / 2) ** 2 + (h / 2) ** 2)
       // Pulse thickness in pixels
       const pulseThickness = 500
@@ -181,7 +195,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       if (startRow > endRow) return
 
       for (let row = startRow; row <= endRow; row++) {
-        const rowY = (row - 1) * GRID
+        const rowY = (row - 1) * GRID - globalOffsetY
         const dyCenter = rowY - centerY
 
         // Determine if this row is uniformly affected by the pulse (no hover interference)

@@ -3,6 +3,7 @@ import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemp
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import ProjectsHalftone from './projects/ProjectsHalftone'
 import ElasticHeading from './hero/ElasticHeading'
+import SectionNav from './SectionNav'
 import { works } from '../data/projectsData'
 import { GitHubIcon, ExternalIcon, WrenchIcon } from './icons'
 import StackIcon from 'tech-stack-icons'
@@ -34,7 +35,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
 
   // Destructure shared transforms passed from parent to avoid redefining them 20 times
   const { blueOpacity, borderStyle, iconOpacity, contentOpacity: globalContentOpacity, grayscale, brightness, flattenFactor, scrollFade } = cardTransforms;
-  
+
   // For the active card, keep thumbnail fully visible. For inactive cards, fade out.
   const contentOpacity = useTransform([globalContentOpacity], ([co]) => isActive ? 1 : co);
   const thumbnailFilter = useMotionTemplate`grayscale(${grayscale}) brightness(${brightness})`;
@@ -86,19 +87,19 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`relative flex flex-col ${widthClass} shrink-0 px-2 snap-center ${zIndexClass}`}
       style={{ cursor: isActive ? 'auto' : 'pointer' }}
     >
-      <motion.div 
-        style={{ 
-          transformOrigin: 'center center', 
+      <motion.div
+        style={{
+          transformOrigin: 'center center',
           zIndex: isPrimary ? 50 : 10,
           opacity: secondaryFade
         }}
       >
-        <motion.article 
+        <motion.article
           id={isActiveIndex ? "primary-project-card" : undefined}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
@@ -119,21 +120,21 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
           }}
         >
           {/* Black Overlay */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-black pointer-events-none"
             style={{ opacity: blueOpacity, zIndex: 0 }}
           />
 
           {/* Thumbnail Image or Wrench Icon */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
             style={{ opacity: contentOpacity, translateZ: 10, filter: thumbnailFilter }}
           >
             {work.thumbnail ? (
-              <img 
-                src={work.thumbnail} 
-                alt={work.title} 
-                className="w-full h-full object-cover" 
+              <img
+                src={work.thumbnail}
+                alt={work.title}
+                className="w-full h-full object-cover"
               />
             ) : (
               <WrenchIcon className="w-16 h-16 md:w-24 md:h-24 text-ink/20 group-hover:text-cobalt/40 transition-colors duration-500" />
@@ -141,7 +142,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
           </motion.div>
 
           {/* Wash Overlay (simulates opacity without translucency) */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-cream pointer-events-none"
             animate={{ opacity: washOpacity }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
@@ -150,35 +151,35 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
 
           {/* Inner Shadow - kept from the previous article class */}
           <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] pointer-events-none z-10" />
-          <motion.div 
+          <motion.div
             style={{ translateZ: 30, opacity: iconOpacity }}
             className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
           >
-          {work.tech.map((t, index) => {
-            const mapped = TECH_ICON_MAP[t] || { custom: t.substring(0, 2).toUpperCase(), color: '#1B3A8C' };
-            return (
-              <div 
-                key={index}
-                className={`group/icon w-8 h-8 rounded-full border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
-                title={t}
-              >
-                {mapped.icon ? (
-                  <div className={`relative w-4 h-4 transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`}>
-                    <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-0' : 'opacity-100 group-hover/icon:opacity-0'}`}>
-                      <StackIcon name={mapped.icon} variant="grayscale" />
+            {work.tech.map((t, index) => {
+              const mapped = TECH_ICON_MAP[t] || { custom: t.substring(0, 2).toUpperCase(), color: '#1B3A8C' };
+              return (
+                <div
+                  key={index}
+                  className={`group/icon w-8 h-8 rounded-full border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
+                  title={t}
+                >
+                  {mapped.icon ? (
+                    <div className={`relative w-4 h-4 transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`}>
+                      <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-0' : 'opacity-100 group-hover/icon:opacity-0'}`}>
+                        <StackIcon name={mapped.icon} variant="grayscale" />
+                      </div>
+                      <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover/icon:opacity-100'}`}>
+                        <StackIcon name={mapped.icon} />
+                      </div>
                     </div>
-                    <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover/icon:opacity-100'}`}>
-                      <StackIcon name={mapped.icon} />
-                    </div>
-                  </div>
-                ) : (
-                  <span className={`font-bold text-[11px] transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
-                    {mapped.custom}
-                  </span>
-                )}
-              </div>
-            )
-          })}
+                  ) : (
+                    <span className={`font-bold text-[11px] transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
+                      {mapped.custom}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </motion.div>
         </motion.article>
       </motion.div>
@@ -192,9 +193,9 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
             y: isActive ? 0 : '-100%',
             opacity: isActive ? 1 : 0,
           }}
-          transition={{ 
-            type: 'spring', 
-            stiffness: 280, 
+          transition={{
+            type: 'spring',
+            stiffness: 280,
             damping: 28,
             delay: isActive ? 0.45 : 0,
           }}
@@ -208,7 +209,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
               {work.subtitle}
             </p>
           </div>
-          
+
           <div className="flex gap-3 shrink-0 mt-0.5">
             {work.github && (
               <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} on GitHub`}>
@@ -229,9 +230,9 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
 
 export default function Projects() {
   const containerRef = useRef(null)
-  
+
   const [activeHeight, setActiveHeight] = useState(0)
-  
+
   useEffect(() => {
     // A sticky top-0 h-screen inside a 400vh parent unpins when the section's bottom
     // exits the viewport: at scroll = offsetTop + (400vh - 100vh) = offsetTop + 300vh.
@@ -239,7 +240,7 @@ export default function Projects() {
     // activeHeight must equal that travel so rawProgress 0→1 maps to the full visible range.
     setActiveHeight(window.innerHeight * 3)
   }, [])
-  
+
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
@@ -253,7 +254,7 @@ export default function Projects() {
   const cardBrightness = useTransform(progress, [0.60, 0.63], [1, 0]);
   const cardFlattenFactor = useTransform(progress, [0.55, 0.63], [1, 0]);
   const cardScrollFade = useTransform(progress, [0.63, 0.67], [1, 0]);
-  
+
   const cardTransforms = {
     blueOpacity: cardBlueOpacity,
     borderStyle: cardBorderStyle,
@@ -323,7 +324,7 @@ export default function Projects() {
   // Multiply works array to create a wide runway for seamless infinite scrolling
   const infiniteWorks = [...works, ...works, ...works]
   const scrollRef = useRef(null)
-  
+
   const [activeIndex, setActiveIndex] = useState(works.length)
 
   useEffect(() => {
@@ -380,7 +381,7 @@ export default function Projects() {
         const l = Math.round(rect.left);
         const w = Math.round(rect.width);
         const h = Math.round(rect.height);
-        
+
         if (t !== lastTop || l !== lastLeft || w !== lastWidth || h !== lastHeight) {
           overlay.style.top = `${t}px`;
           overlay.style.left = `${l}px`;
@@ -439,10 +440,10 @@ export default function Projects() {
 
     // Silent seamless jump logic when idle
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
-    
+
     scrollTimeoutRef.current = setTimeout(() => {
       if (!scrollRef.current || isAnimatingRef.current) return
-      
+
       const currentEl = scrollRef.current
       const firstChild = currentEl.children[0];
       const setFirstChild = currentEl.children[works.length];
@@ -457,7 +458,7 @@ export default function Projects() {
       if (closestIndex < centerSetStart || closestIndex > centerSetEnd) {
         const currentSet = Math.floor(closestIndex / works.length);
         const setOffset = 1 - currentSet; // '1' is the index of Set 2
-        
+
         currentEl.scrollLeft += (setOffset * setWidth); // Silent jump
       }
     }, 150)
@@ -473,210 +474,209 @@ export default function Projects() {
       style={{ height: '400vh' }}
     >
       <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
-        
+
         {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
         <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} lineWaveFront={lineWaveFront} lineWaveHeight={0.15} fadeProgress={progress} />
 
         {/* All content - relative + z-[1] ensures it stacks above the canvas */}
         <div className="relative flex flex-col justify-center h-full" style={{ zIndex: 1 }}>
 
-        {/* Section Label */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
-          <motion.p 
-            className="font-sans text-cobalt text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
-            style={{ y: labelY, opacity: labelOpacity }}
-          >
-            Projects
-          </motion.p>
-        </div>
-
-        {/* Header - Tied to timeline scroll */}
-        <motion.div 
-          className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
-          style={{ y: headingY, opacity: headingOpacity, scale: headingScale }}
-        >
-          <ElasticHeading
-            text="Featured Projects"
-            as="h2"
-            className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink"
-            style={{}}
-          />
-        </motion.div>
-
-        {/* Native Horizontal Scroll Container */}
-        <motion.div 
-          className="w-full mt-32 relative flex justify-center items-center"
-          style={{ y: carouselY, opacity: carouselOpacity }}
-        >
-          
-          {/* Expanding Blue Screen Overlay (synced to active card via DOM rect) */}
-          <div ref={overlayRef} className="fixed z-40 pointer-events-none flex items-center justify-center">
-            <motion.div
-              className="w-full h-full"
-              style={{
-                scale: expandScale,
-                borderRadius: expandRadius,
-                opacity: expandOpacity,
-                backgroundColor: '#000000',
-                transformOrigin: 'center center',
-                willChange: 'transform, opacity',
-              }}
+          {/* Section Label */}
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+            <SectionNav
+              currentSection="Projects"
+              style={{ y: labelY, opacity: labelOpacity }}
+              defaultTextColor="var(--color-cobalt)"
             />
           </div>
 
-          <div 
-            ref={scrollRef}
-            onScroll={handleScroll}
-            onMouseMove={handleContainerMouseMove}
-            onMouseLeave={handleContainerMouseLeave}
-            className="flex items-center w-full overflow-x-hidden custom-scrollbar-hide"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', overflowY: 'visible', paddingBlock: '10rem' }}
+          {/* Header - Tied to timeline scroll */}
+          <motion.div
+            className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
+            style={{ y: headingY, opacity: headingOpacity, scale: headingScale }}
           >
-            {infiniteWorks.map((work, i) => {
-              const isActive = activeIndex !== -1 && (activeIndex % works.length) === (i % works.length);
-              
-              // Calculate relative distance mathematically wrapped around the modulo space
-              let clampedRel = 99;
-              if (activeIndex !== -1) {
-                const aMod = activeIndex % works.length;
-                const bMod = i % works.length;
-                let diff = bMod - aMod;
-                const half = Math.floor(works.length / 2);
-                if (diff > half) diff -= works.length;
-                if (diff < -half) diff += works.length;
-                clampedRel = diff;
-              }
-              const distForStyle = Math.abs(clampedRel);
-              
-              // Uniform width — active card appears larger via article scale, not DOM width
-              // (avoids layout reflow on every click which caused snappy jumping)
-              const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[38vw] xl:w-[28vw]';
+            <ElasticHeading
+              text="Featured Projects"
+              as="h2"
+              className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-cobalt"
+              style={{}}
+            />
+          </motion.div>
 
-              let translateX = 0;
-              let scale = distForStyle === 0 ? 1.18 : 1;
-              if (clampedRel === -1) { translateX = 20; scale = 0.85; }
-              else if (clampedRel === 1) { translateX = -20; scale = 0.85; }
-              else if (clampedRel <= -2) { translateX = 45; scale = 0.7; }
-              else if (clampedRel >= 2) { translateX = -45; scale = 0.7; }
-              
-              const washOpacity = distForStyle === 0 ? 0 : distForStyle === 1 ? 0.3 : 0.6;
-              const cardShadow = distForStyle === 0 ? '0 20px 60px rgba(0,0,0,0.15)' : 'none';
-              
-              let zIndexClass = 'z-0';
-              if (distForStyle === 0) zIndexClass = 'z-30';
-              else if (distForStyle === 1) zIndexClass = 'z-20';
-              else if (distForStyle === 2) zIndexClass = 'z-10';
+          {/* Native Horizontal Scroll Container */}
+          <motion.div
+            className="w-full mt-32 relative flex justify-center items-center"
+            style={{ y: carouselY, opacity: carouselOpacity }}
+          >
 
-              return (
-                <ProjectCard
-                  key={`${work.title}-${i}`}
-                  work={work}
-                  i={i}
-                  isActive={isActive}
-                  isActiveIndex={i === activeIndex}
-                  widthClass={widthClass}
-                  translateX={translateX}
-                  scale={scale}
-                  zIndexClass={zIndexClass}
-                  washOpacity={washOpacity}
-                  cardShadow={cardShadow}
-                  worksLength={works.length}
-                  distForStyle={distForStyle}
-                  clampedRel={clampedRel}
-                  globalSpringX={globalSpringX}
-                  globalSpringY={globalSpringY}
-                  progress={progress}
-                  cardTransforms={cardTransforms}
-                  onClick={() => {
-                    if (!isActive) {
-                      isAnimatingRef.current = true;
-                      setActiveIndex(i);
+            {/* Expanding Blue Screen Overlay (synced to active card via DOM rect) */}
+            <div ref={overlayRef} className="fixed z-40 pointer-events-none flex items-center justify-center">
+              <motion.div
+                className="w-full h-full"
+                style={{
+                  scale: expandScale,
+                  borderRadius: expandRadius,
+                  opacity: expandOpacity,
+                  backgroundColor: '#000000',
+                  transformOrigin: 'center center',
+                  willChange: 'transform, opacity',
+                }}
+              />
+            </div>
 
-                      // Cancel any running animation
-                      if (animationRef.current) { animationRef.current.stop(); animationRef.current = null; }
+            <div
+              ref={scrollRef}
+              onScroll={handleScroll}
+              onMouseMove={handleContainerMouseMove}
+              onMouseLeave={handleContainerMouseLeave}
+              className="flex items-center w-full overflow-x-hidden custom-scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', overflowY: 'visible', paddingBlock: '10rem' }}
+            >
+              {infiniteWorks.map((work, i) => {
+                const isActive = activeIndex !== -1 && (activeIndex % works.length) === (i % works.length);
 
-                      // Wait for React to repaint, then spring-animate scrollLeft
-                      requestAnimationFrame(() => {
+                // Calculate relative distance mathematically wrapped around the modulo space
+                let clampedRel = 99;
+                if (activeIndex !== -1) {
+                  const aMod = activeIndex % works.length;
+                  const bMod = i % works.length;
+                  let diff = bMod - aMod;
+                  const half = Math.floor(works.length / 2);
+                  if (diff > half) diff -= works.length;
+                  if (diff < -half) diff += works.length;
+                  clampedRel = diff;
+                }
+                const distForStyle = Math.abs(clampedRel);
+
+                // Uniform width — active card appears larger via article scale, not DOM width
+                // (avoids layout reflow on every click which caused snappy jumping)
+                const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[38vw] xl:w-[28vw]';
+
+                let translateX = 0;
+                let scale = distForStyle === 0 ? 1.18 : 1;
+                if (clampedRel === -1) { translateX = 20; scale = 0.85; }
+                else if (clampedRel === 1) { translateX = -20; scale = 0.85; }
+                else if (clampedRel <= -2) { translateX = 45; scale = 0.7; }
+                else if (clampedRel >= 2) { translateX = -45; scale = 0.7; }
+
+                const washOpacity = distForStyle === 0 ? 0 : distForStyle === 1 ? 0.3 : 0.6;
+                const cardShadow = distForStyle === 0 ? '0 20px 60px rgba(0,0,0,0.15)' : 'none';
+
+                let zIndexClass = 'z-0';
+                if (distForStyle === 0) zIndexClass = 'z-30';
+                else if (distForStyle === 1) zIndexClass = 'z-20';
+                else if (distForStyle === 2) zIndexClass = 'z-10';
+
+                return (
+                  <ProjectCard
+                    key={`${work.title}-${i}`}
+                    work={work}
+                    i={i}
+                    isActive={isActive}
+                    isActiveIndex={i === activeIndex}
+                    widthClass={widthClass}
+                    translateX={translateX}
+                    scale={scale}
+                    zIndexClass={zIndexClass}
+                    washOpacity={washOpacity}
+                    cardShadow={cardShadow}
+                    worksLength={works.length}
+                    distForStyle={distForStyle}
+                    clampedRel={clampedRel}
+                    globalSpringX={globalSpringX}
+                    globalSpringY={globalSpringY}
+                    progress={progress}
+                    cardTransforms={cardTransforms}
+                    onClick={() => {
+                      if (!isActive) {
+                        isAnimatingRef.current = true;
+                        setActiveIndex(i);
+
+                        // Cancel any running animation
+                        if (animationRef.current) { animationRef.current.stop(); animationRef.current = null; }
+
+                        // Wait for React to repaint, then spring-animate scrollLeft
                         requestAnimationFrame(() => {
-                          const el = scrollRef.current;
-                          const target = el?.children[i];
-                          if (!el || !target) return;
+                          requestAnimationFrame(() => {
+                            const el = scrollRef.current;
+                            const target = el?.children[i];
+                            if (!el || !target) return;
 
-                          const targetLeft = target.offsetLeft - (el.clientWidth / 2) + (target.offsetWidth / 2);
+                            const targetLeft = target.offsetLeft - (el.clientWidth / 2) + (target.offsetWidth / 2);
 
-                          animationRef.current = animate(el.scrollLeft, targetLeft, {
-                            type: 'spring',
-                            stiffness: 350,
-                            damping: 38,
-                            restDelta: 0.5,
-                            onUpdate: (v) => { el.scrollLeft = v; },
-                            onComplete: () => {
-                              animationRef.current = null;
-                              isAnimatingRef.current = false;
-                            },
+                            animationRef.current = animate(el.scrollLeft, targetLeft, {
+                              type: 'spring',
+                              stiffness: 350,
+                              damping: 38,
+                              restDelta: 0.5,
+                              onUpdate: (v) => { el.scrollLeft = v; },
+                              onComplete: () => {
+                                animationRef.current = null;
+                                isAnimatingRef.current = false;
+                              },
+                            });
                           });
                         });
-                      });
-                    }
-                  }}
+                      }
+                    }}
+                  />
+                )
+              })}
+            </div>
+          </motion.div>
+
+          {/* Progress Indicator */}
+          <motion.div
+            className="absolute bottom-60 left-0 right-0 flex justify-center items-center gap-2 md:gap-3 pointer-events-none"
+            style={{ y: bottomY, opacity: bottomOpacity }}
+          >
+            {works.map((_, index) => {
+              const isActive = activeIndex % works.length === index;
+              return (
+                <div
+                  key={`dot-${index}`}
+                  className={`rounded-full transition-all duration-500 ${isActive ? 'h-1.5 w-6 md:w-8 bg-cobalt' : 'h-1.5 w-1.5 bg-ink/20'}`}
                 />
               )
             })}
-          </div>
-        </motion.div>
-        
-        {/* Progress Indicator */}
-        <motion.div 
-          className="absolute bottom-60 left-0 right-0 flex justify-center items-center gap-2 md:gap-3 pointer-events-none"
-          style={{ y: bottomY, opacity: bottomOpacity }}
-        >
-          {works.map((_, index) => {
-            const isActive = activeIndex % works.length === index;
-            return (
-              <div 
-                key={`dot-${index}`} 
-                className={`rounded-full transition-all duration-500 ${isActive ? 'h-1.5 w-6 md:w-8 bg-cobalt' : 'h-1.5 w-1.5 bg-ink/20'}`}
-              />
-            )
-          })}
-        </motion.div>
+          </motion.div>
 
-        {/* All work link */}
-        <motion.div 
-          className="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none"
-          style={{ y: bottomY, opacity: bottomOpacity }}
-        >
-          <motion.a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-cobalt text-sm md:text-base inline-flex items-center gap-2 uppercase tracking-[0.15em] pointer-events-auto relative pb-1"
-            whileHover="hover"
-            initial="initial"
+          {/* All work link */}
+          <motion.div
+            className="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none"
+            style={{ y: bottomY, opacity: bottomOpacity }}
           >
-            <span>View all on GitHub</span>
-            <motion.span 
-              variants={{
-                initial: { x: 0 },
-                hover: { x: 8 }
-              }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            <motion.a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-cobalt text-sm md:text-base inline-flex items-center gap-2 uppercase tracking-[0.15em] pointer-events-auto relative pb-1"
+              whileHover="hover"
+              initial="initial"
             >
-              →
-            </motion.span>
-            
-            {/* Premium Animated Underline */}
-            <div className="absolute left-0 right-0 bottom-0 h-px bg-cobalt/30" />
-            <motion.div 
-              className="absolute left-0 right-0 bottom-0 h-[2px] bg-cobalt origin-left"
-              variants={{
-                initial: { scaleX: 0 },
-                hover: { scaleX: 1 }
-              }}
-              transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            />
-          </motion.a>
-        </motion.div>
+              <span>View all on GitHub</span>
+              <motion.span
+                variants={{
+                  initial: { x: 0 },
+                  hover: { x: 8 }
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                →
+              </motion.span>
+
+              {/* Premium Animated Underline */}
+              <div className="absolute left-0 right-0 bottom-0 h-px bg-cobalt/30" />
+              <motion.div
+                className="absolute left-0 right-0 bottom-0 h-[2px] bg-cobalt origin-left"
+                variants={{
+                  initial: { scaleX: 0 },
+                  hover: { scaleX: 1 }
+                }}
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              />
+            </motion.a>
+          </motion.div>
 
         </div>{/* end content wrapper */}
 
