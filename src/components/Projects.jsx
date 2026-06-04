@@ -228,24 +228,24 @@ export default function Projects() {
   const [activeHeight, setActiveHeight] = useState(0)
   
   useEffect(() => {
-    // A sticky top-0 h-screen inside a 300vh parent unpins when the section’s bottom
-    // exits the viewport: at scroll = offsetTop + (300vh - 100vh) = offsetTop + 200vh.
-    // So the sticky is only visible over 200vh of scroll travel.
+    // A sticky top-0 h-screen inside a 400vh parent unpins when the section's bottom
+    // exits the viewport: at scroll = offsetTop + (400vh - 100vh) = offsetTop + 300vh.
+    // So the sticky is only visible over 300vh of scroll travel.
     // activeHeight must equal that travel so rawProgress 0→1 maps to the full visible range.
-    setActiveHeight(window.innerHeight * 2)
+    setActiveHeight(window.innerHeight * 3)
   }, [])
   
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
-  // Common card transforms computed once instead of 20 times
-  const cardBlueOpacity = useTransform(progress, [0.60, 0.70], [0, 1]);
-  const cardBorderOpacity = useTransform(progress, [0.60, 0.70], [0.4, 0]);
+  // ── Card exit transforms (computed once, shared across all cards) ───────
+  const cardBlueOpacity = useTransform(progress, [0.55, 0.63], [0, 1]);
+  const cardBorderOpacity = useTransform(progress, [0.55, 0.63], [0.4, 0]);
   const cardBorderStyle = useMotionTemplate`1px solid rgba(255,255,255,${cardBorderOpacity})`;
-  const cardIconOpacity = useTransform(progress, [0.55, 0.60], [1, 0]);
-  const cardContentOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
-  const cardFlattenFactor = useTransform(progress, [0.60, 0.70], [1, 0]);
-  const cardScrollFade = useTransform(progress, [0.70, 0.75], [1, 0]);
+  const cardIconOpacity = useTransform(progress, [0.50, 0.55], [1, 0]);
+  const cardContentOpacity = useTransform(progress, [0.55, 0.63], [1, 0]);
+  const cardFlattenFactor = useTransform(progress, [0.55, 0.63], [1, 0]);
+  const cardScrollFade = useTransform(progress, [0.63, 0.67], [1, 0]);
   
   const cardTransforms = {
     blueOpacity: cardBlueOpacity,
@@ -256,24 +256,33 @@ export default function Projects() {
     scrollFade: cardScrollFade,
   };
 
-  // Staggered Entry / Exit logic (Solid on entry, sliding up)
-  const headerY = useTransform(progress, [0, 0.10], [120, 0]);
-  const headerOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+  // ── Staggered Entry — each element fades + slides in with its own timing ──
+  // Section label — enters first with a gentle rise
+  const labelY = useTransform(progress, [0.00, 0.06], [60, 0]);
+  const labelOpacity = useTransform(progress, [0.00, 0.06, 0.55, 0.63], [0, 1, 1, 0]);
 
-  const carouselY = useTransform(progress, [0.05, 0.15], [150, 0]);
+  // "Featured Projects" heading — enters second with scale + rise
+  const headingY = useTransform(progress, [0.04, 0.12], [120, 0]);
+  const headingOpacity = useTransform(progress, [0.04, 0.12, 0.55, 0.63], [0, 1, 1, 0]);
+  const headingScale = useTransform(progress, [0.04, 0.12], [0.92, 1]);
 
-  const bottomY = useTransform(progress, [0.10, 0.20], [100, 0]);
-  const bottomOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+  // Carousel — enters third
+  const carouselY = useTransform(progress, [0.08, 0.16], [150, 0]);
+  const carouselOpacity = useTransform(progress, [0.08, 0.16], [0, 1]);
+
+  // Bottom elements (dots + link) — enter last
+  const bottomY = useTransform(progress, [0.13, 0.20], [100, 0]);
+  const bottomOpacity = useTransform(progress, [0.13, 0.20, 0.55, 0.63], [0, 1, 1, 0]);
 
   // Halftone wave: rises slightly at first, then floods the entire screen right as the card turns blue
-  const projectsWaveFront = useTransform(progress, [0, 0.65, 0.69, 0.85], [0, 0.20, 0.20, 1.5])
+  const projectsWaveFront = useTransform(progress, [0, 0.52, 0.56, 0.73], [0, 0.20, 0.20, 1.5])
 
   // Expanding Overlay logic
   // By mapping the scale non-linearly (slowly to 5, then rapidly to 150),
   // the visible part of the expansion is stretched over a much larger scroll distance!
-  const expandScale = useTransform(progress, [0.75, 0.92, 1.0], [0.5, 5, 150]);
-  const expandRadius = useTransform(progress, [0.75, 0.85], [16, 0]);
-  const expandOpacity = useTransform(progress, [0.70, 0.75], [0, 1]);
+  const expandScale = useTransform(progress, [0.65, 0.82, 0.92], [0.5, 5, 150]);
+  const expandRadius = useTransform(progress, [0.65, 0.73], [16, 0]);
+  const expandOpacity = useTransform(progress, [0.60, 0.65], [0, 1]);
 
   // Global mouse tracking for parallax tilt across all cards
   const globalMouseX = useMotionValue(0);
@@ -318,7 +327,7 @@ export default function Projects() {
     let wasLocked = false;
     return progress.on('change', (v) => {
       if (scrollRef.current) {
-        const isLocked = v > 0.75;
+        const isLocked = v > 0.65;
         if (isLocked !== wasLocked) {
           scrollRef.current.style.pointerEvents = isLocked ? 'none' : 'auto';
           wasLocked = isLocked;
@@ -366,7 +375,7 @@ export default function Projects() {
 
     // Gate: start/stop the RAF loop based on progress
     const unsub = progress.on('change', (v) => {
-      const shouldRun = v > 0.65 && v < 0.95;
+      const shouldRun = v > 0.57 && v < 0.85;
       if (shouldRun && !overlaySyncActive.current) {
         overlaySyncActive.current = true;
         cachedCard = null; // re-lookup in case activeIndex changed
@@ -443,7 +452,7 @@ export default function Projects() {
       id="projects"
       ref={containerRef}
       className="bg-cream"
-      style={{ height: '300vh' }}
+      style={{ height: '400vh' }}
     >
       <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
         
@@ -457,7 +466,7 @@ export default function Projects() {
         <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
           <motion.p 
             className="font-sans text-cobalt text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
-            style={{ y: headerY, opacity: headerOpacity }}
+            style={{ y: labelY, opacity: labelOpacity }}
           >
             Projects
           </motion.p>
@@ -466,7 +475,7 @@ export default function Projects() {
         {/* Header - Tied to timeline scroll */}
         <motion.div 
           className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
-          style={{ y: headerY, opacity: headerOpacity }}
+          style={{ y: headingY, opacity: headingOpacity, scale: headingScale }}
         >
           <h2 className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink">
             Featured Projects
@@ -476,7 +485,7 @@ export default function Projects() {
         {/* Native Horizontal Scroll Container */}
         <motion.div 
           className="w-full mt-32 relative flex justify-center items-center"
-          style={{ y: carouselY }}
+          style={{ y: carouselY, opacity: carouselOpacity }}
         >
           
           {/* Expanding Blue Screen Overlay (synced to active card via DOM rect) */}
