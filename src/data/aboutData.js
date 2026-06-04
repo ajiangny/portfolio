@@ -1,6 +1,6 @@
-export const LEFT_COL   = ['/art/art1.webp', '/art/art5.webp', '/art/art6.webp', '/art/art4.webp'];
-export const CENTER_COL = ['/art/art5.webp', '/art/art4.webp', '/art/art1.webp', '/art/profile.webp'];
-export const RIGHT_COL  = ['/art/art2.webp', '/art/art6.webp', '/art/art4.webp', '/art/art2.webp'];
+export const LEFT_COL = ['/art/art10.webp', '/art/art11.webp', '/art/art12.webp', '/art/art9.webp'];
+export const CENTER_COL = ['/art/art5.webp', '/art/art4.webp', '/art/art6.webp', '/art/profile.webp'];
+export const RIGHT_COL = ['/art/art1.webp', '/art/art3.webp', '/art/art2.webp', '/art/art7.webp'];
 
 export const MAIN_SKILLS = [
   { name: 'React', icon: 'react' },

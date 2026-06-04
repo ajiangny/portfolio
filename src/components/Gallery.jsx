@@ -7,31 +7,27 @@ import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
 
 // ─── Artwork data ─────────────────────────────────────────────────
-const baseArtworks = [
-  { id: 1, title: 'Cosmic Nebula',    medium: 'Digital Art',          src: '/art/art1.png', aspect: 'portrait'  },
-  { id: 2, title: 'Crystal Geometry', medium: 'Digital Illustration', src: '/art/art2.png', aspect: 'landscape' },
-  { id: 3, title: 'Portrait Study',   medium: 'Digital Painting',     src: '/art/art3.png', aspect: 'portrait'  },
-  { id: 4, title: 'Floating Worlds',  medium: 'Concept Art',          src: '/art/art4.png', aspect: 'landscape' },
-]
-
 const artworks = [
-  ...baseArtworks,
-  { id: 5, title: 'Neon Nights',      medium: 'Photography',    src: '/art/art1.png', aspect: 'landscape' },
-  { id: 6, title: 'Abstract Forms',   medium: '3D Render',      src: '/art/art2.png', aspect: 'portrait'  },
-  { id: 7, title: 'Cyber City',       medium: 'Concept Art',    src: '/art/art3.png', aspect: 'landscape' },
-  { id: 8, title: 'Character Sketch', medium: 'Pencil',         src: '/art/art4.png', aspect: 'portrait'  },
-  { id: 9, title: 'Mountain Vista',   medium: 'Matte Painting', src: '/art/art1.png', aspect: 'landscape' },
+  { id: 13, title: '', medium: 'Digital Art', src: '/art/art13.webp', aspect: 'landscape' },
+  { id: 1, title: '', medium: 'Digital Art', src: '/art/art1.webp', aspect: 'portrait' },
+  { id: 2, title: '', medium: 'Digital Illustration', src: '/art/art2.webp', aspect: 'portrait' },
+  { id: 5, title: '', medium: 'Photography', src: '/art/art5.webp', aspect: 'landscape' },
+  { id: 7, title: '', medium: 'Digital Painting', src: '/art/art7.webp', aspect: 'portrait' },
+  { id: 4, title: '', medium: 'Concept Art', src: '/art/art4.webp', aspect: 'portrait' },
+  { id: 3, title: '', medium: 'Concept Art', src: '/art/art3.webp', aspect: 'portrait' },
+  { id: 6, title: '', medium: '3D Render', src: '/art/art6.webp', aspect: 'landscape' },
+  { id: 8, title: '', medium: 'Pencil', src: '/art/art8.webp', aspect: 'portrait' },
 ]
 
 // ─── Single gallery card ──────────────────────────────────────────
 function ArtCard({ art, index, revealProgress, exitProgress, className }) {
   // Entry stagger
   const inStart = 0.65 + index * 0.02
-  const inEnd   = inStart + 0.11
+  const inEnd = inStart + 0.11
 
   // Exit stagger
   const outStart = 0.80 + index * 0.015
-  const outEnd   = outStart + 0.08
+  const outEnd = outStart + 0.08
 
   const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
   const inRotateX = useTransform(revealProgress, [inStart, inEnd], [-90, 0])
@@ -58,16 +54,6 @@ function ArtCard({ art, index, revealProgress, exitProgress, className }) {
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
         />
-        <div className="gallery-overlay absolute inset-0 flex items-end p-5 bg-linear-to-t from-black/60 to-transparent">
-          <div>
-            <p className="font-sans text-cream font-bold text-sm uppercase tracking-wide">
-              {art.title}
-            </p>
-            <p className="font-mono text-cream/70 text-[10px] mt-0.5 uppercase tracking-wider">
-              {art.medium}
-            </p>
-          </div>
-        </div>
       </motion.div>
 
       {/* Lightbox */}
@@ -111,11 +97,11 @@ function ArtCard({ art, index, revealProgress, exitProgress, className }) {
 function ViewAllCard({ index, revealProgress, exitProgress, className }) {
   // Entry stagger
   const inStart = 0.65 + index * 0.02
-  const inEnd   = inStart + 0.11
+  const inEnd = inStart + 0.11
 
   // Exit stagger
   const outStart = 0.80 + index * 0.015
-  const outEnd   = outStart + 0.08
+  const outEnd = outStart + 0.08
 
   const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
   const inRotateX = useTransform(revealProgress, [inStart, inEnd], [-90, 0])
@@ -133,7 +119,7 @@ function ViewAllCard({ index, revealProgress, exitProgress, className }) {
       className={`relative w-full h-full overflow-hidden rounded-xl cursor-pointer group bg-cream/5 border border-cream/10 flex flex-col items-center justify-center ${className || ''}`}
     >
       <div className="absolute inset-0 bg-cream/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"></div>
-      
+
       <div className="relative z-10 flex flex-col items-center justify-center h-12 overflow-hidden w-full">
         <p className="font-sans text-cream font-bold text-lg uppercase tracking-wide group-hover:-translate-y-10 transition-transform duration-500 absolute">
           View All
@@ -142,9 +128,9 @@ function ViewAllCard({ index, revealProgress, exitProgress, className }) {
           Coming Soon
         </p>
       </div>
-      
+
       {/* Abstract arrow */}
-      <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full border border-cream/20 flex items-center justify-center group-hover:bg-cream group-hover:text-cobalt transition-colors duration-500">
+      <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full border border-cream/20 flex items-center justify-center group-hover:bg-cream group-hover:text-ink transition-colors duration-500">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h14"></path>
           <path d="M12 5l7 7-7 7"></path>
@@ -170,7 +156,7 @@ function ViewAllCard({ index, revealProgress, exitProgress, className }) {
 // ─────────────────────────────────────────────────────────────────
 export default function Gallery() {
   const containerRef = useRef(null)
-  const lenisRef     = useLenisContext()
+  const lenisRef = useLenisContext()
 
   const [activeHeight, setActiveHeight] = useState(0)
   useEffect(() => {
@@ -179,7 +165,7 @@ export default function Gallery() {
   }, [])
 
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
-  const progress    = useSpring(rawProgress, { stiffness: 240, damping: 30 })
+  const progress = useSpring(rawProgress, { stiffness: 240, damping: 30 })
 
   // ── Scroll gap progress ──────────────────────────────────────────
   // Track scroll through the 100vh gap before Gallery pins.
@@ -194,17 +180,17 @@ export default function Gallery() {
       const check = ({ scroll }) => {
         const el = containerRef.current
         if (!el) return
-        
+
         const start = el.offsetTop - 1.45 * window.innerHeight
         const end = el.offsetTop
-        
+
         let gp = 0
         if (scroll >= start && scroll <= end) {
           gp = (scroll - start) / (end - start)
         } else if (scroll > end) {
           gp = 1
         }
-        
+
         gapProgressRaw.set(gp)
       }
 
@@ -237,19 +223,19 @@ export default function Gallery() {
 
   // ── Big heading: rises from bottom, shrinks from scale 15 → 1 ──
   const headingScale = useTransform(revealRaw, [0.00, 0.30], [15, 1])
-  const headingY    = useTransform(revealRaw, [0.00, 0.30], ['100vh', '0vh'])
-  const headingO    = useTransform(revealRaw, [0.00, 0.10], [0, 1])
+  const headingY = useTransform(revealRaw, [0.00, 0.30], ['100vh', '0vh'])
+  const headingO = useTransform(revealRaw, [0.00, 0.10], [0, 1])
 
   const bentoClasses = [
-    'col-span-2 row-span-2 md:col-span-2 md:row-span-2', // 0
-    'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 1
+    'col-span-2 row-span-1 md:col-span-2 md:row-span-1', // 0
+    'col-span-1 row-span-2 md:col-span-1 md:row-span-2', // 1
     'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 2
-    'col-span-1 row-span-2 md:col-span-1 md:row-span-2', // 3
+    'col-span-2 row-span-1 md:col-span-2 md:row-span-1', // 3
     'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 4
-    'col-span-1 row-span-1 md:col-span-2 md:row-span-1', // 5
-    'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 6
-    'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 7
-    'col-span-2 row-span-1 md:col-span-2 md:row-span-1', // 8
+    'col-span-1 row-span-2 md:col-span-1 md:row-span-2', // 5
+    'col-span-1 row-span-2 md:col-span-1 md:row-span-2', // 6
+    'col-span-2 row-span-1 md:col-span-2 md:row-span-1', // 7
+    'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 8
   ]
 
   return (
@@ -299,31 +285,31 @@ export default function Gallery() {
         </div>
 
         {/* Bento grid — Fixed to the screen, flips in place */}
-        <motion.div 
+        <motion.div
           className="absolute inset-x-0 bottom-4 md:bottom-8 top-[20vh] md:top-[22vh] flex flex-col items-center justify-start px-4 md:px-6"
           style={{ pointerEvents: gridPointerEvents }}
         >
           <div className="max-w-[95vw] lg:max-w-7xl w-full h-full relative">
-            <motion.div 
-              className="w-full h-full grid grid-cols-2 md:grid-cols-4 grid-rows-8 md:grid-rows-4 gap-2 md:gap-4"
+            <motion.div
+              className="w-full h-full grid grid-cols-2 md:grid-cols-4 grid-rows-8 md:grid-rows-4 grid-flow-row-dense gap-2 md:gap-4"
               style={{ perspective: 1200 }}
             >
               {artworks.slice(0, 9).map((art, index) => (
-                <ArtCard 
-                  key={art.id} 
-                  art={art} 
-                  index={index} 
-                  revealProgress={revealRaw} 
+                <ArtCard
+                  key={art.id}
+                  art={art}
+                  index={index}
+                  revealProgress={revealRaw}
                   exitProgress={progress}
-                  className={bentoClasses[index]} 
+                  className={bentoClasses[index]}
                 />
               ))}
-              
-              <ViewAllCard 
-                index={9} 
-                revealProgress={revealRaw} 
+
+              <ViewAllCard
+                index={9}
+                revealProgress={revealRaw}
                 exitProgress={progress}
-                className="col-span-2 row-span-1 md:col-span-1 md:row-span-1" 
+                className="col-span-2 row-span-1 md:col-span-1 md:row-span-1"
               />
             </motion.div>
           </div>
