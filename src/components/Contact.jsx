@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react'
-import { motion, useTransform, useSpring } from 'framer-motion'
-import useScrollTimeline from '../hooks/useScrollTimeline'
+import { useRef, useState } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import ElasticHeading from './hero/ElasticHeading'
+import SectionNav from './SectionNav'
+import GalleryHalftone from './gallery/GalleryHalftone'
 
 const socials = [
   {
@@ -33,30 +34,45 @@ const socials = [
   },
 ]
 
+// Staggered fade+rise variants
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 32 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 260, damping: 28 },
+  },
+}
+
 export default function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' })
   const [status, setStatus] = useState('idle')
 
-  const containerRef = useRef(null)
-  const [activeHeight, setActiveHeight] = useState(0)
+  const sectionRef = useRef(null)
 
-  useEffect(() => {
-    setActiveHeight(window.innerHeight)
-  }, [])
+  // Drive SectionNav entry — same pattern as Projects
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'start 0.4'],
+  })
+  const labelY = useTransform(scrollYProgress, [0, 1], [60, 0])
+  const labelOpacity = useTransform(scrollYProgress, [0, 1], [0, 1])
 
-  const rawProgress = useScrollTimeline(containerRef, activeHeight)
-  const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
-
-  // Cinematic Assembly Transforms
-  const headerY = useTransform(progress, [0, 0.6], ['-30vh', '0vh'])
-  const headerOpacity = useTransform(progress, [0, 0.5], [0, 1])
-
-  const formY = useTransform(progress, [0.2, 0.8], ['30vh', '0vh'])
-  const formOpacity = useTransform(progress, [0.2, 0.7], [0, 1])
-  const formScale = useTransform(progress, [0.2, 0.8], [0.9, 1])
-
-  const socialOpacity = useTransform(progress, [0.5, 1], [0, 1])
-  const socialScale = useTransform(progress, [0.5, 1], [0.8, 1])
+  // Halftone: fixed layer, only visible when Contact is in the viewport
+  // Starts fading in as Contact's top enters the bottom of the viewport,
+  // and fades out as Contact's bottom leaves the top.
+  const { scrollYProgress: halftoneProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start end', 'end start'],
+  })
+  const halftoneOpacity = useTransform(halftoneProgress, [0, 0.04, 0.96, 1], [0, 1, 1, 0])
 
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -64,7 +80,6 @@ export default function Contact() {
   const submit = async (e) => {
     e.preventDefault()
     setStatus('sending')
-    console.log('Form submitted:', form)
     await new Promise((r) => setTimeout(r, 1000))
     setStatus('sent')
     setForm({ name: '', email: '', message: '' })
@@ -73,49 +88,83 @@ export default function Contact() {
   return (
     <div
       id="contact"
-      ref={containerRef}
-      className="bg-cobalt"
-      style={{ height: '200vh' }}
+      ref={sectionRef}
+      className="relative overflow-hidden" style={{ backgroundColor: '#000' }}
     >
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center px-6">
+      {/* Halftone: position:fixed so it shares the same coordinate space
+          as Gallery's fixed halftone — grid is perfectly continuous.
+          Opacity gates it to only when Contact is in the viewport. */}
+      <motion.div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1,
+          pointerEvents: 'none',
+          opacity: halftoneOpacity,
+        }}
+      >
+        <GalleryHalftone />
+      </motion.div>
 
-        {/* Section Label (Screen Relative) */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+      {/* SectionNav — absolute, fully isolated, guaranteed on top */}
+      <div
+        className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-auto"
+        style={{ zIndex: 50 }}
+      >
+        <SectionNav
+          currentSection="Contact"
+          style={{ y: labelY, opacity: labelOpacity }}
+          defaultTextColor="rgba(245,240,232,0.4)"
+        />
+      </div>
+
+      {/* Heading — absolute top-24, matching Gallery/Projects */}
+      <motion.div
+        className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
+        style={{ zIndex: 2 }}
+        initial={{ opacity: 0, y: 32 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 28, delay: 0.05 }}
+      >
+        <ElasticHeading
+          text="Let's Talk."
+          as="h2"
+          className="font-display text-cream leading-[0.9]"
+          style={{ fontSize: 'clamp(56px, 7vw, 96px)' }}
+        />
+      </motion.div>
+
+      {/* ── Main content — pointer-events-none on wrapper, re-enabled on children ── */}
+      <div
+        className="relative min-h-screen flex flex-col items-center justify-center px-6 py-32 pointer-events-none"
+        style={{ zIndex: 2 }}
+      >
+        <motion.div
+          className="w-full max-w-2xl"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          {/* Tagline */}
           <motion.p
-            className="font-sans text-cream/40 text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
-            style={{ y: headerY, opacity: headerOpacity }}
+            variants={itemVariants}
+            className="font-mono text-cream/60 text-sm leading-[1.9] text-center mb-10 pointer-events-none"
           >
-            Contact
+            Have a project in mind, want to collaborate, or just say hi?<br />
+            I'd love to hear from you.
           </motion.p>
-        </div>
-
-        <div className="max-w-2xl w-full relative">
-
-          {/* Header */}
-          <motion.div
-            className="mb-14 flex flex-col items-center text-center w-full"
-            style={{ y: headerY, opacity: headerOpacity }}
-          >
-            <ElasticHeading
-              text="Thank You for Visiting!"
-              as="h2"
-              className="font-display text-[clamp(40px,6vw,80px)] leading-[0.95] text-cream mb-6"
-              style={{}}
-            />
-            <p className="font-mono text-cream/70 text-sm leading-[1.9] max-w-md mx-auto">
-              Have a project in mind, want to collaborate, or just want to say hi?
-              I'd love to hear from you.
-            </p>
-          </motion.div>
 
           {/* Form */}
-          <motion.div
-            style={{ y: formY, opacity: formOpacity, scale: formScale }}
-            className="w-full"
-          >
+          <motion.div variants={itemVariants} className="pointer-events-auto">
             {status === 'sent' ? (
-              <div className="text-center py-12 border border-white/10 bg-white/5 rounded-2xl shadow-sm backdrop-blur-sm">
-                <div className="w-14 h-14 rounded-full bg-cream/10 border border-white/20 flex items-center justify-center mx-auto mb-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-14 border border-white/10 bg-white/5 rounded-2xl shadow-sm backdrop-blur-sm"
+              >
+                <div className="w-14 h-14 rounded-full bg-cream/10 border border-white/20 flex items-center justify-center mx-auto mb-5">
                   <svg className="w-7 h-7 text-cream" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -128,10 +177,10 @@ export default function Contact() {
                 >
                   Send another →
                 </button>
-              </div>
+              </motion.div>
             ) : (
-              <form onSubmit={submit} className="space-y-6">
-                <div className="grid sm:grid-cols-2 gap-6">
+              <form onSubmit={submit} className="space-y-5">
+                <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label htmlFor="contact-name" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                       Name
@@ -176,7 +225,7 @@ export default function Contact() {
                     placeholder="Tell me about your project or idea..."
                     value={form.message}
                     onChange={handle}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-cream font-mono text-sm placeholder-cream/30 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-colors resize-none custom-scrollbar"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-cream font-mono text-sm placeholder-cream/30 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-colors resize-none"
                   />
                 </div>
 
@@ -184,7 +233,7 @@ export default function Contact() {
                   id="contact-submit"
                   type="submit"
                   disabled={status === 'sending'}
-                  className="relative group flex items-center justify-center border border-[#f5f0e826] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#f5f0e866] hover:-translate-y-1 cursor-pointer w-full rounded-2xl py-5 mt-6 disabled:opacity-50 disabled:pointer-events-none"
+                  className="relative group flex items-center justify-center border border-[#f5f0e826] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#f5f0e866] hover:-translate-y-1 cursor-pointer w-full rounded-2xl py-5 mt-2 disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <span className="relative z-10 font-sans font-bold text-sm tracking-[0.2em] uppercase text-[rgba(255,255,255,0.75)] transition-colors duration-300 group-hover:text-cobalt">
                     {status === 'sending' ? 'Sending...' : 'Send Message'}
@@ -195,16 +244,13 @@ export default function Contact() {
           </motion.div>
 
           {/* Social links */}
-          <motion.div
-            style={{ opacity: socialOpacity, scale: socialScale }}
-          >
-            <div className="mt-16 flex items-center gap-6 justify-center">
+          <motion.div variants={itemVariants} className="mt-14 pointer-events-none">
+            <div className="flex items-center gap-6 justify-center mb-7">
               <div className="flex-1 h-px bg-cream/10" />
               <span className="font-mono text-cream/40 text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
               <div className="flex-1 h-px bg-cream/10" />
             </div>
-
-            <div className="flex justify-center gap-5 mt-8 pointer-events-auto">
+            <div className="flex justify-center gap-5 pointer-events-auto">
               {socials.map(({ label, href, icon }) => (
                 <a
                   key={label}
@@ -220,7 +266,14 @@ export default function Contact() {
             </div>
           </motion.div>
 
-        </div>
+          {/* Bottom breathing room */}
+          <motion.p
+            variants={itemVariants}
+            className="mt-16 text-center font-mono text-cream/20 text-[10px] tracking-[0.3em] uppercase pointer-events-none"
+          >
+            Andrew Jiang &mdash; {new Date().getFullYear()}
+          </motion.p>
+        </motion.div>
       </div>
     </div>
   )

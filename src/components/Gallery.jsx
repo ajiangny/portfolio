@@ -4,6 +4,7 @@ import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
 import GalleryHalftone from './gallery/GalleryHalftone'
 import ElasticHeading from './hero/ElasticHeading'
+import SectionNav from './SectionNav'
 
 // ─── Artwork data ─────────────────────────────────────────────────
 const baseArtworks = [
@@ -270,13 +271,12 @@ export default function Gallery() {
         <GalleryHalftone pulseProgress={pulseProgress} headerOpacity={headerOpacity} />
 
         {/* Small label */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
-          <motion.p
-            className="font-sans text-cream/40 text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+          <SectionNav
+            currentSection="Gallery"
             style={{ y: labelY, opacity: labelO }}
-          >
-            Gallery
-          </motion.p>
+            defaultTextColor="rgba(245,240,232,0.4)"
+          />
         </div>
 
         {/* Big heading */}

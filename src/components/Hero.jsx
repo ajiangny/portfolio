@@ -16,7 +16,7 @@ const navLinks = [
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
 const HOVER_COLORS = [
-  { rgb: [14, 165, 233] },   // About: saturated sky blue
+  { rgb: [37, 79, 193] },    // About: brighter cobalt
   { rgb: [245, 240, 232] },  // Projects: cream
   { rgb: [0, 0, 0] },        // Gallery: black
   { rgb: [245, 240, 232] },  // Contact: cream (inverse of Gallery)
@@ -87,6 +87,12 @@ export default function Hero() {
         target.bgR = 0; target.bgG = 0; target.bgB = 0;
         target.txtR = 0; target.txtG = 0; target.txtB = 0;
       }
+    } else {
+      // Smoothly transition base cobalt to bright cobalt as we scroll down to About
+      const p = Math.max(0, Math.min(1, latestScroll));
+      target.r = 27 + (37 - 27) * p;
+      target.g = 58 + (79 - 58) * p;
+      target.b = 140 + (193 - 140) * p;
     }
 
     if (animationRef.current) animationRef.current.stop()
