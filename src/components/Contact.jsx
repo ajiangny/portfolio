@@ -73,31 +73,32 @@ export default function Contact() {
     <div
       id="contact"
       ref={containerRef}
-      className="border-t-2 border-ink bg-cream-light"
+      className="bg-cobalt"
       style={{ height: '200vh' }}
     >
-      <div className="sticky top-0 h-screen overflow-hidden flex flex-col justify-center px-6">
-        <div className="max-w-2xl mx-auto w-full relative">
-          
-          {/* Section Label */}
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
-            <motion.p 
-              className="font-sans text-cobalt text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
-              style={{ y: headerY, opacity: headerOpacity }}
-            >
-              Contact
-            </motion.p>
-          </div>
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col items-center justify-center px-6">
+        
+        {/* Section Label (Screen Relative) */}
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none z-20">
+          <motion.p 
+            className="font-sans text-cream/40 text-sm font-semibold tracking-[0.28em] uppercase whitespace-nowrap"
+            style={{ y: headerY, opacity: headerOpacity }}
+          >
+            Contact
+          </motion.p>
+        </div>
+
+        <div className="max-w-2xl w-full relative">
 
           {/* Header */}
           <motion.div 
-            className="mb-10 flex flex-col items-center text-center mt-6"
+            className="mb-14 flex flex-col items-center text-center w-full"
             style={{ y: headerY, opacity: headerOpacity }}
           >
-            <h2 className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink mb-3">
-              Contact
+            <h2 className="font-display text-[clamp(40px,6vw,80px)] leading-[0.95] text-cream mb-6">
+              Thank You for Visiting!
             </h2>
-            <p className="font-mono text-text text-sm leading-[1.9] max-w-md">
+            <p className="font-mono text-cream/70 text-sm leading-[1.9] max-w-md mx-auto">
               Have a project in mind, want to collaborate, or just want to say hi?
               I'd love to hear from you.
             </p>
@@ -106,28 +107,29 @@ export default function Contact() {
           {/* Form */}
           <motion.div 
             style={{ y: formY, opacity: formOpacity, scale: formScale }}
+            className="w-full"
           >
             {status === 'sent' ? (
-              <div className="text-center py-12 border-2 border-ink bg-cream shadow-sm">
-                <div className="w-14 h-14 border-2 border-cobalt flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-7 h-7 text-cobalt" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="text-center py-12 border border-white/10 bg-white/5 rounded-2xl shadow-sm backdrop-blur-sm">
+                <div className="w-14 h-14 rounded-full bg-cream/10 border border-white/20 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-cream" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="font-display text-2xl text-cobalt mb-2">Sent!</p>
-                <p className="font-mono text-text text-xs mb-6">Thanks for reaching out. I'll get back to you soon.</p>
+                <p className="font-display text-2xl text-cream mb-2">Sent!</p>
+                <p className="font-mono text-cream/70 text-xs mb-6">Thanks for reaching out. I'll get back to you soon.</p>
                 <button
                   onClick={() => setStatus('idle')}
-                  className="font-mono text-cobalt hover:text-cobalt-dark text-xs transition-colors uppercase tracking-widest"
+                  className="font-mono text-cream/50 hover:text-cream text-xs transition-colors uppercase tracking-widest cursor-pointer"
                 >
                   Send another →
                 </button>
               </div>
             ) : (
-              <form onSubmit={submit} className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
+              <form onSubmit={submit} className="space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="contact-name" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                    <label htmlFor="contact-name" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                       Name
                     </label>
                     <input
@@ -138,11 +140,11 @@ export default function Contact() {
                       placeholder="Jane Doe"
                       value={form.name}
                       onChange={handle}
-                      className="form-input"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-cream font-mono text-sm placeholder-cream/30 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-colors"
                     />
                   </div>
                   <div>
-                    <label htmlFor="contact-email" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                    <label htmlFor="contact-email" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                       Email
                     </label>
                     <input
@@ -153,13 +155,13 @@ export default function Contact() {
                       placeholder="jane@example.com"
                       value={form.email}
                       onChange={handle}
-                      className="form-input"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-cream font-mono text-sm placeholder-cream/30 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-colors"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="font-sans text-ink text-[10px] uppercase tracking-[0.2em] block mb-1.5 font-bold">
+                  <label htmlFor="contact-message" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                     Message
                   </label>
                   <textarea
@@ -170,7 +172,7 @@ export default function Contact() {
                     placeholder="Tell me about your project or idea..."
                     value={form.message}
                     onChange={handle}
-                    className="form-input resize-none custom-scrollbar"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-5 py-4 text-cream font-mono text-sm placeholder-cream/30 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-colors resize-none custom-scrollbar"
                   />
                 </div>
 
@@ -178,9 +180,11 @@ export default function Contact() {
                   id="contact-submit"
                   type="submit"
                   disabled={status === 'sending'}
-                  className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="relative group flex items-center justify-center border border-[#f5f0e826] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#f5f0e866] hover:-translate-y-1 cursor-pointer w-full rounded-2xl py-5 mt-6 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {status === 'sending' ? 'Sending...' : 'Send Message'}
+                  <span className="relative z-10 font-sans font-bold text-sm tracking-[0.2em] uppercase text-[rgba(255,255,255,0.75)] transition-colors duration-300 group-hover:text-cobalt">
+                    {status === 'sending' ? 'Sending...' : 'Send Message'}
+                  </span>
                 </button>
               </form>
             )}
@@ -190,13 +194,13 @@ export default function Contact() {
           <motion.div 
             style={{ opacity: socialOpacity, scale: socialScale }}
           >
-            <div className="mt-10 flex items-center gap-6 justify-center">
-              <div className="flex-1 h-[1.5px] bg-ink/15" />
-              <span className="font-mono text-text-light text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
-              <div className="flex-1 h-[1.5px] bg-ink/15" />
+            <div className="mt-16 flex items-center gap-6 justify-center">
+              <div className="flex-1 h-[1px] bg-cream/10" />
+              <span className="font-mono text-cream/40 text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
+              <div className="flex-1 h-[1px] bg-cream/10" />
             </div>
 
-            <div className="flex justify-center gap-4 mt-6 pointer-events-auto">
+            <div className="flex justify-center gap-5 mt-8 pointer-events-auto">
               {socials.map(({ label, href, icon }) => (
                 <a
                   key={label}
@@ -204,7 +208,7 @@ export default function Contact() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="w-11 h-11 border-2 border-ink flex items-center justify-center text-text hover:text-cobalt hover:border-cobalt hover:bg-cobalt-pale transition-all duration-200"
+                  className="w-11 h-11 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-cream/70 hover:text-cobalt hover:bg-white/90 hover:border-white/90 transition-all duration-300 hover:-translate-y-1"
                 >
                   {icon}
                 </a>

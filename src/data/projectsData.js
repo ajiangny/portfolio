@@ -5,7 +5,7 @@ export const works = [
     tech: ['React', 'Tailwind CSS', 'Framer Motion', 'Vite'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/portfolio_mockup.png'
+    thumbnail: '/thumbnail/portfolio.png'
   },
   {
     title: 'Pear Protocol',
@@ -13,7 +13,7 @@ export const works = [
     tech: ['Python', 'Photoshop', 'Automation scripts'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/pear_mockup.png'
+    thumbnail: '/thumbnail/pear.webp'
   },
   {
     title: 'HackKnight 2026',
@@ -21,7 +21,7 @@ export const works = [
     tech: ['Next.js', 'TypeScript', 'Tailwind', 'Framer Motion', 'Express'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/hackknight_mockup.png'
+    thumbnail: '/thumbnail/hackknight.webp'
   },
   {
     title: 'Art Fundamentals Tutor',
@@ -29,7 +29,7 @@ export const works = [
     tech: ['React', 'TypeScript', 'Three.js', 'Gemini API'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/art_tutor_mockup.png'
+    thumbnail: '/thumbnail/artfundamental.png'
   },
   {
     title: 'Bank Statement Parser',
@@ -37,7 +37,7 @@ export const works = [
     tech: ['Python', 'SQLite', 'Flet'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/bank_parser_mockup.png'
+    thumbnail: null
   },
   {
     title: 'Code For All Brand',
@@ -45,6 +45,6 @@ export const works = [
     tech: ['Figma', 'Illustrator', 'Design'],
     github: 'https://github.com',
     live: '#',
-    image: '/art/code_for_all_mockup.png'
+    thumbnail: '/thumbnail/CFA.webp'
   }
 ];

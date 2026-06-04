@@ -123,6 +123,7 @@ export default function ProfileHalftone({ scrollProgress, scrollRange, waveHeigh
     let hoverStrength = 0
     let lastMoveTime = 0
     let lastWaveFront = -1
+    let lastDrawTime = 0
 
     function draw() {
       if (!isVisible.current) {
@@ -132,6 +133,11 @@ export default function ProfileHalftone({ scrollProgress, scrollRange, waveHeigh
       rafRef.current = requestAnimationFrame(draw)
       const bag = cellsRef.current
       if (!bag || w === 0 || h === 0) return
+
+      // Throttle to ~30fps — halftone dots don't need 60fps
+      const now = performance.now()
+      if (now - lastDrawTime < 30) return
+      lastDrawTime = now
 
       let waveFront = 0;
       if (waveFrontProp) {
@@ -146,7 +152,6 @@ export default function ProfileHalftone({ scrollProgress, scrollRange, waveHeigh
       const hasMouse = mx > -9000
       const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY } = bag
 
-      const now = performance.now()
       if (now - lastMoveTime > 60) {
         hoverStrength = Math.max(0, hoverStrength - 0.03)
       } else {

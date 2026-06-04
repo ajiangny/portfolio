@@ -53,6 +53,11 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       offCanvas.height = H
       const offCtx = offCanvas.getContext('2d')
 
+      const waveDists = new Float32Array(count)
+      const maxDistFromEdge = Math.sqrt((W / 2) ** 2 + (H / 2) ** 2);
+      const centerX = W / 2;
+      const centerY = H / 2;
+
       let i = 0
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -68,6 +73,20 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
           offCtx.arc(cx, cy, DOT_R_MIN, 0, Math.PI * 2)
           offCtx.fillStyle = FILL_CACHE[oi]
           offCtx.fill()
+        }
+      }
+
+      // Precompute normalized distances for the wave effect
+      i = 0;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const cx = (col - 1) * GRID;
+          const cy = (row - 1) * GRID - globalOffsetY;
+          const dxC = cx - centerX;
+          const dyC = cy - centerY;
+          const dCenter = Math.sqrt(dxC * dxC + dyC * dyC);
+          const distFromEdge = maxDistFromEdge - dCenter;
+          waveDists[i++] = Math.max(0, distFromEdge / maxDistFromEdge);
         }
       }
 
@@ -103,7 +122,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
         }
       }
 
-      cellsRef.current = { data, count, cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY }
+      cellsRef.current = { data, count, cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveDists }
       needsRedraw = true
     }
 
@@ -118,6 +137,7 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
     let lastMoveTime = 0
     let lastWaveFront = -1
     let lastWaveHeight = -1
+    let lastDrawTime = 0
 
     function draw() {
       if (!isVisible.current) {
@@ -128,15 +148,19 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       const bag = cellsRef.current
       if (!bag || w === 0 || h === 0) return
 
+      // Throttle to ~30fps — halftone dots don't need 60fps
+      const now = performance.now()
+      if (now - lastDrawTime < 30) return
+      lastDrawTime = now
+
       // Read current wave position and height from motion value props
       const waveFront = waveFrontProp ? waveFrontProp.get() : 0
       const waveHeight = typeof waveHeightProp === 'number' ? waveHeightProp : (waveHeightProp ? waveHeightProp.get() : 0.25)
 
       const { x: mx, y: my } = mouseRef.current
       const hasMouse = mx > -9000
-      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY } = bag
+      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveDists } = bag
 
-      const now = performance.now()
       if (now - lastMoveTime > 60) {
         hoverStrength = Math.max(0, hoverStrength - 0.03)
       } else {
@@ -146,8 +170,10 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       // Skip redraw if nothing has changed
       if (!hasMouse && hoverStrength <= 0 && waveFront === lastWaveFront && waveHeight === lastWaveHeight) {
         if (needsRedraw) {
-          ctx.clearRect(0, 0, w, h)
-          ctx.drawImage(offCanvas, 0, 0)
+          if (waveFront === 0) {
+            ctx.clearRect(0, 0, w, h)
+            ctx.drawImage(offCanvas, 0, 0)
+          }
           needsRedraw = false
         }
         return
@@ -159,97 +185,54 @@ export default function ProjectsHalftone({ containerId, waveFront: waveFrontProp
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(offCanvas, 0, 0)
 
-      drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight)
+      drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists)
     }
 
-    function drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight) {
-      let startRow = rows
-      let endRow = -1
-
-      if (hoverStrength > 0) {
-        startRow = Math.min(startRow, Math.max(0, Math.floor((my - HOVER_R) / GRID)))
-        endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil((my + HOVER_R) / GRID)))
+    function drawDynamicDots(waveFront, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY, waveHeight, waveDists) {
+      // Early exit: if the wave has fully saturated the screen, draw all rows at max level
+      if (waveFront >= 1.0 + waveHeight && hoverStrength <= 0) {
+        const maxLevel = LEVELS - 1;
+        const sy = maxLevel * GRID;
+        const fullWidth = cols * GRID;
+        for (let row = 0; row < rows; row++) {
+          const rowY = (row - 1) * GRID - globalOffsetY;
+          ctx.drawImage(rowSpriteCanvas, 0, sy, fullWidth, GRID, -GRID - GRID / 2, rowY - GRID / 2, fullWidth, GRID);
+        }
+        return;
       }
 
-      // The wave travels up from the bottom to waveHeight of the screen height
-      let waveY = h + 100
-      if (waveFront > 0) {
-        waveY = h * (1 - waveFront)
-        startRow = Math.min(startRow, Math.max(0, Math.floor(waveY / GRID)))
-        endRow = Math.max(endRow, rows - 1)
-      }
+      let i = 0;
+      for (let row = 0; row < rows; row++) {
+        const rowY = (row - 1) * GRID - globalOffsetY;
 
-      for (let row = startRow; row <= endRow; row++) {
-        const rowY = (row - 1) * GRID - globalOffsetY
-
-        let waveInf = 0
-        if (waveFront > 0) {
-          const normalizedY = 1 - (rowY / h)
-          const depth = waveFront - normalizedY
-          waveInf = Math.max(0, Math.min(1, depth / waveHeight))
-        }
-
-        let startCol = 0
-        let endCol = cols - 1
-
-        if (waveFront === 0 || rowY < waveY) {
-          startCol = Math.max(0, Math.floor((mx - HOVER_R) / GRID))
-          endCol = Math.min(cols - 1, Math.ceil((mx + HOVER_R) / GRID))
-        }
-
-        const hoverStartCol = Math.max(startCol, Math.floor((mx - HOVER_R) / GRID))
-        const hoverEndCol = Math.min(endCol, Math.ceil((mx + HOVER_R) / GRID))
-
-        // 1. Draw non-hovered wave dots using drawImage row sprites
-        if (waveInf > 0) {
-          const level = Math.max(0, Math.min(LEVELS - 1, Math.round(waveInf * (LEVELS - 1))))
-          const sy = level * GRID
-
-          if (hoverStrength > 0 && hoverStartCol <= endCol && hoverEndCol >= startCol) {
-            // Draw left chunk
-            if (startCol < hoverStartCol) {
-              const startX = startCol * GRID
-              const width = (hoverStartCol - startCol) * GRID
-              ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
-            }
-            // Draw right chunk
-            if (endCol > hoverEndCol) {
-              const startX = (hoverEndCol + 1) * GRID
-              const width = (endCol - hoverEndCol) * GRID
-              ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
-            }
-          } else {
-            // Draw full chunk
-            const startX = startCol * GRID
-            const width = (endCol - startCol + 1) * GRID
-            ctx.drawImage(rowSpriteCanvas, startX, sy, width, GRID, startX - 1.5 * GRID, rowY - GRID / 2, width, GRID)
-          }
-        }
-
-        // 2. Draw hovered dots individually (compositing hover + wave influence)
-        if (hoverStrength > 0) {
-          const validHoverStart = Math.max(startCol, hoverStartCol)
-          const validHoverEnd = Math.min(endCol, hoverEndCol)
-
-          for (let col = validHoverStart; col <= validHoverEnd; col++) {
-            const cx = (col - 1) * GRID
-            const dx = cx - mx
-            const dy = rowY - my
-            const d2 = dx * dx + dy * dy
-
-            let hoverInf = 0
+        for (let col = 0; col < cols; col++) {
+          const cx = (col - 1) * GRID;
+          const dx = cx - mx;
+          const dy = rowY - my;
+          
+          let hoverInf = 0;
+          if (hoverStrength > 0) {
+            const d2 = dx * dx + dy * dy;
             if (d2 < HOVER_R2) {
-              const dist = Math.sqrt(d2)
-              hoverInf = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
+              const dist = Math.sqrt(d2);
+              hoverInf = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength;
             }
+          }
 
-            const totalInf = Math.max(hoverInf, waveInf)
+          let waveInf = 0;
+          if (waveFront > 0) {
+            const normalizedDist = waveDists[i];
+            const depth = waveFront - normalizedDist;
+            waveInf = depth > 0 ? Math.min(1, depth / waveHeight) : 0;
+          }
+          i++;
 
-            if (totalInf > 0) {
-              const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))))
-              const sx = level * GRID
-              ctx.drawImage(spriteCanvas, sx, 0, GRID, GRID, cx - GRID / 2, rowY - GRID / 2, GRID, GRID)
-            }
+          const totalInf = Math.max(hoverInf, waveInf);
+
+          if (totalInf > 0) {
+            const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))));
+            const sx = level * GRID;
+            ctx.drawImage(spriteCanvas, sx, 0, GRID, GRID, cx - GRID / 2, rowY - GRID / 2, GRID, GRID);
           }
         }
       }
