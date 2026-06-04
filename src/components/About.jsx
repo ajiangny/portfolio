@@ -228,7 +228,7 @@ export default function About() {
           className="absolute inset-0 pointer-events-none"
           aria-hidden
         >
-          <ProjectsHalftone containerId="about" />
+          <ProjectsHalftone containerId="projects" />
         </motion.div>
 
         <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>

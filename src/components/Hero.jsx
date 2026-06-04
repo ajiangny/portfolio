@@ -21,6 +21,11 @@ export default function Hero() {
   const navigate = (href, e) => {
     if (href === '#about') {
       transitionNavigate('#about', { offset: window.innerHeight * 3 }, e)
+    } else if (href === '#projects') {
+      // #projects is a 300vh sticky container. progress=0 is the top edge,
+      // progress≈0.5 is where all entry animations finish and cards are fully visible.
+      // That maps to scrollTop = offsetTop + 1×innerHeight.
+      transitionNavigate('#projects', { offset: window.innerHeight }, e)
     } else {
       transitionNavigate(href, {}, e)
     }
