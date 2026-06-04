@@ -3,7 +3,7 @@ import { useTransitionContext } from '../context/TransitionContext'
 import { BLOB_SHAPES } from './hero/orbitConstants'
 
 export default function PageTransition() {
-  const { isActive, clickPos } = useTransitionContext()
+  const { isActive, clickPos, transitionColor } = useTransitionContext()
 
   return (
     <div className="fixed inset-0 pointer-events-none z-9999 overflow-hidden">
@@ -25,7 +25,7 @@ export default function PageTransition() {
           y: '-50%',
           width: '120vmax',
           height: '120vmax',
-          backgroundColor: 'var(--color-cobalt)',
+          backgroundColor: transitionColor,
           transformOrigin: 'center center',
         }}
       />

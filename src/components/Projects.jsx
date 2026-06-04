@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState } from 'react'
-import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemplate } from 'framer-motion'
+import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemplate, useScroll } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import ProjectsHalftone from './projects/ProjectsHalftone'
+import ElasticHeading from './hero/ElasticHeading'
 import { works } from '../data/projectsData'
 import { GitHubIcon, ExternalIcon, WrenchIcon } from './icons'
 import StackIcon from 'tech-stack-icons'
@@ -32,8 +33,12 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
   const isPrimary = distForStyle === 0;
 
   // Destructure shared transforms passed from parent to avoid redefining them 20 times
-  const { blueOpacity, borderStyle, iconOpacity, contentOpacity, flattenFactor, scrollFade } = cardTransforms;
+  const { blueOpacity, borderStyle, iconOpacity, contentOpacity: globalContentOpacity, grayscale, brightness, flattenFactor, scrollFade } = cardTransforms;
   
+  // For the active card, keep thumbnail fully visible. For inactive cards, fade out.
+  const contentOpacity = useTransform([globalContentOpacity], ([co]) => isActive ? 1 : co);
+  const thumbnailFilter = useMotionTemplate`grayscale(${grayscale}) brightness(${brightness})`;
+
   // Fade out secondary cards after the primary card turns blue
   const secondaryFade = useTransform(scrollFade, (v) => isPrimary ? 1 : v);
 
@@ -113,16 +118,16 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
             transformOrigin: 'center bottom',
           }}
         >
-          {/* Blue Overlay */}
+          {/* Black Overlay */}
           <motion.div 
-            className="absolute inset-0 bg-cobalt pointer-events-none"
+            className="absolute inset-0 bg-black pointer-events-none"
             style={{ opacity: blueOpacity, zIndex: 0 }}
           />
 
           {/* Thumbnail Image or Wrench Icon */}
           <motion.div 
             className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
-            style={{ opacity: contentOpacity, translateZ: 10 }}
+            style={{ opacity: contentOpacity, translateZ: 10, filter: thumbnailFilter }}
           >
             {work.thumbnail ? (
               <img 
@@ -244,6 +249,8 @@ export default function Projects() {
   const cardBorderStyle = useMotionTemplate`1px solid rgba(255,255,255,${cardBorderOpacity})`;
   const cardIconOpacity = useTransform(progress, [0.50, 0.55], [1, 0]);
   const cardContentOpacity = useTransform(progress, [0.55, 0.63], [1, 0]);
+  const cardGrayscale = useTransform(progress, [0.55, 0.60], [0, 1]);
+  const cardBrightness = useTransform(progress, [0.60, 0.63], [1, 0]);
   const cardFlattenFactor = useTransform(progress, [0.55, 0.63], [1, 0]);
   const cardScrollFade = useTransform(progress, [0.63, 0.67], [1, 0]);
   
@@ -252,6 +259,8 @@ export default function Projects() {
     borderStyle: cardBorderStyle,
     iconOpacity: cardIconOpacity,
     contentOpacity: cardContentOpacity,
+    grayscale: cardGrayscale,
+    brightness: cardBrightness,
     flattenFactor: cardFlattenFactor,
     scrollFade: cardScrollFade,
   };
@@ -277,12 +286,21 @@ export default function Projects() {
   // Halftone wave: rises slightly at first, then floods the entire screen right as the card turns blue
   const projectsWaveFront = useTransform(progress, [0, 0.52, 0.56, 0.73], [0, 0.20, 0.20, 1.5])
 
+  // Track the native scroll transition from About to Projects
+  const { scrollYProgress: transitionProgress } = useScroll({
+    target: containerRef,
+    offset: ['start end', 'start start'] // Tracks the exact same 100vh native scroll as About unpins and Projects scrolls in
+  })
+
+  // Second half of the continuous wave sweeps from -1 to 1 on Projects' canvas
+  const lineWaveFront = useTransform(transitionProgress, [0, 1], [-1, 1])
+
   // Expanding Overlay logic
   // By mapping the scale non-linearly (slowly to 5, then rapidly to 150),
   // the visible part of the expansion is stretched over a much larger scroll distance!
   const expandScale = useTransform(progress, [0.65, 0.82, 0.92], [0.5, 5, 150]);
   const expandRadius = useTransform(progress, [0.65, 0.73], [16, 0]);
-  const expandOpacity = useTransform(progress, [0.60, 0.65], [0, 1]);
+  const expandOpacity = useTransform(progress, [0.63, 0.65], [0, 1]);
 
   // Global mouse tracking for parallax tilt across all cards
   const globalMouseX = useMotionValue(0);
@@ -457,7 +475,7 @@ export default function Projects() {
       <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
         
         {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
-        <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} />
+        <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} lineWaveFront={lineWaveFront} lineWaveHeight={0.15} fadeProgress={progress} />
 
         {/* All content - relative + z-[1] ensures it stacks above the canvas */}
         <div className="relative flex flex-col justify-center h-full" style={{ zIndex: 1 }}>
@@ -477,9 +495,12 @@ export default function Projects() {
           className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
           style={{ y: headingY, opacity: headingOpacity, scale: headingScale }}
         >
-          <h2 className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink">
-            Featured Projects
-          </h2>
+          <ElasticHeading
+            text="Featured Projects"
+            as="h2"
+            className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-ink"
+            style={{}}
+          />
         </motion.div>
 
         {/* Native Horizontal Scroll Container */}
@@ -496,7 +517,7 @@ export default function Projects() {
                 scale: expandScale,
                 borderRadius: expandRadius,
                 opacity: expandOpacity,
-                backgroundColor: '#1B3A8C',
+                backgroundColor: '#000000',
                 transformOrigin: 'center center',
                 willChange: 'transform, opacity',
               }}

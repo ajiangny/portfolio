@@ -1,11 +1,12 @@
 import { useRef, useEffect, useState } from 'react'
-import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate } from 'framer-motion'
+import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate, useScroll } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import ProfileHalftone from './about/ProfileHalftone'
 import ProjectsHalftone from './projects/ProjectsHalftone'
 import { LEFT_COL, CENTER_COL, RIGHT_COL, MAIN_SKILLS, OTHER_SKILLS, DOT_BG } from '../data/aboutData'
 import ArtColumn from './about/ArtColumn'
 import SkillIcon from './about/SkillIcon'
+import ElasticHeading from './hero/ElasticHeading'
 
 // ─── SVG Gradient Map (duotone) ───────────────────────────────────────────────
 function DuotoneDefs() {
@@ -130,7 +131,7 @@ export default function About() {
   
   // Fade starts at 0.85 (which is 510vh), and ends at 1.0 (which is 600vh).
   // This provides a comfortable pause from 0.5 to 0.85 before the fade out begins.
-  const bgColor = useTransform(progress, [0.85, 1.0], ['#1B3A8C', '#F5F0E8'])
+  const bgFadeOpacity = useTransform(progress, [0.85, 1.0], [0, 1])
   
   // Gradient fade out from bottom to top
   const fadeStop1 = useTransform(progress, [0.85, 1.0], [-100, 100])
@@ -139,6 +140,15 @@ export default function About() {
 
   // Halftone dots fade in as the About content fades out — seamless handoff to Projects
   const halftoneDotsOpacity = useTransform(progress, [0.85, 1.0], [0, 1])
+
+  // Track the native scroll transition from About to Projects
+  const { scrollYProgress: transitionProgress } = useScroll({
+    target: containerRef,
+    offset: ['end end', 'end start'] // Tracks the 100vh native scroll as About unpins and scrolls away
+  })
+  
+  // Single continuous wave sweeps from 0 to 2 on About's canvas
+  const lineWaveFront = useTransform(transitionProgress, [0, 1], [0, 2])
 
   // Halftone waves: original sweep, then pause, then complete to top during fade out
   const globalWaveFront = useTransform(progress, [0, 0.5, 0.70, 0.85, 1.0], [0, 0, 0.20, 0.20, 1.0])
@@ -204,8 +214,12 @@ export default function About() {
       id="about"
       ref={containerRef}
       className="relative"
-      style={{ height: '700vh', backgroundColor: bgColor }}
+      style={{ height: '700vh', backgroundColor: 'var(--color-cobalt)' }}
     >
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{ backgroundColor: 'var(--color-cream)', opacity: bgFadeOpacity, zIndex: 0 }}
+      />
       {/* ── Top Boundary Gradient ───────────────────────────────────────── */}
       {/* Fades out the film columns and dots so they don't hit the Hero   */}
       {/* boundary abruptly. Since it's absolute (not sticky), it scrolls  */}
@@ -214,7 +228,7 @@ export default function About() {
         className="absolute top-0 left-0 right-0 pointer-events-none"
         style={{
           height: '25vh',
-          background: 'linear-gradient(to bottom, #1B3A8C 0%, rgba(27, 58, 140, 0) 100%)',
+          background: 'linear-gradient(to bottom, var(--color-cobalt) 0%, transparent 100%)',
           zIndex: 20,
         }}
       />
@@ -228,7 +242,7 @@ export default function About() {
           className="absolute inset-0 pointer-events-none"
           aria-hidden
         >
-          <ProjectsHalftone containerId="projects" />
+          <ProjectsHalftone containerId="projects" lineWaveFront={lineWaveFront} lineWaveHeight={0.15} />
         </motion.div>
 
         <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>
@@ -354,19 +368,26 @@ export default function About() {
           }}
         >
           {/* 2 — Heading (second out) */}
-          <motion.h2
+          <motion.div
             style={{
-              fontFamily: "'EastBlue', 'Abril Fatface', serif",
-              fontSize: 'clamp(56px, 7vw, 96px)',
-              lineHeight: 0.95,
-              color: 'var(--color-cream)',
               marginBottom: '28px',
               x: headingX,
               opacity: headingO,
             }}
           >
-            Hello! I'm Andrew.
-          </motion.h2>
+            <ElasticHeading
+              text="Hello! I'm Andrew."
+              as="h2"
+              style={{
+                fontFamily: "'EastBlue', 'Abril Fatface', serif",
+                fontSize: 'clamp(56px, 7vw, 96px)',
+                lineHeight: 0.95,
+                color: 'var(--color-cream)'
+              }}
+              className=""
+              waveEffect={true}
+            />
+          </motion.div>
 
           {/* 3 — Primary bio quote (third out) */}
           <motion.p

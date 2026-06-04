@@ -58,7 +58,7 @@ export default function OrbitBubble({
     <a
       ref={posRef}
       href={href}
-      onClick={(e) => { e.preventDefault(); onNavigate(href, e) }}
+      onClick={(e) => { e.preventDefault(); onNavigate(href, e, myIdx) }}
       className="absolute"
       style={{ transform: 'translate(-50%, -50%)' }}
       aria-label={`Go to ${label}`}
@@ -71,17 +71,18 @@ export default function OrbitBubble({
           borderRadius: isHovered ? BLOB_ACTIVE : blobShape,
           scale:   isHovered ? 2.25 : shrunkScale,
           opacity: 1,
-          backgroundColor: '#1B3A8C',
+          backgroundColor: 'var(--color-cobalt)',
           boxShadow: isHovered
-            ? '0 16px 44px rgba(27,58,140,0.65)'
+            ? '0 16px 44px rgba(var(--color-cobalt-rgb), 0.65)'
             : isShrunk
-            ? '0 2px 10px rgba(27,58,140,0.2)'
-            : '0 4px 18px rgba(27,58,140,0.28)',
+            ? '0 2px 10px rgba(var(--color-cobalt-rgb), 0.2)'
+            : '0 4px 18px rgba(var(--color-cobalt-rgb), 0.28)',
         }}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
 
-        className="flex items-center justify-center gap-1.5 text-cream font-sans font-bold uppercase tracking-[0.18em] whitespace-nowrap select-none cursor-pointer"
+        className="flex items-center justify-center gap-1.5 font-sans font-bold uppercase tracking-[0.18em] whitespace-nowrap select-none cursor-pointer"
         style={{
+          color: 'var(--color-cobalt-text, var(--color-cream))',
           fontSize: '0.65rem',
           padding: '0.625rem 1.25rem',
           borderRadius: blobShape,

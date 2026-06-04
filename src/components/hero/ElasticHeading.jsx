@@ -1,10 +1,9 @@
 import { useRef } from 'react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion'
 
-const LETTERS = 'Portfolio'.split('')
 const OFF = -9999
 
-function ElasticLetter({ char, mouseX, mouseY }) {
+function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
   const ref = useRef(null)
 
   const rawX = useTransform([mouseX, mouseY], ([mx, my]) => {
@@ -38,30 +37,53 @@ function ElasticLetter({ char, mouseX, mouseY }) {
   const x = useSpring(rawX, { stiffness: 120, damping: 10, mass: 0.08 })
   const y = useSpring(rawY, { stiffness: 120, damping: 10, mass: 0.08 })
 
+  const waveY = useMotionValue(0)
+  useAnimationFrame((t) => {
+    if (waveEffect) {
+      const period = 4000
+      const waveSpeed = 50
+      const waveDuration = 600
+      const localTime = (t % period) - (index * waveSpeed)
+      
+      let offset = 0
+      if (localTime > 0 && localTime < waveDuration) {
+        offset = -Math.sin((localTime / waveDuration) * Math.PI) * 20
+      }
+      waveY.set(offset)
+    }
+  })
+
+  const finalY = useTransform([y, waveY], ([yv, wv]) => yv + wv)
+
   return (
-    <motion.span ref={ref} style={{ x, y, display: 'inline-block' }}>
+    <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre' }}>
       {char}
     </motion.span>
   )
 }
 
-export default function ElasticHeading() {
+export default function ElasticHeading({ 
+  text = "Portfolio", 
+  className = "font-display text-cobalt leading-none select-none", 
+  style = { fontSize: 'clamp(3rem, 13vw, 14rem)', letterSpacing: '-0.01em' },
+  as: Tag = 'h1',
+  waveEffect = false
+}) {
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
+  const letters = text.split('')
 
   return (
     <div
       onMouseMove={(e) => { mouseX.set(e.clientX); mouseY.set(e.clientY) }}
       onMouseLeave={() => { mouseX.set(OFF); mouseY.set(OFF) }}
+      style={{ display: 'inline-block', pointerEvents: 'auto' }}
     >
-      <h1
-        className="font-display text-cobalt leading-none select-none"
-        style={{ fontSize: 'clamp(3rem, 13vw, 14rem)', letterSpacing: '-0.01em' }}
-      >
-        {LETTERS.map((char, i) => (
-          <ElasticLetter key={i} char={char} mouseX={mouseX} mouseY={mouseY} />
+      <Tag className={className} style={style}>
+        {letters.map((char, i) => (
+          <ElasticLetter key={i} index={i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} />
         ))}
-      </h1>
+      </Tag>
     </div>
   )
 }
