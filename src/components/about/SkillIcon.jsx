@@ -35,8 +35,13 @@ export default function SkillIcon({ skill, index, progress, isMain }) {
           {skill.custom}
         </div>
       ) : (
-        <div className={`${iconSizeClass} flex items-center justify-center brightness-0 invert opacity-75 transition-all duration-300 group-hover:brightness-100 group-hover:invert-0 group-hover:opacity-100`}>
-          <StackIcon name={skill.icon} />
+        <div className={`${iconSizeClass} relative flex items-center justify-center transition-all duration-300`}>
+          <div className="absolute inset-0 opacity-75 group-hover:opacity-0 transition-opacity duration-300 flex items-center justify-center">
+            <StackIcon name={skill.icon} variant="grayscale" />
+          </div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+            <StackIcon name={skill.icon} />
+          </div>
         </div>
       )}
     </motion.div>
