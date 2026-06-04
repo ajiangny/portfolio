@@ -13,16 +13,17 @@ const TECH_ICON_MAP = {
   'Framer Motion': { icon: 'framer' },
   'Vite': { icon: 'vitejs' },
   'Python': { icon: 'python' },
-  'Photoshop': { custom: 'Ps', color: '#31A8FF' },
+  'Photoshop': { icon: 'photoshop' },
   'Next.js': { icon: 'nextjs' },
-  'TypeScript': { custom: 'TS', color: '#3178C6' },
+  'JavaScript': { icon: 'js' },
+  'TypeScript': { icon: 'typescript' },
   'Express': { icon: 'expressjs' },
-  'Three.js': { custom: 'T3', color: '#000000' },
-  'Gemini API': { custom: 'AI', color: '#1A73E8' },
-  'SQLite': { icon: 'mysql' },
+  'Three.js': { icon: 'threejs' },
+  'Gemini API': { icon: 'gemini' },
+  'SQLite': { icon: 'sqlite' },
   'Flet': { custom: 'Fl', color: '#1B3A8C' },
   'Figma': { icon: 'figma' },
-  'Illustrator': { custom: 'Ai', color: '#FF9A00' },
+  'Illustrator': { icon: 'adobeillustrator' },
   'Design': { custom: 'UI', color: '#E84545' },
   'Automation scripts': { custom: 'Sh', color: '#4CAF50' }
 };
@@ -157,8 +158,13 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
                 title={t}
               >
                 {mapped.icon ? (
-                  <div className={`w-4 h-4 transition-all duration-300 ${isActive ? 'grayscale-0 opacity-100' : 'grayscale opacity-70 group-hover/icon:grayscale-0 group-hover/icon:opacity-100'}`}>
-                    <StackIcon name={mapped.icon} />
+                  <div className={`relative w-4 h-4 transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`}>
+                    <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-0' : 'opacity-100 group-hover/icon:opacity-0'}`}>
+                      <StackIcon name={mapped.icon} variant="grayscale" />
+                    </div>
+                    <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover/icon:opacity-100'}`}>
+                      <StackIcon name={mapped.icon} />
+                    </div>
                   </div>
                 ) : (
                   <span className={`font-bold text-[11px] transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>

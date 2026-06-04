@@ -5,8 +5,8 @@ export const RIGHT_COL  = ['/art/art2.webp', '/art/art6.webp', '/art/art4.webp',
 export const MAIN_SKILLS = [
   { name: 'React', icon: 'react' },
   { name: 'Next.js', icon: 'nextjs' },
-  { name: 'JavaScript', custom: 'JS', hoverColor: '#F7DF1E' },
-  { name: 'TypeScript', custom: 'TS', hoverColor: '#3178C6' },
+  { name: 'JavaScript', icon: 'js' },
+  { name: 'TypeScript', icon: 'typescript' },
   { name: 'CSS / Tailwind', icon: 'tailwindcss' },
   { name: 'Python', icon: 'python' },
 ];

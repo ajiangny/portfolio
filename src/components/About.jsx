@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
-import StackIcon from 'tech-stack-icons'
 import ProfileHalftone from './about/ProfileHalftone'
 import ProjectsHalftone from './projects/ProjectsHalftone'
 import { LEFT_COL, CENTER_COL, RIGHT_COL, MAIN_SKILLS, OTHER_SKILLS, DOT_BG } from '../data/aboutData'
