@@ -1,0 +1,320 @@
+import { useEffect, useRef } from 'react'
+
+const GRID         = 18
+const DOT_R_MIN    = 1.0
+const DOT_COLOR    = '245,240,232' // Cream dots
+const BASE_OPACITY = 0.05
+const HOVER_R      = 160
+const HOVER_R2     = HOVER_R * HOVER_R
+const HOVER_BOOST  = 4.5
+const HALF_CELL    = GRID / 2 - 0.5
+
+const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
+  `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
+)
+
+export default function GalleryHalftone({ pulseProgress: pulseProgressProp, headerOpacity: headerOpacityProp }) {
+  const canvasRef = useRef(null)
+  const mouseRef  = useRef({ x: -9999, y: -9999 })
+  const rafRef    = useRef(null)
+  const isVisible = useRef(false)
+  const cellsRef  = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx    = canvas.getContext('2d')
+    let w = 0, h = 0
+    let needsRedraw = true
+
+    function buildCells(W, H) {
+      const cols  = Math.ceil(W / GRID) + 2
+      const rows  = Math.ceil(H / GRID) + 2
+
+      const offCanvas = document.createElement('canvas')
+      offCanvas.width = W
+      offCanvas.height = H
+      const offCtx = offCanvas.getContext('2d')
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const cx = (col - 1) * GRID
+          const cy = (row - 1) * GRID
+
+          const oi = Math.round(Math.min(0.99, BASE_OPACITY) * 100)
+          offCtx.beginPath()
+          offCtx.arc(cx, cy, DOT_R_MIN, 0, Math.PI * 2)
+          offCtx.fillStyle = FILL_CACHE[oi]
+          offCtx.fill()
+        }
+      }
+
+      const LEVELS = 60
+      const spriteCanvas = document.createElement('canvas')
+      spriteCanvas.width = LEVELS * GRID
+      spriteCanvas.height = GRID
+      const sCtx = spriteCanvas.getContext('2d')
+
+      // Row sprite — pre-rendered full rows at each intensity level
+      const rowSpriteCanvas = document.createElement('canvas')
+      rowSpriteCanvas.width = cols * GRID
+      rowSpriteCanvas.height = LEVELS * GRID
+      const rsCtx = rowSpriteCanvas.getContext('2d')
+
+      for (let lvl = 0; lvl < LEVELS; lvl++) {
+        const inf = lvl / (LEVELS - 1)
+        const finalRadius = Math.min(DOT_R_MIN + HOVER_BOOST * inf, HALF_CELL)
+        const oi = Math.round(Math.min(0.99, BASE_OPACITY + inf * 0.5) * 100)
+
+        sCtx.beginPath()
+        sCtx.arc(lvl * GRID + GRID / 2, GRID / 2, finalRadius, 0, Math.PI * 2)
+        sCtx.fillStyle = FILL_CACHE[oi]
+        sCtx.fill()
+
+        // Build full row sprite at this level
+        rsCtx.fillStyle = FILL_CACHE[oi]
+        const sy = lvl * GRID
+        for (let col = 0; col < cols; col++) {
+          const cx = col * GRID
+          rsCtx.beginPath()
+          rsCtx.arc(cx + GRID / 2, sy + GRID / 2, finalRadius, 0, Math.PI * 2)
+          rsCtx.fill()
+        }
+      }
+
+      cellsRef.current = { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS }
+      needsRedraw = true
+    }
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect()
+      w = canvas.width  = rect.width
+      h = canvas.height = rect.height
+      if (w > 0 && h > 0) buildCells(w, h)
+    }
+
+    let hoverStrength = 0
+    let lastMoveTime = 0
+    let lastPulse = -1
+    let lastDrawTime = 0
+
+    function draw() {
+      if (!isVisible.current) {
+        rafRef.current = null
+        return
+      }
+      rafRef.current = requestAnimationFrame(draw)
+      const bag = cellsRef.current
+      if (!bag || w === 0 || h === 0) return
+
+      // Skip entirely when the header is invisible (opacity ≈ 0)
+      // This is critical because the canvas is position:fixed, so IntersectionObserver
+      // always reports it as visible even when the parent is transparent.
+      const headerO = headerOpacityProp ? headerOpacityProp.get() : 1
+      if (headerO < 0.01) return
+
+      // Throttle to ~30fps — halftone dots don't need 60fps
+      const now = performance.now()
+      if (now - lastDrawTime < 30) return
+      lastDrawTime = now
+
+      const pulseP = pulseProgressProp ? pulseProgressProp.get() : 0
+
+      const { x: mx, y: my } = mouseRef.current
+      const hasMouse = mx > -9000
+      const { cols, rows, offCanvas, spriteCanvas, rowSpriteCanvas, LEVELS } = bag
+
+      if (now - lastMoveTime > 60) {
+        hoverStrength = Math.max(0, hoverStrength - 0.03)
+      } else {
+        hoverStrength = Math.min(1, hoverStrength + 0.15)
+      }
+
+      if (!hasMouse && hoverStrength <= 0 && pulseP === lastPulse && pulseP === 0) {
+        if (needsRedraw) {
+          ctx.clearRect(0, 0, w, h)
+          ctx.drawImage(offCanvas, 0, 0)
+          needsRedraw = false
+        }
+        return
+      }
+
+      needsRedraw = true
+      lastPulse = pulseP
+      ctx.clearRect(0, 0, w, h)
+      ctx.drawImage(offCanvas, 0, 0)
+
+      drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS)
+    }
+
+    function drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS) {
+      const maxDist = Math.sqrt((w / 2) ** 2 + (h / 2) ** 2)
+      // Pulse thickness in pixels
+      const pulseThickness = 500
+      // Pulse radius ranges from 0 to maxDist + pulseThickness
+      const pulseRadius = pulseP * (maxDist + pulseThickness)
+      const centerX = w / 2
+      const centerY = h / 2
+      const halfPulse = pulseThickness / 2
+
+      // Compute row range that intersects with the pulse ring or hover area
+      let startRow = rows
+      let endRow = -1
+
+      if (hoverStrength > 0) {
+        startRow = Math.min(startRow, Math.max(0, Math.floor((my - HOVER_R) / GRID)))
+        endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil((my + HOVER_R) / GRID)))
+      }
+
+      if (pulseP > 0 && pulseP < 1) {
+        // The pulse ring spans from pulseRadius - halfPulse to pulseRadius + halfPulse
+        // from center. Convert to row bounds.
+        const innerR = Math.max(0, pulseRadius - halfPulse)
+        const outerR = pulseRadius + halfPulse
+
+        // Any row whose Y falls within [centerY - outerR, centerY + outerR] could be affected
+        const topY = centerY - outerR
+        const botY = centerY + outerR
+        startRow = Math.min(startRow, Math.max(0, Math.floor(topY / GRID)))
+        endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil(botY / GRID)))
+      }
+
+      if (startRow > endRow) return
+
+      for (let row = startRow; row <= endRow; row++) {
+        const rowY = (row - 1) * GRID
+        const dyCenter = rowY - centerY
+
+        // Determine if this row is uniformly affected by the pulse (no hover interference)
+        let uniformPulseInf = -1
+        if (pulseP > 0 && pulseP < 1) {
+          // For this row, check the range of distances from center
+          // Min distance from center for any point on this row
+          const minDxC = (centerX >= 0 && centerX <= (cols - 1) * GRID) ? 0 : Math.min(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
+          const maxDxC = Math.max(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
+
+          const minDist = Math.sqrt(minDxC * minDxC + dyCenter * dyCenter)
+          const maxDist2 = Math.sqrt(maxDxC * maxDxC + dyCenter * dyCenter)
+
+          const minDiff = Math.abs(minDist - pulseRadius)
+          const maxDiff = Math.abs(maxDist2 - pulseRadius)
+
+          // If both extremes give the same level AND no hover, we can batch the row
+          if (hoverStrength <= 0 || (my < rowY - HOVER_R || my > rowY + HOVER_R)) {
+            const inf1 = minDiff < halfPulse ? Math.pow(1 - minDiff / halfPulse, 1.5) : 0
+            const inf2 = maxDiff < halfPulse ? Math.pow(1 - maxDiff / halfPulse, 1.5) : 0
+            const lvl1 = Math.max(0, Math.min(LEVELS - 1, Math.round(inf1 * (LEVELS - 1))))
+            const lvl2 = Math.max(0, Math.min(LEVELS - 1, Math.round(inf2 * (LEVELS - 1))))
+
+            if (lvl1 === lvl2 && lvl1 > 0) {
+              // Entire row is the same level — batch draw
+              const sy = lvl1 * GRID
+              const startX = 0
+              const fullWidth = cols * GRID
+              ctx.drawImage(rowSpriteCanvas, startX, sy, fullWidth, GRID, -GRID - GRID / 2, rowY - GRID / 2, fullWidth, GRID)
+              continue // skip per-dot loop for this row
+            }
+          }
+        }
+
+        // Per-dot loop (only for rows that can't be batched)
+        for (let col = 0; col < cols; col++) {
+          const cx = (col - 1) * GRID
+          const dx = cx - mx
+          const dy = rowY - my
+          const d2Hover = dx * dx + dy * dy
+
+          let hoverInf = 0
+          if (hoverStrength > 0 && d2Hover < HOVER_R2) {
+            const dist = Math.sqrt(d2Hover)
+            hoverInf = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
+          }
+
+          let pulseInf = 0
+          if (pulseP > 0 && pulseP < 1) {
+            const dxC = cx - centerX
+            const dCenter = Math.sqrt(dxC * dxC + dyCenter * dyCenter)
+
+            // Distance from the pulse ring
+            const diff = Math.abs(dCenter - pulseRadius)
+            if (diff < halfPulse) {
+               // easing for smooth dropoff
+               pulseInf = Math.pow(1 - diff / halfPulse, 1.5)
+            }
+          }
+
+          const totalInf = Math.max(hoverInf, pulseInf)
+
+          if (totalInf > 0) {
+            const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))))
+            const sx = level * GRID
+            ctx.drawImage(spriteCanvas, sx, 0, GRID, GRID, cx - GRID / 2, rowY - GRID / 2, GRID, GRID)
+          }
+        }
+      }
+    }
+
+    const handleMouse = (e) => {
+      const rect = canvas.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      mouseRef.current = { x, y }
+      lastMoveTime = performance.now()
+    }
+    const handleLeave = () => {
+      mouseRef.current = { x: -9999, y: -9999 }
+      hoverStrength = 0
+    }
+
+    window.addEventListener('mousemove', handleMouse)
+    window.addEventListener('mouseleave', handleLeave)
+
+    const parent = canvas.parentElement
+    const ro = new ResizeObserver(resize)
+    ro.observe(parent)
+
+    const io = new IntersectionObserver(([entry]) => {
+      isVisible.current = entry.isIntersecting
+      if (entry.isIntersecting && !rafRef.current) {
+        lastPulse = -1 // Force redraw on enter
+        rafRef.current = requestAnimationFrame(draw)
+      }
+    })
+    io.observe(canvas)
+
+    // Also restart the RAF loop when headerOpacity becomes > 0
+    let unsubHeader
+    if (headerOpacityProp) {
+      unsubHeader = headerOpacityProp.on('change', (v) => {
+        if (v > 0.01 && isVisible.current && !rafRef.current) {
+          lastPulse = -1
+          rafRef.current = requestAnimationFrame(draw)
+        }
+      })
+    }
+
+    resize()
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      window.removeEventListener('mousemove', handleMouse)
+      window.removeEventListener('mouseleave', handleLeave)
+      ro.disconnect()
+      io.disconnect()
+      if (unsubHeader) unsubHeader()
+    }
+  }, [pulseProgressProp])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    />
+  )
+}

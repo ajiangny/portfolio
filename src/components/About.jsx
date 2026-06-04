@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring } from 'framer-motion'
+import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import StackIcon from 'tech-stack-icons'
 import ProfileHalftone from './about/ProfileHalftone'
@@ -126,11 +126,18 @@ export default function About() {
   const bodyO     = useTransform(progress, [0.448, 0.465], [0, 1])
   const bioO      = useTransform(progress, [0.455, 0.471], [0, 1])
   const skillsO   = useTransform(progress, [0.462, 0.4775], [0, 1])
+  const resumeX   = useTransform(progress, [0.469, 0.4975], ['68vw', '0vw'])
+  const resumeO   = useTransform(progress, [0.469, 0.4845], [0, 1])
   
   // Fade starts at 0.85 (which is 510vh), and ends at 1.0 (which is 600vh).
   // This provides a comfortable pause from 0.5 to 0.85 before the fade out begins.
   const bgColor = useTransform(progress, [0.85, 1.0], ['#1B3A8C', '#F5F0E8'])
-  const masterFade = useTransform(progress, [0.85, 1.0], [1, 0])
+  
+  // Gradient fade out from bottom to top
+  const fadeStop1 = useTransform(progress, [0.85, 1.0], [-100, 100])
+  const fadeStop2 = useTransform(progress, [0.85, 1.0], [0, 200])
+  const maskImage = useMotionTemplate`linear-gradient(to top, transparent ${fadeStop1}%, black ${fadeStop2}%)`
+
   // Halftone dots fade in as the About content fades out — seamless handoff to Projects
   const halftoneDotsOpacity = useTransform(progress, [0.85, 1.0], [0, 1])
 
@@ -225,7 +232,7 @@ export default function About() {
           <ProjectsHalftone containerId="about" />
         </motion.div>
 
-        <motion.div style={{ opacity: masterFade, width: '100%', height: '100%' }}>
+        <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>
         {/* ── Global Halftone Background ──────────────────────────────────── */}
         {/* Visible for the entirety of the About section.                     */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
@@ -279,7 +286,6 @@ export default function About() {
             width: aboutW,
             height: aboutH,
             opacity: aboutOpacity,
-            overflow: 'hidden',
             borderRadius: aboutRadius,
             zIndex: 3,
             rotateX: profileRotateX,
@@ -288,14 +294,27 @@ export default function About() {
           }}
           onMouseMove={handleProfileMouseMove}
           onMouseLeave={handleProfileMouseLeave}
+          className="group"
         >
-          <img
-            src="/art/profile.webp"
-            alt="Profile"
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{ objectPosition: 'top center' }}
+          {/* Pulse Glow */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{ animation: 'pulse-glow 2s ease-out infinite', borderRadius: aboutRadius }}
           />
-          <ProfileHalftone waveFront={profileWaveFront} waveHeight={0.40} />
+          {/* Pulse Ring */}
+          <motion.div
+            className="absolute inset-0 border border-[#f5f0e8] pointer-events-none"
+            style={{ animation: 'pulse-ring 2s ease-out infinite', backfaceVisibility: 'hidden', borderRadius: aboutRadius }}
+          />
+          <motion.div style={{ borderRadius: aboutRadius, overflow: 'hidden', width: '100%', height: '100%', position: 'relative' }}>
+            <img
+              src="/art/profile.webp"
+              alt="Profile"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              style={{ objectPosition: 'top center' }}
+            />
+            <ProfileHalftone waveFront={profileWaveFront} waveHeight={0.40} />
+          </motion.div>
         </motion.div>
 
 
@@ -414,6 +433,55 @@ export default function About() {
                 <SkillIcon key={skill.name} skill={skill} index={MAIN_SKILLS.length + index} progress={progress} />
               ))}
             </div>
+
+            <motion.a
+              href="/resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                x: resumeX,
+                opacity: resumeO,
+                marginTop: '24px',
+                padding: '12px 40px'
+              }}
+              className="relative group flex items-center justify-center border border-[#f5f0e826] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#f5f0e866] hover:-translate-y-1 cursor-pointer w-fit rounded-2xl"
+            >
+              <style>{`
+                @keyframes pulse-glow {
+                  0% {
+                    background-color: rgba(245, 240, 232, 0.15);
+                    box-shadow: 0px 0px 20px 0px rgba(245, 240, 232, 0.2);
+                  }
+                  100% {
+                    background-color: rgba(245, 240, 232, 0);
+                    box-shadow: 0px 0px 0px 0px rgba(245, 240, 232, 0);
+                  }
+                }
+                @keyframes pulse-ring {
+                  0% {
+                    transform: scale(1);
+                    opacity: 0.6;
+                  }
+                  100% {
+                    transform: scale(1.15);
+                    opacity: 0;
+                  }
+                }
+              `}</style>
+              {/* Button Glow */}
+              <div
+                className="absolute inset-0 rounded-2xl pointer-events-none"
+                style={{ animation: 'pulse-glow 2s ease-out infinite' }}
+              />
+              {/* Expanding Skinny Ring */}
+              <div
+                className="absolute inset-0 rounded-2xl border border-[#f5f0e8] pointer-events-none"
+                style={{ animation: 'pulse-ring 2s ease-out infinite', backfaceVisibility: 'hidden' }}
+              />
+              <span className="relative z-10 font-sans font-bold text-sm tracking-[0.2em] uppercase text-[rgba(255,255,255,0.75)] transition-colors duration-300 group-hover:text-cobalt">
+                Resume
+              </span>
+            </motion.a>
           </div>
         </motion.div>
         </motion.div>

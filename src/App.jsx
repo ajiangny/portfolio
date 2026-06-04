@@ -24,13 +24,6 @@ function App() {
             <Gallery />
             <Contact />
           </main>
-          <footer className="border-t-2 border-ink py-8 text-center bg-cream">
-            <AnimateIn direction="up">
-              <p className="font-mono text-text-light text-[11px] uppercase tracking-[0.2em]">
-                © {new Date().getFullYear()} Your Name · Built with React &amp; Tailwind CSS
-              </p>
-            </AnimateIn>
-          </footer>
         </div>
       </TransitionProvider>
     </LenisContext.Provider>

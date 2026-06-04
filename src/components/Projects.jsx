@@ -3,7 +3,7 @@ import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemp
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import ProjectsHalftone from './projects/ProjectsHalftone'
 import { works } from '../data/projectsData'
-import { GitHubIcon, ExternalIcon } from './icons'
+import { GitHubIcon, ExternalIcon, WrenchIcon } from './icons'
 import StackIcon from 'tech-stack-icons'
 
 const TECH_ICON_MAP = {
@@ -27,19 +27,13 @@ const TECH_ICON_MAP = {
   'Automation scripts': { custom: 'Sh', color: '#4CAF50' }
 };
 
-const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, cardOpacity, cardShadow, onClick, worksLength, distForStyle, clampedRel, globalSpringX, globalSpringY, progress }) => {
+const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, washOpacity, cardShadow, onClick, worksLength, distForStyle, clampedRel, globalSpringX, globalSpringY, progress, cardTransforms }) => {
   const isPrimary = distForStyle === 0;
 
-  // Transition scales and opacities
-  const blueOpacity = useTransform(progress, [0.60, 0.70], [0, 1]);
-  const borderOpacity = useTransform(progress, [0.60, 0.70], [0.4, 0]);
-  const borderStyle = useMotionTemplate`1px solid rgba(255,255,255,${borderOpacity})`;
-  const iconOpacity = useTransform(progress, [0.55, 0.60], [1, 0]);
-  const contentOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
-  const flattenFactor = useTransform(progress, [0.60, 0.70], [1, 0]);
+  // Destructure shared transforms passed from parent to avoid redefining them 20 times
+  const { blueOpacity, borderStyle, iconOpacity, contentOpacity, flattenFactor, scrollFade } = cardTransforms;
   
   // Fade out secondary cards after the primary card turns blue
-  const scrollFade = useTransform(progress, [0.70, 0.75], [1, 0]);
   const secondaryFade = useTransform(scrollFade, (v) => isPrimary ? 1 : v);
 
   // --- Per-hover tilt (active card only) ---
@@ -102,18 +96,17 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
           id={isActiveIndex ? "primary-project-card" : undefined}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="group relative w-full aspect-video rounded-2xl select-none overflow-hidden bg-white/40 backdrop-blur-lg flex items-center justify-center shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] z-10"
+          className="group relative w-full aspect-video rounded-2xl select-none overflow-hidden bg-white/70 flex items-center justify-center z-10"
           animate={{
             x: `${translateX}%`,
             scale: scale,
-            opacity: cardOpacity,
-            boxShadow: cardShadow,
           }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
           style={{
             rotateX,
             rotateY,
             border: borderStyle,
+            boxShadow: cardShadow,
             transformStyle: "preserve-3d",
             transformPerspective: 1000,
             transformOrigin: 'center bottom',
@@ -125,13 +118,32 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
             style={{ opacity: blueOpacity, zIndex: 0 }}
           />
 
-          <motion.span 
-            style={{ translateZ: 50, opacity: contentOpacity }}
-            className={`relative font-display text-6xl md:text-7xl lg:text-8xl transition-colors duration-500 ${isActive ? 'text-cobalt/40' : 'text-ink/20 group-hover:text-cobalt/40'}`}
+          {/* Thumbnail Image or Wrench Icon */}
+          <motion.div 
+            className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
+            style={{ opacity: contentOpacity, translateZ: 10 }}
           >
-            {((i % worksLength) + 1).toString().padStart(2, '0')}
-          </motion.span>
-          
+            {work.thumbnail ? (
+              <img 
+                src={work.thumbnail} 
+                alt={work.title} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              <WrenchIcon className="w-16 h-16 md:w-24 md:h-24 text-ink/20 group-hover:text-cobalt/40 transition-colors duration-500" />
+            )}
+          </motion.div>
+
+          {/* Wash Overlay (simulates opacity without translucency) */}
+          <motion.div 
+            className="absolute inset-0 bg-cream pointer-events-none"
+            animate={{ opacity: washOpacity }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            style={{ zIndex: 5 }}
+          />
+
+          {/* Inner Shadow - kept from the previous article class */}
+          <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] pointer-events-none z-10" />
           <motion.div 
             style={{ translateZ: 30, opacity: iconOpacity }}
             className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
@@ -141,7 +153,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
             return (
               <div 
                 key={index}
-                className={`group/icon w-8 h-8 rounded-full backdrop-blur-md border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
+                className={`group/icon w-8 h-8 rounded-full border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
                 title={t}
               >
                 {mapped.icon ? (
@@ -220,6 +232,24 @@ export default function Projects() {
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
+  // Common card transforms computed once instead of 20 times
+  const cardBlueOpacity = useTransform(progress, [0.60, 0.70], [0, 1]);
+  const cardBorderOpacity = useTransform(progress, [0.60, 0.70], [0.4, 0]);
+  const cardBorderStyle = useMotionTemplate`1px solid rgba(255,255,255,${cardBorderOpacity})`;
+  const cardIconOpacity = useTransform(progress, [0.55, 0.60], [1, 0]);
+  const cardContentOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
+  const cardFlattenFactor = useTransform(progress, [0.60, 0.70], [1, 0]);
+  const cardScrollFade = useTransform(progress, [0.70, 0.75], [1, 0]);
+  
+  const cardTransforms = {
+    blueOpacity: cardBlueOpacity,
+    borderStyle: cardBorderStyle,
+    iconOpacity: cardIconOpacity,
+    contentOpacity: cardContentOpacity,
+    flattenFactor: cardFlattenFactor,
+    scrollFade: cardScrollFade,
+  };
+
   // Staggered Entry / Exit logic (Solid on entry, sliding up)
   const headerY = useTransform(progress, [0, 0.10], [120, 0]);
   const headerOpacity = useTransform(progress, [0.60, 0.70], [1, 0]);
@@ -258,18 +288,18 @@ export default function Projects() {
   };
 
   // Multiply works array to create a wide runway for seamless infinite scrolling
-  const infiniteWorks = [...works, ...works, ...works, ...works, ...works]
+  const infiniteWorks = [...works, ...works, ...works]
   const scrollRef = useRef(null)
   
-  const [activeIndex, setActiveIndex] = useState(works.length * 2)
+  const [activeIndex, setActiveIndex] = useState(works.length)
 
   useEffect(() => {
     // Initial center position to allow scrolling left immediately
     if (scrollRef.current && scrollRef.current.children.length > 0) {
       setTimeout(() => {
         const el = scrollRef.current
-        if (el && el.children[works.length * 2]) {
-          const target = el.children[works.length * 2];
+        if (el && el.children[works.length]) {
+          const target = el.children[works.length];
           el.scrollLeft = target.offsetLeft + (target.offsetWidth / 2) - (el.clientWidth / 2);
         }
       }, 100)
@@ -279,36 +309,72 @@ export default function Projects() {
   // Lock scrolling when transition begins
   // Since overflowX is already hidden for native scroll, we just disable pointer events
   useEffect(() => {
+    let wasLocked = false;
     return progress.on('change', (v) => {
       if (scrollRef.current) {
-        if (v > 0.75) {
-          scrollRef.current.style.pointerEvents = 'none';
-        } else {
-          scrollRef.current.style.pointerEvents = 'auto';
+        const isLocked = v > 0.75;
+        if (isLocked !== wasLocked) {
+          scrollRef.current.style.pointerEvents = isLocked ? 'none' : 'auto';
+          wasLocked = isLocked;
         }
       }
     });
   }, [progress]);
 
   // Sync the expanding overlay to the active card's exact position
+  // Only run the RAF loop when the overlay is actually visible (progress 0.65–0.95)
+  // to avoid continuous getBoundingClientRect() layout reflow at all other times.
   const overlayRef = useRef(null);
+  const overlaySyncActive = useRef(false);
+  const overlaySyncRaf = useRef(null);
+
   useEffect(() => {
-    let rafId;
+    let lastTop, lastLeft, lastWidth, lastHeight;
+    let cachedCard = null;
+
     const sync = () => {
-      const activeCard = document.getElementById('primary-project-card');
-      const overlay = overlayRef.current;
-      if (activeCard && overlay) {
-        const rect = activeCard.getBoundingClientRect();
-        overlay.style.top = `${rect.top}px`;
-        overlay.style.left = `${rect.left}px`;
-        overlay.style.width = `${rect.width}px`;
-        overlay.style.height = `${rect.height}px`;
+      if (!overlaySyncActive.current) {
+        overlaySyncRaf.current = null;
+        return;
       }
-      rafId = requestAnimationFrame(sync);
+      overlaySyncRaf.current = requestAnimationFrame(sync);
+
+      if (!cachedCard) cachedCard = document.getElementById('primary-project-card');
+      const overlay = overlayRef.current;
+      if (cachedCard && overlay) {
+        const rect = cachedCard.getBoundingClientRect();
+        const t = Math.round(rect.top);
+        const l = Math.round(rect.left);
+        const w = Math.round(rect.width);
+        const h = Math.round(rect.height);
+        
+        if (t !== lastTop || l !== lastLeft || w !== lastWidth || h !== lastHeight) {
+          overlay.style.top = `${t}px`;
+          overlay.style.left = `${l}px`;
+          overlay.style.width = `${w}px`;
+          overlay.style.height = `${h}px`;
+          lastTop = t; lastLeft = l; lastWidth = w; lastHeight = h;
+        }
+      }
     };
-    sync();
-    return () => cancelAnimationFrame(rafId);
-  }, []);
+
+    // Gate: start/stop the RAF loop based on progress
+    const unsub = progress.on('change', (v) => {
+      const shouldRun = v > 0.65 && v < 0.95;
+      if (shouldRun && !overlaySyncActive.current) {
+        overlaySyncActive.current = true;
+        cachedCard = null; // re-lookup in case activeIndex changed
+        if (!overlaySyncRaf.current) overlaySyncRaf.current = requestAnimationFrame(sync);
+      } else if (!shouldRun && overlaySyncActive.current) {
+        overlaySyncActive.current = false;
+      }
+    });
+
+    return () => {
+      unsub();
+      if (overlaySyncRaf.current) cancelAnimationFrame(overlaySyncRaf.current);
+    };
+  }, [progress]);
 
   const scrollTimeoutRef = useRef(null)
 
@@ -319,14 +385,14 @@ export default function Projects() {
     const el = scrollRef.current
     if (!el || el.children.length === 0) return
 
-    // Determine the center element
-    const containerCenter = el.getBoundingClientRect().left + el.clientWidth / 2;
+    // Determine the center element using scrollLeft (avoids getBoundingClientRect layout thrashing)
+    const containerCenter = el.scrollLeft + el.clientWidth / 2;
     let closestIndex = 0;
     let minDistance = Infinity;
 
     Array.from(el.children).forEach((child, index) => {
-      const rect = child.getBoundingClientRect();
-      const childCenter = rect.left + rect.width / 2;
+      // offsetLeft is relative to the scroll container
+      const childCenter = child.offsetLeft + child.offsetWidth / 2;
       const distance = Math.abs(containerCenter - childCenter);
       if (distance < minDistance) {
         minDistance = distance;
@@ -350,14 +416,14 @@ export default function Projects() {
       if (!firstChild || !setFirstChild) return;
       const setWidth = setFirstChild.offsetLeft - firstChild.offsetLeft;
 
-      // Center set is Set 3 (index 2 * works.length to 3 * works.length - 1)
-      const centerSetStart = works.length * 2;
-      const centerSetEnd = works.length * 3 - 1;
+      // Center set is Set 2 (index 1 * works.length to 2 * works.length - 1)
+      const centerSetStart = works.length;
+      const centerSetEnd = works.length * 2 - 1;
 
       // If we've scrolled out of the center set, jump back to it silently
       if (closestIndex < centerSetStart || closestIndex > centerSetEnd) {
         const currentSet = Math.floor(closestIndex / works.length);
-        const setOffset = 2 - currentSet; // '2' is the index of Set 3
+        const setOffset = 1 - currentSet; // '1' is the index of Set 2
         
         currentEl.scrollLeft += (setOffset * setWidth); // Silent jump
       }
@@ -417,6 +483,7 @@ export default function Projects() {
                 opacity: expandOpacity,
                 backgroundColor: '#1B3A8C',
                 transformOrigin: 'center center',
+                willChange: 'transform, opacity',
               }}
             />
           </div>
@@ -456,7 +523,7 @@ export default function Projects() {
               else if (clampedRel <= -2) { translateX = 45; scale = 0.7; }
               else if (clampedRel >= 2) { translateX = -45; scale = 0.7; }
               
-              const cardOpacity = distForStyle === 0 ? 1 : distForStyle === 1 ? 0.6 : 0.3;
+              const washOpacity = distForStyle === 0 ? 0 : distForStyle === 1 ? 0.3 : 0.6;
               const cardShadow = distForStyle === 0 ? '0 20px 60px rgba(0,0,0,0.15)' : 'none';
               
               let zIndexClass = 'z-0';
@@ -475,7 +542,7 @@ export default function Projects() {
                   translateX={translateX}
                   scale={scale}
                   zIndexClass={zIndexClass}
-                  cardOpacity={cardOpacity}
+                  washOpacity={washOpacity}
                   cardShadow={cardShadow}
                   worksLength={works.length}
                   distForStyle={distForStyle}
@@ -483,6 +550,7 @@ export default function Projects() {
                   globalSpringX={globalSpringX}
                   globalSpringY={globalSpringY}
                   progress={progress}
+                  cardTransforms={cardTransforms}
                   onClick={() => {
                     if (!isActive) {
                       isAnimatingRef.current = true;
@@ -539,7 +607,7 @@ export default function Projects() {
 
         {/* All work link */}
         <motion.div 
-          className="absolute bottom-42 left-0 right-0 flex justify-center pointer-events-none"
+          className="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none"
           style={{ y: bottomY, opacity: bottomOpacity }}
         >
           <motion.a
