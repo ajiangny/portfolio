@@ -17,9 +17,9 @@ function DuotoneDefs() {
         <filter id="duotone-art" colorInterpolationFilters="sRGB">
           <feColorMatrix type="saturate" values="0" result="gray" />
           <feComponentTransfer colorInterpolationFilters="sRGB">
-            <feFuncR type="table" tableValues="0.106 0.961" />
-            <feFuncG type="table" tableValues="0.227 0.941" />
-            <feFuncB type="table" tableValues="0.549 0.910" />
+            <feFuncR type="table" tableValues="0.145 0.961" />
+            <feFuncG type="table" tableValues="0.310 0.941" />
+            <feFuncB type="table" tableValues="0.757 0.910" />
           </feComponentTransfer>
         </filter>
       </defs>
@@ -454,7 +454,7 @@ export default function About() {
             </div>
 
             <motion.a
-              href="/resume.pdf"
+              href="/docs/resume.pdf"
               target="_blank"
               rel="noopener noreferrer"
               style={{
