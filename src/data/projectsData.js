@@ -46,5 +46,12 @@ export const works = [
     github: null,
     live: null,
     thumbnail: '/thumbnail/CFA.webp'
+  },
+  {
+    isGithubCard: true,
+    title: 'View All Work.',
+    subtitle: 'Check out all my repositories and open-source contributions.',
+    github: 'https://github.com/ajiangny',
+    tech: [],
   }
 ];
