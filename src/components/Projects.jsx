@@ -103,7 +103,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
           id={isActiveIndex ? "primary-project-card" : undefined}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="group relative w-full aspect-video rounded-2xl select-none overflow-hidden bg-white/70 flex items-center justify-center z-10"
+          className={`group relative w-full aspect-video rounded-2xl select-none overflow-hidden flex items-center justify-center z-10 transition-colors duration-500 ${work.isGithubCard ? 'bg-white/70 hover:bg-ink' : 'bg-white/70'}`}
           animate={{
             x: `${translateX}%`,
             scale: scale,
@@ -130,7 +130,20 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
             className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
             style={{ opacity: contentOpacity, translateZ: 10, filter: thumbnailFilter }}
           >
-            {work.thumbnail ? (
+            {work.isGithubCard ? (
+              <div className="relative w-full h-full pointer-events-none">
+                <img
+                  src="/thumbnail/github.svg"
+                  alt="GitHub"
+                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 group-hover:opacity-0"
+                />
+                <img
+                  src="/thumbnail/github2.svg"
+                  alt="GitHub Hover"
+                  className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                />
+              </div>
+            ) : work.thumbnail ? (
               <img
                 src={work.thumbnail}
                 alt={work.title}
@@ -211,7 +224,7 @@ const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX,
           </div>
 
           <div className="flex gap-3 shrink-0 mt-0.5">
-            {work.github && (
+            {work.github && !work.isGithubCard && (
               <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} on GitHub`}>
                 <GitHubIcon />
               </a>
@@ -486,7 +499,7 @@ export default function Projects() {
             <SectionNav
               currentSection="Projects"
               style={{ y: labelY, opacity: labelOpacity }}
-              defaultTextColor="var(--color-cobalt)"
+              defaultTextColor="#1B3A8C"
             />
           </div>
 
@@ -498,8 +511,8 @@ export default function Projects() {
             <ElasticHeading
               text="Featured Projects"
               as="h2"
-              className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95] text-cobalt"
-              style={{}}
+              className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95]"
+              style={{ color: '#1B3A8C' }}
             />
           </motion.div>
 
@@ -617,6 +630,8 @@ export default function Projects() {
                             });
                           });
                         });
+                      } else if (work.isGithubCard) {
+                        window.open(work.github, '_blank', 'noopener,noreferrer');
                       }
                     }}
                   />
@@ -639,43 +654,6 @@ export default function Projects() {
                 />
               )
             })}
-          </motion.div>
-
-          {/* All work link */}
-          <motion.div
-            className="absolute bottom-20 left-0 right-0 flex justify-center pointer-events-none"
-            style={{ y: bottomY, opacity: bottomOpacity }}
-          >
-            <motion.a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-cobalt text-sm md:text-base inline-flex items-center gap-2 uppercase tracking-[0.15em] pointer-events-auto relative pb-1"
-              whileHover="hover"
-              initial="initial"
-            >
-              <span>View all on GitHub</span>
-              <motion.span
-                variants={{
-                  initial: { x: 0 },
-                  hover: { x: 8 }
-                }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              >
-                →
-              </motion.span>
-
-              {/* Premium Animated Underline */}
-              <div className="absolute left-0 right-0 bottom-0 h-px bg-cobalt/30" />
-              <motion.div
-                className="absolute left-0 right-0 bottom-0 h-[2px] bg-cobalt origin-left"
-                variants={{
-                  initial: { scaleX: 0 },
-                  hover: { scaleX: 1 }
-                }}
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
-              />
-            </motion.a>
           </motion.div>
 
         </div>{/* end content wrapper */}
