@@ -2,7 +2,6 @@ import { useRef, useEffect, useState } from 'react'
 import { motion, useTransform, useSpring, useMotionValue, animate, useMotionTemplate, useScroll } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import ProjectsHalftone from './projects/ProjectsHalftone'
-import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
 import { works } from '../data/projectsData'
 import { GitHubIcon, ExternalIcon, WrenchIcon } from './icons'
@@ -477,8 +476,6 @@ export default function Projects() {
     }, 150)
   }
 
-
-
   return (
     <div
       id="projects"
@@ -486,6 +483,7 @@ export default function Projects() {
       className="bg-cream"
       style={{ height: '400vh' }}
     >
+
       <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
 
         {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
@@ -502,20 +500,6 @@ export default function Projects() {
               defaultTextColor="#1B3A8C"
             />
           </div>
-
-          {/* Header - Tied to timeline scroll */}
-          <motion.div
-            className="absolute top-24 left-0 right-0 flex flex-col items-center text-center pointer-events-none"
-            style={{ y: headingY, opacity: headingOpacity, scale: headingScale }}
-          >
-            <ElasticHeading
-              text="Featured Projects"
-              as="h2"
-              className="font-display text-[clamp(56px,7vw,96px)] leading-[0.95]"
-              style={{ color: '#1B3A8C' }}
-            />
-          </motion.div>
-
           {/* Native Horizontal Scroll Container */}
           <motion.div
             className="w-full mt-32 relative flex justify-center items-center"
@@ -566,7 +550,7 @@ export default function Projects() {
                 const widthClass = 'w-[80vw] md:w-[50vw] lg:w-[38vw] xl:w-[28vw]';
 
                 let translateX = 0;
-                let scale = distForStyle === 0 ? 1.18 : 1;
+                let scale = distForStyle === 0 ? 1.35 : 1;
                 if (clampedRel === -1) { translateX = 20; scale = 0.85; }
                 else if (clampedRel === 1) { translateX = -20; scale = 0.85; }
                 else if (clampedRel <= -2) { translateX = 45; scale = 0.7; }

@@ -1,3 +1,15 @@
+/**
+ * SkillIcon.jsx — Animated Skill Tile
+ *
+ * Renders a single tech skill as an icon tile in the About section.
+ * Each tile enters with a staggered scroll-driven animation (slide from
+ * right + rotate + scale) and shows its icon in grayscale by default,
+ * switching to full colour on hover.
+ *
+ * Supports two modes:
+ *   • `icon` — renders a tech-stack-icons SVG (grayscale ↔ color)
+ *   • `custom` — renders a text abbreviation with a custom hover color
+ */
 import { useState } from 'react';
 import { motion, useTransform } from 'framer-motion';
 import StackIcon from 'tech-stack-icons';

@@ -1,3 +1,15 @@
+/**
+ * ArtColumn.jsx — Filmstrip Art Column
+ *
+ * Renders a vertical column of artwork images for the About section's
+ * filmstrip grid. Each image is displayed with a duotone filter and a
+ * halftone dot overlay.
+ *
+ * The last card in the center column (`clearLast = true`) is the profile
+ * photo — it gets a special full-colour crossfade animation and its ref
+ * is passed up so About.jsx can read its position for the expanding
+ * portrait transition.
+ */
 import { motion } from 'framer-motion';
 import { DOT_BG } from '../../data/aboutData';
 

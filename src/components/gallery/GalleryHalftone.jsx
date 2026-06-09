@@ -1,3 +1,18 @@
+/**
+ * GalleryHalftone.jsx — Cream Halftone Dot Canvas (Gallery / Contact Sections)
+ *
+ * Renders an animated halftone dot grid (cream dots on black) used as the
+ * background for both Gallery and Contact sections. The dots share the same
+ * grid alignment so the pattern is seamless when scrolling between sections.
+ *
+ * Features a radial "pulse ring" effect — an expanding circle of boosted dots
+ * that sweeps outward from center, driven by the Gallery scroll-in progress.
+ *
+ * Also supports mouse hover proximity boost and an early-out optimisation
+ * based on parent headerOpacity to skip rendering when the layer is invisible.
+ *
+ * Performance optimisations: same sprite-sheet approach as ProfileHalftone.
+ */
 import { useEffect, useRef } from 'react'
 
 const GRID         = 18

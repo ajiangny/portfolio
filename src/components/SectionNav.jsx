@@ -1,3 +1,18 @@
+/**
+ * SectionNav.jsx — Floating Section Navigation Bar
+ *
+ * A compact navigation component pinned to the top of each section.
+ * Shows the current section label by default; on hover, expands into
+ * a row of five organic blob buttons (one per section) with spring
+ * animations.
+ *
+ * Adapts its colours to the current section's background:
+ *   • Light bg (Hero, Projects) → cobalt blobs with cream text
+ *   • Dark bg (About) → cream blobs with cobalt text
+ *   • Black bg (Gallery, Contact) → cream blobs with ink text
+ *
+ * Clicking a blob triggers the TransitionContext page transition.
+ */
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTransitionContext } from '../context/TransitionContext';

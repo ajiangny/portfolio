@@ -1,6 +1,21 @@
+/**
+ * OrbitBubble.jsx — Orbiting Navigation Bubble
+ *
+ * A single floating nav link that orbits the Hero heading in an elliptical
+ * path. On hover, the active bubble scales up while siblings shrink.
+ * On scroll, all bubbles explode outward and fade to make room for
+ * the About section entrance.
+ *
+ * Each bubble has:
+ *   • Continuous orbital motion (useAnimationFrame)
+ *   • Mouse parallax layered on top of the orbit
+ *   • Scroll-driven outward expansion and fade
+ *   • Organic blob border-radius shapes
+ */
 import { useRef } from 'react'
 import { motion, useAnimationFrame } from 'framer-motion'
 import { ORBIT_DURATION} from './orbitConstants'
+
 
 const NAV_LENGTH = 4 // kept in sync with navLinks in Hero
 

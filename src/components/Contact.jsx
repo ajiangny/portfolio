@@ -1,8 +1,20 @@
+/**
+ * Contact.jsx — Contact Section
+ *
+ * The final section of the portfolio. Features:
+ *   • "Let's Talk" heading with elastic letter repulsion
+ *   • Contact form (name, email, message) with a simulated submit
+ *   • Social links (GitHub, LinkedIn, X)
+ *   • Staggered entrance animations via Framer Motion variants
+ *   • GalleryHalftone background (fixed position, shared grid with Gallery)
+ *   • SectionNav floating navigation bar
+ */
 import { useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
 import GalleryHalftone from './gallery/GalleryHalftone'
+
 
 const socials = [
   {

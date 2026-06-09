@@ -1,3 +1,13 @@
+/**
+ * PageTransition.jsx — Blob-Expand Page Transition Overlay
+ *
+ * Renders a fixed-position organic blob that expands from the click point
+ * to cover the entire screen, then shrinks back. Used by TransitionContext
+ * to create a curtain effect during section-to-section navigation.
+ *
+ * The blob cycles through organic border-radius shapes (from orbitConstants)
+ * for a fluid, non-circular expansion feel.
+ */
 import { motion } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { BLOB_SHAPES } from './hero/orbitConstants'

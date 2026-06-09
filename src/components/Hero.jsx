@@ -1,5 +1,21 @@
+/**
+ * Hero.jsx — Landing Section
+ *
+ * The first viewport the user sees. Composed of:
+ *   • HalftoneBg canvas — dot-gradient background that responds to mouse
+ *   • ElasticHeading — "Portfolio" title with letter-repulsion physics
+ *   • OrbitBubble ×4 — floating nav links that orbit the heading
+ *   • Dynamic colour system — cobalt hue shifts on hover/scroll
+ *     via CSS custom properties (--color-cobalt, --color-hero-bg, etc.)
+ *
+ * Scroll behaviour:
+ *   • Heading scales up, rises, and fades out
+ *   • Bubbles explode outward
+ *   • Background fades, revealing the cobalt About section beneath
+ */
 import { useRef, useState, useEffect } from 'react'
 import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionValueEvent, animate } from 'framer-motion'
+
 import { useTransitionContext } from '../context/TransitionContext'
 import HalftoneBg    from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'

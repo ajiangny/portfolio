@@ -1,3 +1,12 @@
+/**
+ * orbitConstants.js — Shared Hero Animation Constants
+ *
+ * Constants used by OrbitBubble and PageTransition:
+ *   • ORBIT_DURATION — time for one full orbit revolution (~2 minutes)
+ *   • BLOB_SHAPES — organic border-radius values giving each blob
+ *     a unique hand-drawn silhouette (used for nav bubbles and
+ *     the page transition curtain)
+ */
 export const ORBIT_DURATION = 120_000 // ms — one full revolution ≈ 2 minutes
 
 export const BLOB_SHAPES = [
