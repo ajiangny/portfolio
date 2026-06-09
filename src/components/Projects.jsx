@@ -480,7 +480,7 @@ export default function Projects() {
     <div
       id="projects"
       ref={containerRef}
-      className="bg-cream"
+      className="bg-cream relative"
       style={{ height: '400vh' }}
     >
 

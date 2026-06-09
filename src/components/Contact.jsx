@@ -2,7 +2,7 @@
  * Contact.jsx — Contact Section
  *
  * The final section of the portfolio. Features:
- *   • "Let's Talk" heading with elastic letter repulsion
+ *   • "Thank You For Visiting!" heading with elastic letter repulsion
  *   • Contact form (name, email, message) with a simulated submit
  *   • Social links (GitHub, LinkedIn, X)
  *   • Staggered entrance animations via Framer Motion variants
@@ -140,7 +140,7 @@ export default function Contact() {
         transition={{ type: 'spring', stiffness: 260, damping: 28, delay: 0.05 }}
       >
         <ElasticHeading
-          text="Let's Talk."
+          text="Thank You For Visiting!"
           as="h2"
           className="font-display text-cream leading-[0.9]"
           style={{ fontSize: 'clamp(56px, 7vw, 96px)' }}
