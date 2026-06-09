@@ -1,3 +1,13 @@
+/**
+ * projectsData.js — Projects Section Data
+ *
+ * Array of project objects displayed in the Projects carousel.
+ * Each project has a title, subtitle description, tech stack array,
+ * optional GitHub/live links, and an optional thumbnail path.
+ *
+ * The last entry is a special `isGithubCard` — a CTA card that
+ * links to the full GitHub profile instead of a specific project.
+ */
 export const works = [
   {
     title: 'Interactive Portfolio',
@@ -48,9 +58,10 @@ export const works = [
     thumbnail: '/thumbnail/CFA.webp'
   },
   {
+    // Special CTA card — links to GitHub profile instead of a project
     isGithubCard: true,
     title: 'View All Work.',
-    subtitle: 'Check out all my repositories and open-source contributions.',
+    subtitle: 'Check out all my projects and repositories.',
     github: 'https://github.com/ajiangny',
     tech: [],
   }

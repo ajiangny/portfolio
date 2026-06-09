@@ -1,3 +1,11 @@
+/**
+ * AnimateIn.jsx — Scroll-Triggered Entrance Animation
+ *
+ * A reusable wrapper that fades and slides its children into view
+ * when they enter the viewport. Supports four directions and
+ * configurable delay/duration. Uses Framer Motion's `whileInView`
+ * for intersection-based triggering (fires once).
+ */
 import { motion } from 'framer-motion'
 
 /**

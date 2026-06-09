@@ -1,3 +1,15 @@
+/**
+ * TransitionContext.jsx — Page Transition State
+ *
+ * Provides a blob-expand navigation effect shared across the entire app.
+ * When `navigate()` is called, it:
+ *   1. Records the click position for the expand origin
+ *   2. Sets the transition color (section-specific)
+ *   3. Activates the blob (PageTransition renders the expanding circle)
+ *   4. After the blob covers the screen (600ms), performs an instant
+ *      Lenis scroll jump to the target section
+ *   5. Shrinks the blob to reveal the new section
+ */
 import { createContext, useContext, useState, useRef, useCallback } from 'react'
 import { useLenisContext } from './LenisContext'
 
@@ -14,12 +26,14 @@ export function TransitionProvider({ children }) {
     if (isTransitioning.current) return
     isTransitioning.current = true
 
+    // Set the blob's fill color — each section has a themed color
     if (colorStr) {
       setTransitionColor(colorStr)
     } else {
       setTransitionColor('var(--color-cobalt)')
     }
 
+    // Resolve click coordinates for the expand origin
     let clientX
     let clientY
 
@@ -36,16 +50,16 @@ export function TransitionProvider({ children }) {
 
     setIsActive(true)
 
-    // Wait for blob to expand (600ms)
+    // Phase 1: Wait for blob to fully expand (600ms CSS transition)
     setTimeout(() => {
-      // Jump instantly while hidden
+      // Instant jump while the blob hides the page
       lenisRef?.current?.scrollTo(href, { ...options, immediate: true, duration: 0 })
 
-      // Wait a tiny bit for DOM layout to settle, then shrink blob
+      // Phase 2: Brief pause for DOM to settle, then shrink the blob
       setTimeout(() => {
         setIsActive(false)
         
-        // Unlock after exit animation (600ms)
+        // Phase 3: Unlock after exit animation completes (600ms)
         setTimeout(() => {
           isTransitioning.current = false
         }, 600)
@@ -63,4 +77,3 @@ export function TransitionProvider({ children }) {
 export function useTransitionContext() {
   return useContext(TransitionContext)
 }
-

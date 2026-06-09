@@ -1,3 +1,13 @@
+/**
+ * App.jsx — Root Application Component
+ *
+ * Composes the full single-page portfolio by stacking five
+ * scroll-driven sections: Hero → About → Projects → Gallery → Contact.
+ *
+ * Wraps everything in:
+ *   • LenisContext  — smooth-scroll instance shared across sections
+ *   • TransitionProvider — blob-expand page-transition state
+ */
 import useLenis from './hooks/useLenis'
 import { LenisContext } from './context/LenisContext'
 import { TransitionProvider } from './context/TransitionContext'

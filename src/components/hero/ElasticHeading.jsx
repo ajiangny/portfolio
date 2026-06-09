@@ -1,5 +1,16 @@
+/**
+ * ElasticHeading.jsx — Mouse-Repulsive Typography
+ *
+ * Renders a heading where each letter independently reacts to the mouse
+ * cursor — letters within a radius are "pushed" away with spring physics,
+ * creating a fluid elastic repulsion effect.
+ *
+ * Optional `waveEffect` adds a looping vertical wave animation where
+ * letters bob up in sequence (used in the About heading).
+ */
 import { useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion'
+
 
 const OFF = -9999
 

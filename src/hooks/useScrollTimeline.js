@@ -1,13 +1,21 @@
+/**
+ * useScrollTimeline.js — Section Scroll Progress Hook
+ *
+ * Tracks how far the user has scrolled through a specific section,
+ * returning a MotionValue that ranges from 0 (section top at viewport top)
+ * to 1 (section fully scrolled past).
+ *
+ * Used by Projects and Gallery to drive scroll-linked animations
+ * (card transforms, halftone waves, entry/exit sequences).
+ *
+ * @param {React.RefObject} containerRef - Ref to the tall scrolling wrapper (e.g. 400vh div).
+ * @param {number} activeHeight - Total scroll distance (px) over which progress goes 0→1.
+ * @returns {import('framer-motion').MotionValue<number>} progress — clamped to [0, 1].
+ */
 import { useEffect } from 'react'
 import { useMotionValue } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 
-/**
- * Custom hook to track scroll progress over a specific container.
- * @param {React.RefObject} containerRef - Ref to the section container (usually the tall scrolling wrapper).
- * @param {number} activeHeight - The total scroll distance (in pixels) over which progress goes from 0 to 1.
- * @returns {import('framer-motion').MotionValue} progress - A MotionValue between 0 and 1.
- */
 export default function useScrollTimeline(containerRef, activeHeight) {
   const lenisRef = useLenisContext()
   const progress = useMotionValue(0)
@@ -24,7 +32,7 @@ export default function useScrollTimeline(containerRef, activeHeight) {
         const el = containerRef.current
         if (!el) return
         
-        // Use the provided activeHeight, or fallback to the element's clientHeight minus 1 window height
+        // Use the provided activeHeight, or fallback to element height minus one viewport
         const height = activeHeight || Math.max(1, el.clientHeight - window.innerHeight)
         
         const raw = (scroll - el.offsetTop) / height

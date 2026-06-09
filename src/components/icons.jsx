@@ -1,3 +1,13 @@
+/**
+ * icons.jsx — Shared SVG Icon Components
+ *
+ * Small, reusable icon components used across the portfolio:
+ *   • GitHubIcon   — GitHub octocat logo (filled)
+ *   • ExternalIcon — External link arrow (stroked)
+ *   • WrenchIcon   — Wrench/tool icon for projects without thumbnails (stroked)
+ */
+
+/** GitHub octocat mark — used in project card links */
 export function GitHubIcon() {
   return (
     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -6,6 +16,7 @@ export function GitHubIcon() {
   )
 }
 
+/** External link arrow — used for live demo links */
 export function ExternalIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -14,6 +25,7 @@ export function ExternalIcon() {
   )
 }
 
+/** Wrench icon — fallback thumbnail for projects without screenshots */
 export function WrenchIcon({ className = "w-5 h-5" }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

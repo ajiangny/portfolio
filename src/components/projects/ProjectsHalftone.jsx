@@ -1,3 +1,19 @@
+/**
+ * ProjectsHalftone.jsx — Cobalt Halftone Dot Canvas (Projects Section)
+ *
+ * Renders an animated halftone dot grid (cobalt dots on cream) used for
+ * the Projects and About-to-Projects transition backgrounds.
+ *
+ * Supports three simultaneous dot-influence sources:
+ *   • Radial wave — expands outward from center (driven by scroll progress)
+ *   • Line wave — horizontal band sweeps top-to-bottom (About→Projects transition)
+ *   • Mouse hover — proximity-based dot boost
+ *
+ * Also applies a scroll-driven grayscale filter as the cards fade to black
+ * during the Gallery transition (progress 0.55→0.63).
+ *
+ * Performance optimisations: same sprite-sheet approach as ProfileHalftone.
+ */
 import { useEffect, useRef } from 'react'
 import { motion, useTransform, useMotionTemplate, useMotionValue } from 'framer-motion'
 

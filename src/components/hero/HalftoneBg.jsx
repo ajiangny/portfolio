@@ -1,9 +1,23 @@
+/**
+ * HalftoneBg.jsx — Hero Section Halftone Dot Background
+ *
+ * Renders a full-viewport canvas of halftone dots that increase in size
+ * from top to bottom, creating a gradient density effect that dissolves
+ * into the cobalt-blue boundary. Dots are tinted to the current cobalt
+ * color (which changes dynamically on hover via CSS custom properties).
+ *
+ * Performance optimisations:
+ *   • Pre-renders a static offscreen canvas for the base dots
+ *   • Only redraws the hover-affected region (not the full canvas)
+ *   • Uses `source-in` compositing to tint all dots in a single fillRect
+ */
 import { useEffect, useRef } from 'react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const GRID        = 18          // px between dot centres
 const DOT_R_MIN   = 0.6         // radius at very top (px)
 const DOT_R_MAX   = 8.5         // radius at very bottom — cells are 9px half, so nearly solid
+
 export default function HalftoneBg({ containerId, colorRgbValue }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })

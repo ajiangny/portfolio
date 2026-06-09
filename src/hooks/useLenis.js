@@ -1,12 +1,18 @@
+/**
+ * useLenis.js — Smooth Scroll Hook
+ *
+ * Initialises a Lenis smooth-scroll instance and keeps it alive
+ * for the lifetime of the component that calls the hook.
+ * Returns a ref so callers can access `lenisRef.current.scrollTo()`.
+ *
+ * Configuration:
+ *   • easeOutExpo easing for a snappy-then-smooth feel
+ *   • Vertical orientation only
+ *   • Touch multiplier of 2 for responsive mobile scrolling
+ */
 import { useEffect, useRef } from 'react'
 import Lenis from 'lenis'
 
-/**
- * Initialises a Lenis smooth-scroll instance and keeps it alive
- * for the lifetime of the component that calls the hook.
- *
- * Returns the Lenis instance so callers can use `lenis.scrollTo()`.
- */
 export default function useLenis() {
   const lenisRef = useRef(null)
 
@@ -22,6 +28,7 @@ export default function useLenis() {
 
     lenisRef.current = lenis
 
+    // Drive the Lenis scroll loop via requestAnimationFrame
     function raf(time) {
       lenis.raf(time)
       requestAnimationFrame(raf)

@@ -1,3 +1,24 @@
+/**
+ * About.jsx — About Section
+ *
+ * A 700vh scroll-driven section with three phases:
+ *
+ * Phase 1 — Filmstrip (progress 0→0.28):
+ *   Three columns of duotone artwork scroll upward at different speeds,
+ *   then part outward to reveal the profile photo.
+ *
+ * Phase 2 — Profile Expansion (progress 0.34→0.43):
+ *   The profile card's exact DOM rect is read and used as the start
+ *   position for a smooth expansion to a larger portrait on the right.
+ *
+ * Phase 3 — Text Panel (progress 0.43→0.50):
+ *   Heading, bio, skills, and resume button slide in from behind the
+ *   profile photo in a staggered cascade.
+ *
+ * Fade-out (progress 0.85→1.0):
+ *   Content fades via a CSS mask gradient while ProjectsHalftone dots
+ *   rise in to create a seamless handoff to the Projects section.
+ */
 import { useRef, useEffect, useState } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate, useScroll } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
@@ -32,7 +53,6 @@ export default function About() {
   const containerRef   = useRef(null)
   const lenisRef       = useLenisContext()
   const progress       = useMotionValue(0)
-  const fadeProgress   = useMotionValue(0)
 
   // Ref on the filmstrip profile card — used to read its exact screen position.
   const profileCardRef = useRef(null)

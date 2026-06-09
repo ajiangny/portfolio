@@ -1,3 +1,18 @@
+/**
+ * ProfileHalftone.jsx — Cream Halftone Dot Canvas (About Section)
+ *
+ * Renders an animated halftone dot grid (cream dots on transparent)
+ * used for the About section background and the profile photo overlay.
+ * Dots react to mouse proximity (hover boost) and a scroll-driven
+ * wave that sweeps from bottom to top.
+ *
+ * Performance optimisations:
+ *   • Pre-rendered offscreen canvas for static base dots
+ *   • Sprite sheet for all dot size/opacity levels (avoids arc() calls)
+ *   • Row sprite canvas for batch drawImage of uniform rows
+ *   • IntersectionObserver to pause RAF when off-screen
+ *   • Throttled to ~30fps
+ */
 import { useEffect, useRef } from 'react'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
