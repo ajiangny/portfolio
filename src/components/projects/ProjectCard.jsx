@@ -12,7 +12,7 @@
  * all cards via the `cardTransforms` bundle computed once in Projects.
  */
 import { motion, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion'
-import StackIcon from 'tech-stack-icons'
+import StackIcon from '../LazyStackIcon'
 import { TECH_ICON_MAP } from '../../data/projectsData'
 import { GitHubIcon, ExternalIcon, WrenchIcon } from '../icons'
 

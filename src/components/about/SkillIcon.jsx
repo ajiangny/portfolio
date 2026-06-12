@@ -12,7 +12,7 @@
  */
 import { useState } from 'react';
 import { motion, useTransform } from 'framer-motion';
-import StackIcon from 'tech-stack-icons';
+import StackIcon from '../LazyStackIcon';
 
 export default function SkillIcon({ skill, index, progress, isMain, startAt = 0.537 }) {
   const [hovered, setHovered] = useState(false);
