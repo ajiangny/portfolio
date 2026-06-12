@@ -122,6 +122,13 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
         if (needsRedraw) {
            ctx.clearRect(0, 0, w, h)
            ctx.drawImage(offCanvas, 0, 0)
+           // Tint the idle frame too — the pre-render is white, and
+           // skipping this left a milky "glass" veil over the dots
+           // until the first mousemove/tap swapped in tinted draws.
+           ctx.globalCompositeOperation = 'source-in'
+           ctx.fillStyle = `rgb(${rgbStr})`
+           ctx.fillRect(0, 0, w, h)
+           ctx.globalCompositeOperation = 'source-over'
            needsRedraw = false
         }
         return
@@ -188,6 +195,11 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
     window.addEventListener('mousemove', handleMouse)
     window.addEventListener('mouseleave', handleLeave)
 
+    // The idle frame is drawn once and cached — invalidate it whenever
+    // the dynamic cobalt changes (nav hover/tap colour animations) so
+    // the resting dots re-tint to match.
+    const unsubColor = colorRgbValue?.on?.('change', () => { needsRedraw = true })
+
     const parent = canvas.parentElement
     const ro = new ResizeObserver(resize)
     ro.observe(parent)
@@ -198,6 +210,7 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
       cancelAnimationFrame(rafRef.current)
       window.removeEventListener('mousemove', handleMouse)
       window.removeEventListener('mouseleave', handleLeave)
+      unsubColor?.()
       ro.disconnect()
     }
   }, [containerId, colorRgbValue])

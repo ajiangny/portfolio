@@ -54,6 +54,9 @@ export default function About() {
   const containerRef = useRef(null)
   const lenisRef = useLenisContext()
   const progress = useMotionValue(0)
+  // Separate clock for the Hero→About handoff — runs while `progress` is
+  // still clamped at 0 (i.e. before the sticky viewport pins).
+  const introProgress = useMotionValue(0)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
   // Ref on the filmstrip profile card — used to read its exact screen position.
@@ -112,6 +115,13 @@ export default function About() {
         const activeHeight = vh * 6
         const raw = (scroll - el.offsetTop) / activeHeight
         progress.set(Math.max(0, Math.min(1, raw)))
+        // Hero→About handoff clock — starts at 20% into the Hero's exit
+        // (0.8vh BEFORE `progress` leaves 0) so the blank strips can fall
+        // while the blue section is still sliding up over the Hero.
+        // Spans 1.25vh of scroll: 1 lands at About progress 0.075, where
+        // the filmstrip entry used to finish.
+        const introRaw = (scroll - (el.offsetTop - vh * 0.8)) / (vh * 1.25)
+        introProgress.set(Math.max(0, Math.min(1, introRaw)))
       }
       const onScroll = ({ scroll }) => calc(scroll)
       calc(lenis.scroll ?? window.scrollY)
@@ -119,19 +129,25 @@ export default function About() {
       unlisten = () => lenis.off('scroll', onScroll)
     }, 0)
     return () => { clearTimeout(t); unlisten() }
-  }, [lenisRef, progress])
+  }, [lenisRef, progress, introProgress])
 
   // ── Scroll-phase transforms ───────────────────────────────────────────────
   // Re-mapped so everything finishes at progress = 0.5 (which is 300vh)
 
-  const colsEntryY = useTransform(progress, [0.0075, 0.075], ['100vh', '0vh'])
-  const framesScale = useTransform(progress, [0.0075, 0.0975], [0.60, 1])
+  // Intro choreography rides introProgress (see the Lenis listener):
+  //   0    → 20% into the Hero's exit; blank strips appear at the top
+  //   0.31 → the blanks' bottom row has dropped below the viewport, so
+  //          the art columns start rising to chase it (they break into
+  //          view at ≈0.42 while the upper blank rows are still falling)
+  //   0.72 → filmstrip fully risen; blanks have faded out by 0.70
+  const colsEntryY = useTransform(introProgress, [0.31, 0.72], ['100vh', '0vh'])
+  const framesScale = useTransform(introProgress, [0.31, 0.78], [0.60, 1])
 
   // Distant blank strips — small, light placeholders that fall down
   // through the cobalt opening before the real filmstrip rises in,
   // selling the "falling from a distance" depth as the section opens.
-  const miniY = useTransform(progress, [0, 0.09], ['-90vh', '90vh'])
-  const miniO = useTransform(progress, [0, 0.015, 0.055, 0.085], [0, 1, 1, 0])
+  const miniY = useTransform(introProgress, [0, 0.7], ['-90vh', '107vh'])
+  const miniO = useTransform(introProgress, [0, 0.06, 0.62, 0.7], [0, 1, 1, 0])
 
   const leftY = useTransform(progress, [0.1125, 0.28125], ['0%', '-55%'])
   const leftX = useTransform(progress, [0.2925, 0.35], ['0%', '-140%'])
@@ -346,7 +362,7 @@ export default function About() {
 
           {/* ── Distant strips — depth cue ahead of the filmstrip ──────────── */}
           <motion.div
-            className="absolute inset-0 grid grid-cols-3 gap-6 px-[30vw]"
+            className="absolute inset-0 grid grid-cols-3 gap-4 px-[16vw] md:gap-6 md:px-[30vw]"
             style={{ y: miniY, opacity: miniO, zIndex: 1 }}
             aria-hidden="true"
           >
