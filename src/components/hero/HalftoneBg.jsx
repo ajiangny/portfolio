@@ -6,31 +6,40 @@
  * into the cobalt-blue boundary. Dots are tinted to the current cobalt
  * color (which changes dynamically on hover via CSS custom properties).
  *
+ * This is the one halftone that does NOT use the shared HalftoneCanvas
+ * engine: its per-row radius/opacity gradient and dynamic `source-in`
+ * tinting don't fit the uniform-dot sprite-sheet model. It still shares
+ * the grid-alignment helper from halftoneCore so the lattice matches
+ * the other sections.
+ *
  * Performance optimisations:
  *   • Pre-renders a static offscreen canvas for the base dots
  *   • Only redraws the hover-affected region (not the full canvas)
  *   • Uses `source-in` compositing to tint all dots in a single fillRect
+ *   • IntersectionObserver pauses the RAF loop while scrolled offscreen
  */
 import { useEffect, useRef } from 'react'
+import { GRID, computeGlobalOffsetY } from '../halftone/halftoneCore'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const GRID        = 18          // px between dot centres
-const DOT_R_MIN   = 0.6         // radius at very top (px)
-const DOT_R_MAX   = 8.5         // radius at very bottom — cells are 9px half, so nearly solid
+const DOT_R_MIN = 0.6         // radius at very top (px)
+const DOT_R_MAX = 8.5         // radius at very bottom — cells are 9px half, so nearly solid
+const DOT_OPACITY_TOP = 0.06
+const DOT_OPACITY_BOT = 1
+const HOVER_R = 180
+const HOVER_R2 = HOVER_R * HOVER_R
+const HOVER_BOOST = 6
+const HALF_CELL = GRID / 2 - 0.5
+const TAU = Math.PI * 2
 
 export default function HalftoneBg({ containerId, colorRgbValue }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
+  const isVisible = useRef(false)
 
   // Pre-baked cell data — rebuilt only on resize
   const cellsRef = useRef(null)
-
-  const DOT_OPACITY_TOP = 0.06
-  const DOT_OPACITY_BOT = 1
-  const HOVER_R         = 180
-  const HOVER_R2        = HOVER_R * HOVER_R
-  const HOVER_BOOST     = 6
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -40,30 +49,18 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
     let needsRedraw = true
 
     function buildCells(W, H) {
-      let globalOffsetY = 0
-      if (containerId) {
-        const el = document.getElementById(containerId)
-        if (el) {
-          let current = el
-          let top = 0
-          while (current) {
-            top += current.offsetTop
-            current = current.offsetParent
-          }
-          globalOffsetY = top % GRID
-        }
-      }
+      const globalOffsetY = computeGlobalOffsetY(containerId)
 
       const cols  = Math.ceil(W / GRID) + 2
       const rows  = Math.ceil(H / GRID) + 2
       const count = cols * rows
       const data  = new Float32Array(count * 4)
-      
+
       const offCanvas = document.createElement('canvas')
       offCanvas.width = W
       offCanvas.height = H
       const offCtx = offCanvas.getContext('2d')
-      
+
       let i = 0
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
@@ -76,10 +73,10 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
           data[i++] = cy
           data[i++] = baseR
           data[i++] = opac
-          
+
           const oi = Math.max(0, Math.min(1, opac))
           offCtx.beginPath()
-          offCtx.arc(cx, cy, baseR, 0, Math.PI * 2)
+          offCtx.arc(cx, cy, baseR, 0, TAU)
           offCtx.fillStyle = `rgba(255, 255, 255, ${oi.toFixed(3)})`
           offCtx.fill()
         }
@@ -95,13 +92,14 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
       if (w > 0 && h > 0) buildCells(w, h)
     }
 
-    const HALF_CELL = GRID / 2 - 0.5
-    const TAU = Math.PI * 2
-
     let hoverStrength = 0
     let lastMoveTime = 0
 
     function draw() {
+      if (!isVisible.current) {
+        rafRef.current = null
+        return
+      }
       rafRef.current = requestAnimationFrame(draw)
       const bag = cellsRef.current
       if (!bag || w === 0 || h === 0) return
@@ -136,10 +134,10 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
 
       needsRedraw = true
       ctx.clearRect(0, 0, w, h)
-      
+
       // Draw white base dots
       ctx.drawImage(offCanvas, 0, 0)
-      
+
       // Tint base dots to current color
       ctx.globalCompositeOperation = 'source-in'
       ctx.fillStyle = `rgb(${rgbStr})`
@@ -159,17 +157,17 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
             const dx = cx - mx
             const dy = cy - my
             const d2 = dx * dx + dy * dy
-            
+
             if (d2 < HOVER_R2) {
                let radius = data[idx+2]
-               let baseOpac = data[idx+3]
+               const baseOpac = data[idx+3]
                const dist = Math.sqrt(d2)
                const influence = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
                radius = Math.min(radius + HOVER_BOOST * influence, HALF_CELL)
 
                // Clear the base dot so alpha doesn't stack
                ctx.clearRect(cx - radius - 1, cy - radius - 1, radius * 2 + 2, radius * 2 + 2)
-               
+
                ctx.beginPath()
                ctx.arc(cx, cy, radius, 0, TAU)
                ctx.fillStyle = `rgba(${rgbStr}, ${Math.min(1, baseOpac + influence * 0.4).toFixed(3)})`
@@ -181,14 +179,12 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
 
     const handleMouse = (e) => {
       const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      mouseRef.current = { x, y }
+      mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top }
       lastMoveTime = performance.now()
     }
-    const handleLeave = () => { 
+    const handleLeave = () => {
       mouseRef.current = { x: -9999, y: -9999 }
-      hoverStrength = 0 
+      hoverStrength = 0
     }
 
     window.addEventListener('mousemove', handleMouse)
@@ -202,15 +198,28 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
     const parent = canvas.parentElement
     const ro = new ResizeObserver(resize)
     ro.observe(parent)
+
+    // Pause the RAF loop entirely while the Hero is scrolled offscreen —
+    // the window-level mousemove listener would otherwise keep triggering
+    // full redraws of an invisible canvas.
+    const io = new IntersectionObserver(([entry]) => {
+      isVisible.current = entry.isIntersecting
+      if (entry.isIntersecting && !rafRef.current) {
+        needsRedraw = true
+        rafRef.current = requestAnimationFrame(draw)
+      }
+    })
+    io.observe(canvas)
+
     resize()
-    rafRef.current = requestAnimationFrame(draw)
 
     return () => {
-      cancelAnimationFrame(rafRef.current)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
       window.removeEventListener('mousemove', handleMouse)
       window.removeEventListener('mouseleave', handleLeave)
       unsubColor?.()
       ro.disconnect()
+      io.disconnect()
     }
   }, [containerId, colorRgbValue])
 
