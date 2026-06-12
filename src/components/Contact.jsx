@@ -120,7 +120,9 @@ export default function Contact() {
     >
       {/* Halftone: position:fixed so it shares the same coordinate space
           as Gallery's fixed halftone — grid is perfectly continuous.
-          Opacity gates it to only when Contact is in the viewport. */}
+          Opacity gates it to only when Contact is in the viewport, and
+          headerOpacity lets the canvas skip drawing entirely while hidden
+          (a fixed canvas always "intersects", so IO alone can't pause it). */}
       <motion.div
         style={{
           position: 'fixed',
@@ -130,7 +132,7 @@ export default function Contact() {
           opacity: halftoneOpacity,
         }}
       >
-        <GalleryHalftone />
+        <GalleryHalftone headerOpacity={halftoneOpacity} />
       </motion.div>
 
       {/* SectionNav — absolute, fully isolated, guaranteed on top */}

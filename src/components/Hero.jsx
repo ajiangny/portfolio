@@ -13,7 +13,7 @@
  *   • Bubbles explode outward
  *   • Background fades, revealing the cobalt About section beneath
  */
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionValueEvent, animate } from 'framer-motion'
 
 import { useTransitionContext } from '../context/TransitionContext'
@@ -98,7 +98,9 @@ export default function Hero() {
   const colorRgbValue = useMotionValue('27,58,140')
   const animationRef = useRef(null)
 
-  const updateColor = (latestScroll, hoverIndex) => {
+  // useCallback keeps the identity stable (only refs/motion values inside)
+  // so the effects below can list it as a dependency without re-running.
+  const updateColor = useCallback((latestScroll, hoverIndex) => {
     let target = {
       r: 27, g: 58, b: 140,
       bgR: 245, bgG: 240, bgB: 232,
@@ -158,16 +160,19 @@ export default function Hero() {
         document.documentElement.style.setProperty('--color-cobalt-text', `rgb(${txtR}, ${txtG}, ${txtB})`)
       }
     })
-  }
+  }, [colorRgbValue])
 
   useMotionValueEvent(scrollYProgress, "change", (latest) => updateColor(latest, hovIdx))
-  
+
   useEffect(() => {
     updateColor(scrollYProgress.get(), hovIdx)
-  }, [hovIdx])
+  }, [hovIdx, updateColor, scrollYProgress])
 
   useEffect(() => {
     return () => {
+      // Stop any in-flight colour animation first — it writes these CSS
+      // vars on every tick and would re-create them after removal.
+      animationRef.current?.stop()
       document.documentElement.style.removeProperty('--color-cobalt')
       document.documentElement.style.removeProperty('--color-cobalt-rgb')
       document.documentElement.style.removeProperty('--color-hero-bg')

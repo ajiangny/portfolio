@@ -1,5 +1,5 @@
 /**
- * TransitionContext.jsx — Page Transition State
+ * TransitionProvider.jsx — Page Transition State Provider
  *
  * Provides a blob-expand navigation effect shared across the entire app.
  * When `navigate()` is called, it:
@@ -10,10 +10,9 @@
  *      Lenis scroll jump to the target section
  *   5. Shrinks the blob to reveal the new section
  */
-import { createContext, useContext, useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import { TransitionContext } from './TransitionContext'
 import { useLenisContext } from './LenisContext'
-
-const TransitionContext = createContext()
 
 export function TransitionProvider({ children }) {
   const [isActive, setIsActive] = useState(false)
@@ -27,11 +26,7 @@ export function TransitionProvider({ children }) {
     isTransitioning.current = true
 
     // Set the blob's fill color — each section has a themed color
-    if (colorStr) {
-      setTransitionColor(colorStr)
-    } else {
-      setTransitionColor('var(--color-cobalt)')
-    }
+    setTransitionColor(colorStr || 'var(--color-cobalt)')
 
     // Resolve click coordinates for the expand origin
     let clientX
@@ -58,13 +53,13 @@ export function TransitionProvider({ children }) {
       // Phase 2: Brief pause for DOM to settle, then shrink the blob
       setTimeout(() => {
         setIsActive(false)
-        
+
         // Phase 3: Unlock after exit animation completes (600ms)
         setTimeout(() => {
           isTransitioning.current = false
         }, 600)
       }, 50)
-    }, 600) 
+    }, 600)
   }, [lenisRef])
 
   return (
@@ -72,8 +67,4 @@ export function TransitionProvider({ children }) {
       {children}
     </TransitionContext.Provider>
   )
-}
-
-export function useTransitionContext() {
-  return useContext(TransitionContext)
 }

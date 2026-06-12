@@ -33,13 +33,15 @@ export default function useLenis() {
     lenisRef.current = lenis
 
     // Drive the Lenis scroll loop via requestAnimationFrame
+    let rafId
     function raf(time) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
-    requestAnimationFrame(raf)
+    rafId = requestAnimationFrame(raf)
 
     return () => {
+      cancelAnimationFrame(rafId)
       lenis.destroy()
       lenisRef.current = null
     }
