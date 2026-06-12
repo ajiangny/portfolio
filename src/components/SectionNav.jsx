@@ -24,23 +24,8 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTransitionContext } from '../context/TransitionContext';
+import { SECTIONS, goToSection } from '../config/sections';
 import useMediaQuery from '../hooks/useMediaQuery';
-
-const SECTIONS = [
-  { id: 'hero',    label: 'Home',     shape: '68% 32% 55% 45% / 48% 56% 44% 52%' },
-  { id: 'about',   label: 'About',    shape: '44% 56% 65% 35% / 56% 44% 58% 42%' },
-  { id: 'projects',label: 'Projects', shape: '58% 42% 38% 62% / 42% 62% 54% 46%' },
-  { id: 'gallery', label: 'Gallery',  shape: '34% 66% 46% 54% / 62% 38% 52% 48%' },
-  { id: 'contact', label: 'Contact',  shape: '54% 46% 58% 42% / 50% 52% 48% 50%' },
-];
-
-const HOVER_COLORS = [
-  { id: 'hero',     rgb: [27,  58, 140] }, // default cobalt — matches Hero's resting palette
-  { id: 'about',    rgb: [37,  79, 193] },
-  { id: 'projects', rgb: [245,240, 232] },
-  { id: 'gallery',  rgb: [0,    0,   0] },
-  { id: 'contact',  rgb: [245,240, 232] },
-];
 
 const ITEM_GAP = 105;   // desktop horizontal spacing
 const ROW_GAP = 50;     // mobile vertical spacing
@@ -110,18 +95,8 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
   const handleNavigate = (id, e) => {
     e.stopPropagation();
     closeNav();
-    const colorObj = HOVER_COLORS.find(c => c.id === id);
-    let colorStr = 'var(--color-cobalt, #1B3A8C)';
-    if (colorObj) colorStr = `rgb(${colorObj.rgb.join(', ')})`;
-
-    // Offsets land each section at its fully-revealed state:
-    //   about   +3.6×vh → progress 0.6, text panel settled
-    //   contact +0      → section top; content fits one viewport exactly
-    //            (an offset would clamp at max scroll and cut the heading)
-    if (id === 'hero')         transitionNavigate('#hero', {}, e, colorStr);
-    else if (id === 'about')   transitionNavigate(`#${id}`, { offset: window.innerHeight * 3.6 }, e, colorStr);
-    else if (id === 'projects')transitionNavigate(`#${id}`, { offset: window.innerHeight }, e, colorStr);
-    else                       transitionNavigate(`#${id}`, {}, e, colorStr);
+    // Curtain colour + landing offset come from config/sections.js
+    goToSection(transitionNavigate, id, e);
   };
 
   const currentIndex = SECTIONS.findIndex(s => s.label.toLowerCase() === currentSection.toLowerCase());
@@ -217,7 +192,7 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
                         top: -21,
                         fontSize: '0.65rem',
                         color: blobTextColor,
-                        borderRadius: section.shape,
+                        borderRadius: section.blobShape,
                       }}
                       role="button"
                       tabIndex={0}

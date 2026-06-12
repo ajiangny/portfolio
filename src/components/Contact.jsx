@@ -3,8 +3,9 @@
  *
  * The final section of the portfolio. Features:
  *   • "Let's Talk" heading with elastic letter repulsion
- *   • Contact form (name, email, message) with a simulated submit
- *   • Social links (GitHub, LinkedIn, X)
+ *   • Contact form (name, email, message) — no backend; submit opens the
+ *     visitor's email client via a prefilled mailto: link
+ *   • Social links (GitHub, LinkedIn)
  *   • Staggered entrance animations via Framer Motion variants
  *   • GalleryHalftone background (fixed position, shared grid with Gallery)
  *   • SectionNav floating navigation bar
@@ -12,23 +13,13 @@
 import { useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
+import { SECTIONS, goToSection } from '../config/sections'
 import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
 import GalleryHalftone from './gallery/GalleryHalftone'
 
-// Footer navigation — mirrors SectionNav's targets and scroll offsets
-const FOOTER_LINKS = [
-  { id: 'hero',     label: 'Home' },
-  { id: 'about',    label: 'About' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'gallery',  label: 'Gallery' },
-  { id: 'contact',  label: 'Contact' },
-]
-
-
 const CONTACT_EMAIL = 'andrewjiang74@gmail.com'
 
-// TODO: replace LinkedIn/X hrefs with real profile URLs
 const socials = [
   {
     label: 'GitHub',
@@ -74,13 +65,8 @@ export default function Contact() {
 
   const sectionRef = useRef(null)
 
-  const footerNavigate = (id, e) => {
-    if (id === 'about')         transitionNavigate('#about', { offset: window.innerHeight * 3.6 }, e, 'rgb(27, 58, 140)')
-    else if (id === 'projects') transitionNavigate('#projects', { offset: window.innerHeight }, e, 'rgb(245, 240, 232)')
-    else if (id === 'contact')  transitionNavigate('#contact', {}, e, 'rgb(245, 240, 232)')
-    else if (id === 'gallery')  transitionNavigate('#gallery', {}, e, 'rgb(0, 0, 0)')
-    else                        transitionNavigate('#hero', {}, e, 'rgb(27, 58, 140)')
-  }
+  // Curtain colour + landing offset come from config/sections.js
+  const footerNavigate = (id, e) => goToSection(transitionNavigate, id, e)
 
   // Drive SectionNav entry — same pattern as Projects
   const { scrollYProgress } = useScroll({
@@ -307,7 +293,7 @@ export default function Contact() {
       >
         <div className="max-w-3xl mx-auto flex flex-col items-center gap-7">
           <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-7 gap-y-3">
-            {FOOTER_LINKS.map(({ id, label }) => (
+            {SECTIONS.map(({ id, label }) => (
               <button
                 key={id}
                 type="button"

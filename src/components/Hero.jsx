@@ -17,27 +17,14 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionValueEvent, animate } from 'framer-motion'
 
 import { useTransitionContext } from '../context/TransitionContext'
+import { NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
 import HalftoneBg    from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
 
-const navLinks = [
-  { label: 'About',    href: '#about'    },
-  { label: 'Projects', href: '#projects' },
-  { label: 'Gallery',  href: '#gallery'  },
-  { label: 'Contact',  href: '#contact'  },
-]
-
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
-
-const HOVER_COLORS = [
-  { rgb: [37, 79, 193] },    // About: brighter cobalt
-  { rgb: [245, 240, 232] },  // Projects: cream
-  { rgb: [0, 0, 0] },        // Gallery: black
-  { rgb: [245, 240, 232] },  // Contact: cream (inverse of Gallery)
-]
 
 export default function Hero() {
   const { navigate: transitionNavigate, isActive } = useTransitionContext()
@@ -51,21 +38,9 @@ export default function Hero() {
   }, [isActive])
   
   const navigate = (href, e, clickedIdx) => {
-    let colorStr = 'var(--color-cobalt)'
-    if (clickedIdx !== undefined && clickedIdx !== null) {
-      const col = HOVER_COLORS[clickedIdx].rgb
-      colorStr = `rgb(${col[0]}, ${col[1]}, ${col[2]})`
-    }
-
     const go = () => {
-      if (href === '#about') {
-        // 3.6×vh = About progress 0.6 — text panel fully revealed
-        transitionNavigate('#about', { offset: window.innerHeight * 3.6 }, e, colorStr)
-      } else if (href === '#projects') {
-        transitionNavigate('#projects', { offset: window.innerHeight }, e, colorStr)
-      } else {
-        transitionNavigate(href, {}, e, colorStr)
-      }
+      // Colour + landing offset both come from config/sections.js
+      goToSection(transitionNavigate, href.slice(1), e)
       // Clear the tap/hover tint once the curtain has covered the screen
       // (600ms expand) so it can't linger if the user scrolls back to Hero.
       setTimeout(() => setHovIdx(null), 650)
@@ -108,7 +83,7 @@ export default function Hero() {
     }
 
     if (!isTransitionActiveRef.current && latestScroll <= 0.05 && hoverIndex !== null) {
-      const col = HOVER_COLORS[hoverIndex].rgb
+      const col = NAV_SECTIONS[hoverIndex].themeRgb
       target.r = col[0]
       target.g = col[1]
       target.b = col[2]
@@ -266,12 +241,12 @@ export default function Hero() {
         </motion.div>
 
         {/* Orbiting nav bubbles — explode outward on scroll */}
-        {navLinks.map((link, i) => (
+        {NAV_SECTIONS.map((section, i) => (
           <OrbitBubble
-            key={link.href}
-            label={link.label}
-            href={link.href}
-            angleOffset={(i / navLinks.length) * Math.PI * 2}
+            key={section.id}
+            label={section.label}
+            href={`#${section.id}`}
+            angleOffset={(i / NAV_SECTIONS.length) * Math.PI * 2}
             onNavigate={navigate}
             myIdx={i}
             hoveredIdx={hovIdx}
