@@ -73,16 +73,25 @@ function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
   )
 }
 
-export default function ElasticHeading({ 
-  text = "Portfolio", 
-  className = "font-display text-cobalt leading-none select-none", 
+export default function ElasticHeading({
+  text = "Portfolio",
+  className = "font-display text-cobalt leading-none select-none",
   style = { fontSize: 'clamp(3rem, 13vw, 14rem)', letterSpacing: '-0.01em' },
   as: Tag = 'h1',
   waveEffect = false
 }) {
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
-  const letters = text.split('')
+
+  // Group letters into words so line-wrapping happens between words,
+  // not between arbitrary letters. Letter indices stay global so the
+  // wave animation sweeps continuously across the whole heading.
+  const words = []
+  let letterIndex = 0
+  for (const word of text.split(' ')) {
+    words.push({ word, start: letterIndex })
+    letterIndex += word.length + 1
+  }
 
   return (
     <div
@@ -90,10 +99,19 @@ export default function ElasticHeading({
       onMouseLeave={() => { mouseX.set(OFF); mouseY.set(OFF) }}
       style={{ display: 'inline-block', pointerEvents: 'auto' }}
     >
-      <Tag className={className} style={style}>
-        {letters.map((char, i) => (
-          <ElasticLetter key={i} index={i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} />
-        ))}
+      <Tag className={className} style={style} aria-label={text}>
+        <span aria-hidden="true">
+          {words.map(({ word, start }, w) => (
+            <span key={w}>
+              <span style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+                {word.split('').map((char, i) => (
+                  <ElasticLetter key={i} index={start + i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} />
+                ))}
+              </span>
+              {w < words.length - 1 && ' '}
+            </span>
+          ))}
+        </span>
       </Tag>
     </div>
   )

@@ -8,11 +8,14 @@
  */
 
 // ── Filmstrip columns — displayed during the scroll-in animation ────────────
-// Each array is a column of artwork images; the last item in CENTER_COL is the
-// profile photo which transitions into the expanded About portrait.
-export const LEFT_COL = ['/art/art10.webp', '/art/art11.webp', '/art/art12.webp', '/art/art9.webp'];
-export const CENTER_COL = ['/art/art5.webp', '/art/art4.webp', '/art/art6.webp', '/art/profile.webp'];
-export const RIGHT_COL = ['/art/art1.webp', '/art/art3.webp', '/art/art2.webp', '/art/art7.webp'];
+// CENTER_COL holds the profile photo (index CENTER_PROFILE_INDEX), which
+// transitions into the expanded About portrait. The cards after it exist so
+// the filmstrip doesn't look like it ran out of frames when the scroll stops
+// with the profile dead-centre in the viewport.
+export const LEFT_COL = ['/art/art10.webp', '/art/art11.webp', '/art/art12.webp', '/art/art9.webp', '/art/art3.webp', '/art/art6.webp', '/art/art1.webp'];
+export const CENTER_COL = ['/art/art5.webp', '/art/art4.webp', '/art/art6.webp', '/art/profile.webp', '/art/art8.webp', '/art/art13.webp'];
+export const CENTER_PROFILE_INDEX = 3;
+export const RIGHT_COL = ['/art/art1.webp', '/art/art3.webp', '/art/art2.webp', '/art/art7.webp', '/art/art13.webp', '/art/art10.webp', '/art/art4.webp'];
 
 // ── Primary skills — rendered as large 64px icon tiles ──────────────────────
 export const MAIN_SKILLS = [

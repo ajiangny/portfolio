@@ -17,6 +17,7 @@ import { useRef, useState, useEffect } from 'react'
 import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionValueEvent, animate } from 'framer-motion'
 
 import { useTransitionContext } from '../context/TransitionContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 import HalftoneBg    from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
@@ -40,6 +41,9 @@ const HOVER_COLORS = [
 
 export default function Hero() {
   const { navigate: transitionNavigate, isActive } = useTransitionContext()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const [hovIdx, setHovIdx] = useState(null)
+  const isOrbitPausedRef    = useRef(false)
   const isTransitionActiveRef = useRef(isActive)
   
   useEffect(() => {
@@ -53,17 +57,30 @@ export default function Hero() {
       colorStr = `rgb(${col[0]}, ${col[1]}, ${col[2]})`
     }
 
-    if (href === '#about') {
-      transitionNavigate('#about', { offset: window.innerHeight * 3 }, e, colorStr)
-    } else if (href === '#projects') {
-      transitionNavigate('#projects', { offset: window.innerHeight }, e, colorStr)
+    const go = () => {
+      if (href === '#about') {
+        // 3.6×vh = About progress 0.6 — text panel fully revealed
+        transitionNavigate('#about', { offset: window.innerHeight * 3.6 }, e, colorStr)
+      } else if (href === '#projects') {
+        transitionNavigate('#projects', { offset: window.innerHeight }, e, colorStr)
+      } else {
+        transitionNavigate(href, {}, e, colorStr)
+      }
+      // Clear the tap/hover tint once the curtain has covered the screen
+      // (600ms expand) so it can't linger if the user scrolls back to Hero.
+      setTimeout(() => setHovIdx(null), 650)
+    }
+
+    // Mobile has no hover preview, so on tap flash the section's colour
+    // scheme first, then run the transition. The colour is reset when the
+    // transition activates (see the isActive effect below).
+    if (isMobile && clickedIdx !== undefined && clickedIdx !== null) {
+      setHovIdx(clickedIdx)
+      setTimeout(go, 300)
     } else {
-      transitionNavigate(href, {}, e, colorStr)
+      go()
     }
   }
-
-  const [hovIdx, setHovIdx] = useState(null)
-  const isOrbitPausedRef    = useRef(false)
 
   // ── Scroll-exit setup ────────────────────────────────────────────────────
   const heroRef = useRef(null)
@@ -200,12 +217,21 @@ export default function Hero() {
         <HalftoneBg containerId="hero" colorRgbValue={colorRgbValue} />
       </motion.div>
 
-      {/* Name — pinned to top centre, flies up on scroll */}
+      {/* Name + year — pinned to top centre, flies up on scroll.
+          shine-text adds the periodic diagonal sweep (faster on hover). */}
       <motion.p
-        style={{ y: nameY, opacity: nameOpacity, color: 'rgba(var(--color-cobalt-rgb), 0.55)', zIndex: 50 }}
-        className="absolute top-8 left-1/2 -translate-x-1/2 font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-none"
+        style={{ y: nameY, opacity: nameOpacity, zIndex: 50, '--shine-base': 'rgba(var(--color-cobalt-rgb), 0.55)' }}
+        className="shine-text absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-auto cursor-default"
       >
-        Andrew Jiang
+        {/* shine-text sits on the parent so one highlight band sweeps the
+            whole header (name, dot, year) as a single continuous surface */}
+        <span>Andrew Jiang</span>
+        <span
+          aria-hidden="true"
+          className="rounded-full shrink-0"
+          style={{ width: '5px', height: '5px', backgroundColor: 'rgba(var(--color-cobalt-rgb), 0.45)' }}
+        />
+        <span>2026</span>
       </motion.p>
 
       {/* Orbit arena — heading + floating nav bubbles */}
@@ -224,7 +250,12 @@ export default function Hero() {
             transition={{ duration: 0.9, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <motion.div style={{ x: headingParallaxX, y: headingParallaxY }}>
-              <ElasticHeading />
+              <ElasticHeading
+                style={{
+                  fontSize: isMobile ? 'clamp(2.5rem, 11vw, 4rem)' : 'clamp(3rem, 13vw, 14rem)',
+                  letterSpacing: '-0.01em',
+                }}
+              />
             </motion.div>
           </motion.div>
         </motion.div>

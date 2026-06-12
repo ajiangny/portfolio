@@ -14,9 +14,9 @@ import { useState } from 'react';
 import { motion, useTransform } from 'framer-motion';
 import StackIcon from 'tech-stack-icons';
 
-export default function SkillIcon({ skill, index, progress, isMain }) {
+export default function SkillIcon({ skill, index, progress, isMain, startAt = 0.537 }) {
   const [hovered, setHovered] = useState(false);
-  const start = 0.462 + index * 0.001;
+  const start = startAt + index * 0.001;
   const end = Math.min(1.0, start + 0.02);
 
   const x = useTransform(progress, [start, end], ['68vw', '0vw']);
@@ -24,12 +24,12 @@ export default function SkillIcon({ skill, index, progress, isMain }) {
   const opacity = useTransform(progress, [start, start + 0.0075], [0, 1]);
   const scale = useTransform(progress, [start, end], [0.3, 1]);
 
-  const sizeClass = isMain 
-    ? "w-[64px] h-[64px] rounded-2xl" 
-    : "w-[36px] h-[36px] rounded-lg";
-    
-  const iconSizeClass = isMain ? "w-[36px] h-[36px]" : "w-[18px] h-[18px]";
-  const textSizeClass = isMain ? "text-[20px]" : "text-[12px]";
+  const sizeClass = isMain
+    ? "w-[44px] h-[44px] md:w-[64px] md:h-[64px] rounded-xl md:rounded-2xl"
+    : "w-[30px] h-[30px] md:w-[36px] md:h-[36px] rounded-lg";
+
+  const iconSizeClass = isMain ? "w-[24px] h-[24px] md:w-[36px] md:h-[36px]" : "w-[15px] h-[15px] md:w-[18px] md:h-[18px]";
+  const textSizeClass = isMain ? "text-[15px] md:text-[20px]" : "text-[10px] md:text-[12px]";
 
   return (
     <motion.div
