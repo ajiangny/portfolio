@@ -8,6 +8,7 @@
  *   • LenisContext  — smooth-scroll instance shared across sections
  *   • TransitionProvider — blob-expand page-transition state
  */
+import { MotionConfig } from 'framer-motion'
 import useLenis from './hooks/useLenis'
 import { LenisContext } from './context/LenisContext'
 import { TransitionProvider } from './context/TransitionContext'
@@ -23,6 +24,9 @@ function App() {
 
   return (
     <LenisContext.Provider value={lenisRef}>
+      {/* reducedMotion="user" lets Framer Motion honour OS-level
+          prefers-reduced-motion for its spring/transform animations */}
+      <MotionConfig reducedMotion="user">
       <TransitionProvider>
         <div className="bg-cream text-ink min-h-screen overflow-x-clip">
           <PageTransition />
@@ -35,6 +39,7 @@ function App() {
           </main>
         </div>
       </TransitionProvider>
+      </MotionConfig>
     </LenisContext.Provider>
   )
 }

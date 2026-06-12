@@ -32,12 +32,16 @@ export default function OrbitBubble({
   const posRef   = useRef(null)
   const angleRef = useRef(angleOffset)
   const lastTRef = useRef(null)
+  const reducedMotionRef = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
 
   const isHovered = hoveredIdx === myIdx
   const isShrunk  = hoveredIdx !== null && hoveredIdx !== myIdx
 
   useAnimationFrame((t) => {
-    if (lastTRef.current !== null && !orbitPausedRef.current) {
+    // Under prefers-reduced-motion the bubbles hold their positions
+    if (lastTRef.current !== null && !orbitPausedRef.current && !reducedMotionRef.current) {
       const dt = t - lastTRef.current
       angleRef.current += (dt / ORBIT_DURATION) * Math.PI * 2
     }
@@ -45,7 +49,11 @@ export default function OrbitBubble({
 
     const scroll = scrollYProgress ? scrollYProgress.get() : 0
 
-    const rx = window.innerWidth  * 0.39
+    // Mobile: clamp the orbit so bubbles always stay fully on screen
+    // (they pass behind the wordmark instead of leaving the viewport).
+    const rx = window.innerWidth < 768
+      ? window.innerWidth / 2 - 62
+      : window.innerWidth * 0.39
     const ry = Math.min(window.innerHeight * 0.26, 220)
 
     // Push radius outward as user scrolls — bubbles explode away from centre
@@ -74,7 +82,7 @@ export default function OrbitBubble({
       ref={posRef}
       href={href}
       onClick={(e) => { e.preventDefault(); onNavigate(href, e, myIdx) }}
-      className="absolute"
+      className="absolute z-0"
       style={{ transform: 'translate(-50%, -50%)' }}
       aria-label={`Go to ${label}`}
     >
@@ -107,10 +115,8 @@ export default function OrbitBubble({
         <motion.span
           animate={{ opacity: isShrunk ? 0 : 1 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="flex items-center gap-1.5"
           style={{ pointerEvents: 'none' }}
         >
-          <span className="rounded-full bg-cream/40 shrink-0" style={{ width: '4px', height: '4px' }} />
           {label}
         </motion.span>
       </motion.span>

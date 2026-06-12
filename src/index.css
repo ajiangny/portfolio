@@ -39,12 +39,9 @@
   --color-border: #1a1a1a;
 }
 
-/* ── Resets ───────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* NOTE: no custom `* { margin:0; padding:0 }` reset here — Tailwind v4
+   preflight already provides it, and an unlayered reset would override
+   every Tailwind padding/margin utility (unlayered CSS beats @layer). */
 
 /* ── Lenis Smooth Scroll Overrides ───────────────── */
 html.lenis,
@@ -73,6 +70,78 @@ body {
 ::selection {
   background: var(--color-cobalt);
   color: var(--color-cream);
+}
+
+/* ── Shine text — periodic diagonal highlight sweep ─ */
+/* Base colour comes from --shine-base; the highlight band sweeps
+   across on a loop and accelerates on hover. Uses background-clip
+   so the shine is confined to the glyphs themselves. */
+.shine-text {
+  --shine-hi: rgba(255, 255, 255, 0.95);
+  background-image: linear-gradient(
+    115deg,
+    var(--shine-base, currentColor) 42%,
+    var(--shine-hi) 50%,
+    var(--shine-base, currentColor) 58%
+  );
+  /* The highlight band sits mid-image; sweeping position 100%→0% keeps
+     the (oversized) image covering every glyph at all times — letters
+     would otherwise render transparent when the image slides off them. */
+  background-size: 320% 100%;
+  background-repeat: no-repeat;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shine-sweep 5.5s ease-in-out infinite;
+}
+
+.shine-text:hover {
+  animation-duration: 1.3s;
+}
+
+@keyframes shine-sweep {
+  0%   { background-position: 100% 0; }
+  45%  { background-position: 0% 0; }
+  100% { background-position: 0% 0; }
+}
+
+/* ── Skills marquee — infinite horizontal carousel ── */
+/* Content is rendered twice; translating by -50% loops seamlessly. */
+.skill-marquee {
+  display: flex;
+  width: max-content;
+  animation: skill-marquee-scroll 22s linear infinite;
+}
+
+@keyframes skill-marquee-scroll {
+  to { transform: translateX(-50%); }
+}
+
+/* ── Keyboard focus ──────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-cobalt);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Dark sections need a light outline to be visible */
+#gallery :focus-visible,
+#contact :focus-visible,
+#about :focus-visible,
+.gallery-lightbox-backdrop :focus-visible {
+  outline-color: var(--color-cream);
+}
+
+/* ── Reduced Motion ──────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -189,6 +258,50 @@ body {
 .gallery-cell-blank {
   background: rgba(245,240,232,0.06);
   border: 1px solid rgba(245,240,232,0.04);
+}
+
+/* ── "View All" teaser cell ──────────────────────── */
+.gallery-cell-viewall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245,240,232,0.08);
+  border: 1px dashed rgba(245,240,232,0.25);
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.gallery-cell-viewall:hover {
+  background: rgba(245,240,232,0.14);
+  border-color: rgba(245,240,232,0.5);
+  transform: scale(1.06);
+  z-index: 20;
+}
+
+.gallery-cell-viewall-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: clamp(8px, 1vw, 11px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.85);
+  text-align: center;
+  padding: 0 4px;
+}
+
+/* ── Scrollbar hiding helpers ────────────────────── */
+.scrollbar-none,
+.custom-scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar,
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Lightbox — fullscreen artwork viewer ────────── */

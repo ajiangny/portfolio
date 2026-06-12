@@ -20,20 +20,32 @@ import { useRef, useEffect, useState, useCallback } from 'react'
 import { motion, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 import GalleryHalftone from './gallery/GalleryHalftone'
 import SectionNav from './SectionNav'
 import { artworks } from '../data/galleryData'
 
 
-// 9 columns × 3 rows = 27 cells. Fill remaining with blanks.
-const TOTAL_CELLS = 27
+// Artworks are scattered bento-style among blank cells so the grid
+// reads as an intentional composition instead of one full row + blanks.
+// Desktop: 9 cols × 3 rows (27 cells), diagonal drift pattern.
+// Mobile:  3 cols × 5 rows (15 cells), symmetric checkerboard.
+const DESKTOP_CELLS = 27
+const MOBILE_CELLS = 15
+const DESKTOP_ART_POSITIONS = [1, 4, 7, 9, 12, 15, 18, 20, 23]
+const MOBILE_ART_POSITIONS = [0, 2, 4, 6, 7, 8, 10, 12, 13]
+// Bottom-right cell — "View All" teaser for the future gallery page
+const DESKTOP_VIEWALL_POSITION = 26
+const MOBILE_VIEWALL_POSITION = 14
 
 // ─── Single gallery card ──────────────────────────────────────────
-function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
-  const inStart = 0.55 + index * 0.025
+function ArtCard({ art, artIndex, index, totalCells, revealProgress, exitProgress, onSelect }) {
+  // Stagger windows are normalized by cell count so even the last cell
+  // finishes revealing before progress reaches 1.
+  const inStart = 0.55 + (index / totalCells) * 0.30
   const inEnd = inStart + 0.14
 
-  const outStart = 0.80 + index * 0.012
+  const outStart = 0.80 + (index / totalCells) * 0.11
   const outEnd = outStart + 0.08
 
   const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
@@ -49,7 +61,11 @@ function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
     <motion.div
       style={{ opacity, scale }}
       className="gallery-cell gallery-cell-art group"
-      onClick={() => onSelect(index)}
+      onClick={() => onSelect(artIndex)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(artIndex) } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View ${art.title || art.medium}`}
     >
       <img
         src={art.src}
@@ -68,11 +84,11 @@ function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
 }
 
 // ─── Blank placeholder cell ───────────────────────────────────────
-function BlankCard({ index, revealProgress, exitProgress }) {
-  const inStart = 0.55 + index * 0.025
+function BlankCard({ index, totalCells, revealProgress, exitProgress }) {
+  const inStart = 0.55 + (index / totalCells) * 0.30
   const inEnd = inStart + 0.14
 
-  const outStart = 0.80 + index * 0.012
+  const outStart = 0.80 + (index / totalCells) * 0.11
   const outEnd = outStart + 0.08
 
   const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
@@ -92,11 +108,83 @@ function BlankCard({ index, revealProgress, exitProgress }) {
   )
 }
 
+// ─── "View All" teaser cell ───────────────────────────────────────
+// Links to a dedicated gallery page (not built yet) — hover or tap
+// flips the label to "Coming Soon".
+function ViewAllCard({ index, totalCells, revealProgress, exitProgress }) {
+  const [showSoon, setShowSoon] = useState(false)
+
+  const inStart = 0.55 + (index / totalCells) * 0.30
+  const inEnd = inStart + 0.14
+
+  const outStart = 0.80 + (index / totalCells) * 0.11
+  const outEnd = outStart + 0.08
+
+  const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
+  const inScale = useTransform(revealProgress, [inStart, inEnd], [0.85, 1])
+
+  const outOpacity = useTransform(exitProgress, [outStart, outEnd], [1, 0])
+  const outScale = useTransform(exitProgress, [outStart, outEnd], [1, 0.9])
+
+  const opacity = useTransform([inOpacity, outOpacity], ([i, o]) => i * o)
+  const scale = useTransform([inScale, outScale], ([i, o]) => i * o)
+
+  const reveal = () => setShowSoon(true)
+  const conceal = () => setShowSoon(false)
+
+  return (
+    <motion.div
+      style={{ opacity, scale }}
+      className="gallery-cell gallery-cell-viewall"
+      role="button"
+      tabIndex={0}
+      aria-label="View all artwork — coming soon"
+      onMouseEnter={reveal}
+      onMouseLeave={conceal}
+      onFocus={reveal}
+      onBlur={conceal}
+      onClick={() => {
+        // Touch has no hover — flash the label for a beat instead
+        setShowSoon(true)
+        setTimeout(() => setShowSoon(false), 1600)
+      }}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={showSoon ? 'soon' : 'all'}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="gallery-cell-viewall-label"
+        >
+          {showSoon ? 'Coming Soon' : (
+            <>
+              View All
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" />
+              </svg>
+            </>
+          )}
+        </motion.span>
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 // ─── Lightbox with carousel ───────────────────────────────────────
 function GalleryLightbox({ artworks, initialIndex, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const current = artworks[currentIndex]
   const carouselRef = useRef(null)
+  const closeButtonRef = useRef(null)
+
+  // Move focus into the dialog on open, restore it on close
+  useEffect(() => {
+    const previouslyFocused = document.activeElement
+    closeButtonRef.current?.focus()
+    return () => previouslyFocused?.focus?.()
+  }, [])
 
   // Keyboard navigation
   useEffect(() => {
@@ -145,6 +233,7 @@ function GalleryLightbox({ artworks, initialIndex, onClose }) {
       >
         {/* Close button */}
         <button
+          ref={closeButtonRef}
           className="gallery-lightbox-close"
           onClick={onClose}
           aria-label="Close lightbox"
@@ -241,7 +330,9 @@ export default function Gallery() {
 
   const [activeHeight, setActiveHeight] = useState(0)
   useEffect(() => {
-    setActiveHeight(window.innerHeight * 3)
+    // Sticky travel = container (340vh) − viewport (100vh) = 240vh,
+    // trimmed from 300vh so the run-out into Contact doesn't drag.
+    setActiveHeight(window.innerHeight * 2.4)
   }, [])
 
   const rawProgress = useScrollTimeline(containerRef, activeHeight)
@@ -288,6 +379,17 @@ export default function Gallery() {
   const headerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
   const headerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
   const headerOpacity = useTransform([headerEntryO, headerExitO], ([inO, outO]) => inO * outO)
+  // The header layer is position:fixed and always mounted, so when invisible
+  // it must also be visibility:hidden — pointer-events:none alone is undone
+  // by interactive children (e.g. SectionNav re-enables pointer events,
+  // making the Gallery nav tappable from the Hero section).
+  const headerVisibility = useTransform(headerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
+
+  // Scroll progress is indicated by a line of boosted dots inside the
+  // halftone canvas itself — see GalleryHalftone's lineProgress prop.
+  // Starts just inside the top edge; the canvas ramps its intensity from
+  // zero so the line only materialises once the user starts scrolling.
+  const lineProgress = useTransform(progress, [0, 1], [0.02, 0.94])
   const gridPointerEvents = useTransform(
     [revealRaw, progress],
     ([r, p]) => (r > 0.6 && p < 0.85) ? 'auto' : 'none'
@@ -300,18 +402,35 @@ export default function Gallery() {
   // ── Lightbox state ──────────────────────────────────────────────
   const [lightboxIndex, setLightboxIndex] = useState(null)
 
-  // Build the 15-cell grid: 9 artworks + 6 blanks
+  // Pause Lenis while the lightbox is open so the page can't scroll under it
+  useEffect(() => {
+    const lenis = lenisRef?.current
+    if (!lenis) return
+    if (lightboxIndex !== null) lenis.stop()
+    else lenis.start()
+    return () => lenis.start()
+  }, [lightboxIndex, lenisRef])
+
+  // ── Build the grid with artworks scattered among blanks ─────────
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const totalCells = isMobile ? MOBILE_CELLS : DESKTOP_CELLS
+  const artPositions = isMobile ? MOBILE_ART_POSITIONS : DESKTOP_ART_POSITIONS
+  const viewAllPosition = isMobile ? MOBILE_VIEWALL_POSITION : DESKTOP_VIEWALL_POSITION
+
   const cells = []
-  for (let i = 0; i < TOTAL_CELLS; i++) {
-    if (i < artworks.length) {
-      cells.push({ type: 'art', art: artworks[i], index: i })
+  for (let i = 0; i < totalCells; i++) {
+    const artIndex = artPositions.indexOf(i)
+    if (artIndex !== -1 && artIndex < artworks.length) {
+      cells.push({ type: 'art', art: artworks[artIndex], artIndex, index: i })
+    } else if (i === viewAllPosition) {
+      cells.push({ type: 'viewall', index: i })
     } else {
       cells.push({ type: 'blank', index: i })
     }
   }
 
   return (
-    <div id="gallery" ref={containerRef} style={{ height: '400vh' }}>
+    <div id="gallery" ref={containerRef} style={{ height: '340vh' }}>
 
       {/* ── Fixed header — z-50 puts it ABOVE the Projects overlay (z-40) ── */}
       <motion.div
@@ -321,10 +440,12 @@ export default function Gallery() {
           zIndex: 50,
           pointerEvents: 'none',
           opacity: headerOpacity,
+          visibility: headerVisibility,
         }}
       >
-        {/* Halftone pulse and background */}
-        <GalleryHalftone pulseProgress={pulseProgress} headerOpacity={headerOpacity} />
+        {/* Halftone pulse and background — lineProgress draws the
+            scroll-progress line directly in the dot grid */}
+        <GalleryHalftone pulseProgress={pulseProgress} headerOpacity={headerOpacity} lineProgress={lineProgress} />
 
         {/* Small label */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
@@ -346,15 +467,26 @@ export default function Gallery() {
                 <ArtCard
                   key={cell.art.id}
                   art={cell.art}
+                  artIndex={cell.artIndex}
                   index={cell.index}
+                  totalCells={totalCells}
                   revealProgress={revealRaw}
                   exitProgress={progress}
                   onSelect={setLightboxIndex}
+                />
+              ) : cell.type === 'viewall' ? (
+                <ViewAllCard
+                  key="viewall"
+                  index={cell.index}
+                  totalCells={totalCells}
+                  revealProgress={revealRaw}
+                  exitProgress={progress}
                 />
               ) : (
                 <BlankCard
                   key={`blank-${cell.index}`}
                   index={cell.index}
+                  totalCells={totalCells}
                   revealProgress={revealRaw}
                   exitProgress={progress}
                 />

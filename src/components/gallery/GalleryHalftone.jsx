@@ -28,7 +28,12 @@ const FILL_CACHE = Array.from({ length: 101 }, (_, i) =>
   `rgba(${DOT_COLOR},${(i / 100).toFixed(2)})`
 )
 
-export default function GalleryHalftone({ pulseProgress: pulseProgressProp, headerOpacity: headerOpacityProp, containerId }) {
+// Scroll-progress line — a horizontal band of boosted dots that sweeps
+// down the grid as the section scrolls (drawn batched via row sprites)
+const LINE_HALF = 48
+const LINE_STRENGTH = 0.8
+
+export default function GalleryHalftone({ pulseProgress: pulseProgressProp, headerOpacity: headerOpacityProp, lineProgress: lineProgressProp, containerId }) {
   const canvasRef = useRef(null)
   const mouseRef  = useRef({ x: -9999, y: -9999 })
   const rafRef    = useRef(null)
@@ -124,6 +129,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
     let hoverStrength = 0
     let lastMoveTime = 0
     let lastPulse = -1
+    let lastLine = -1
     let lastDrawTime = 0
 
     function draw() {
@@ -147,6 +153,8 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       lastDrawTime = now
 
       const pulseP = pulseProgressProp ? pulseProgressProp.get() : 0
+      const lineP = lineProgressProp ? lineProgressProp.get() : 0
+      const lineActive = lineP > 0 && lineP < 1
 
       const { x: mx, y: my } = mouseRef.current
       const hasMouse = mx > -9000
@@ -158,24 +166,28 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
         hoverStrength = Math.min(1, hoverStrength + 0.15)
       }
 
-      if (!hasMouse && hoverStrength <= 0 && pulseP === lastPulse && pulseP === 0) {
-        if (needsRedraw) {
-          ctx.clearRect(0, 0, w, h)
-          ctx.drawImage(offCanvas, 0, 0)
-          needsRedraw = false
-        }
+      // Nothing dynamic changed — the previous frame is still correct
+      // (unless a resize flagged needsRedraw, in which case fall through
+      // so the cleared canvas gets repainted).
+      const nothingChanged = !hasMouse && hoverStrength <= 0 && pulseP === lastPulse && lineP === lastLine
+      if (nothingChanged && !needsRedraw) return
+      if (nothingChanged && pulseP === 0 && !lineActive) {
+        ctx.clearRect(0, 0, w, h)
+        ctx.drawImage(offCanvas, 0, 0)
+        needsRedraw = false
         return
       }
 
       needsRedraw = true
       lastPulse = pulseP
+      lastLine = lineP
       ctx.clearRect(0, 0, w, h)
       ctx.drawImage(offCanvas, 0, 0)
 
-      drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY)
+      drawDynamicDots(pulseP, lineP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY)
     }
 
-    function drawDynamicDots(pulseP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY) {
+    function drawDynamicDots(pulseP, lineP, mx, my, hoverStrength, cols, rows, spriteCanvas, rowSpriteCanvas, LEVELS, globalOffsetY) {
       const maxDist = Math.sqrt((w / 2) ** 2 + (h / 2) ** 2)
       // Pulse thickness in pixels
       const pulseThickness = 500
@@ -185,7 +197,10 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       const centerY = h / 2
       const halfPulse = pulseThickness / 2
 
-      // Compute row range that intersects with the pulse ring or hover area
+      const lineActive = lineP > 0 && lineP < 1
+      const lineY = lineP * h
+
+      // Compute row range that intersects the pulse ring, hover area or line
       let startRow = rows
       let endRow = -1
 
@@ -194,10 +209,14 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
         endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil((my + HOVER_R) / GRID)))
       }
 
+      if (lineActive) {
+        startRow = Math.min(startRow, Math.max(0, Math.floor((lineY - LINE_HALF) / GRID)))
+        endRow = Math.max(endRow, Math.min(rows - 1, Math.ceil((lineY + LINE_HALF) / GRID) + 1))
+      }
+
       if (pulseP > 0 && pulseP < 1) {
         // The pulse ring spans from pulseRadius - halfPulse to pulseRadius + halfPulse
         // from center. Convert to row bounds.
-        const innerR = Math.max(0, pulseRadius - halfPulse)
         const outerR = pulseRadius + halfPulse
 
         // Any row whose Y falls within [centerY - outerR, centerY + outerR] could be affected
@@ -213,35 +232,53 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
         const rowY = (row - 1) * GRID - globalOffsetY
         const dyCenter = rowY - centerY
 
-        // Determine if this row is uniformly affected by the pulse (no hover interference)
-        let uniformPulseInf = -1
-        if (pulseP > 0 && pulseP < 1) {
-          // For this row, check the range of distances from center
-          // Min distance from center for any point on this row
-          const minDxC = (centerX >= 0 && centerX <= (cols - 1) * GRID) ? 0 : Math.min(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
-          const maxDxC = Math.max(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
+        // Progress line influence — uniform across the row (horizontal band).
+        // Intensity ramps in over the first stretch of travel so the line
+        // fades into existence as scrolling starts instead of popping in.
+        let lineInf = 0
+        if (lineActive) {
+          const dyLine = Math.abs(rowY - lineY)
+          if (dyLine < LINE_HALF) {
+            const ramp = Math.min(1, Math.max(0, (lineP - 0.02) / 0.08))
+            lineInf = Math.pow(1 - dyLine / LINE_HALF, 1.5) * LINE_STRENGTH * ramp
+          }
+        }
+        const lineLvl = Math.max(0, Math.min(LEVELS - 1, Math.round(lineInf * (LEVELS - 1))))
 
-          const minDist = Math.sqrt(minDxC * minDxC + dyCenter * dyCenter)
-          const maxDist2 = Math.sqrt(maxDxC * maxDxC + dyCenter * dyCenter)
+        const hoverNearRow = hoverStrength > 0 && my >= rowY - HOVER_R && my <= rowY + HOVER_R
 
-          const minDiff = Math.abs(minDist - pulseRadius)
-          const maxDiff = Math.abs(maxDist2 - pulseRadius)
+        // Batch the whole row when nothing varies across it (no hover nearby
+        // and the pulse — if any — hits the row's extremes at the same level)
+        if (!hoverNearRow) {
+          let pulseUniform = true
+          let pulseLvl = 0
+          if (pulseP > 0 && pulseP < 1) {
+            const minDxC = (centerX >= 0 && centerX <= (cols - 1) * GRID) ? 0 : Math.min(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
+            const maxDxC = Math.max(Math.abs(0 - centerX), Math.abs((cols - 1) * GRID - centerX))
 
-          // If both extremes give the same level AND no hover, we can batch the row
-          if (hoverStrength <= 0 || (my < rowY - HOVER_R || my > rowY + HOVER_R)) {
+            const minDist = Math.sqrt(minDxC * minDxC + dyCenter * dyCenter)
+            const maxDist2 = Math.sqrt(maxDxC * maxDxC + dyCenter * dyCenter)
+
+            const minDiff = Math.abs(minDist - pulseRadius)
+            const maxDiff = Math.abs(maxDist2 - pulseRadius)
+
             const inf1 = minDiff < halfPulse ? Math.pow(1 - minDiff / halfPulse, 1.5) : 0
             const inf2 = maxDiff < halfPulse ? Math.pow(1 - maxDiff / halfPulse, 1.5) : 0
             const lvl1 = Math.max(0, Math.min(LEVELS - 1, Math.round(inf1 * (LEVELS - 1))))
             const lvl2 = Math.max(0, Math.min(LEVELS - 1, Math.round(inf2 * (LEVELS - 1))))
 
-            if (lvl1 === lvl2 && lvl1 > 0) {
-              // Entire row is the same level — batch draw
-              const sy = lvl1 * GRID
-              const startX = 0
+            pulseUniform = lvl1 === lvl2
+            pulseLvl = lvl1
+          }
+
+          if (pulseUniform) {
+            const lvl = Math.max(pulseLvl, lineLvl)
+            if (lvl > 0) {
+              const sy = lvl * GRID
               const fullWidth = cols * GRID
-              ctx.drawImage(rowSpriteCanvas, startX, sy, fullWidth, GRID, -GRID - GRID / 2, rowY - GRID / 2, fullWidth, GRID)
-              continue // skip per-dot loop for this row
+              ctx.drawImage(rowSpriteCanvas, 0, sy, fullWidth, GRID, -GRID - GRID / 2, rowY - GRID / 2, fullWidth, GRID)
             }
+            continue // row fully handled — skip per-dot loop
           }
         }
 
@@ -271,7 +308,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
             }
           }
 
-          const totalInf = Math.max(hoverInf, pulseInf)
+          const totalInf = Math.max(hoverInf, pulseInf, lineInf)
 
           if (totalInf > 0) {
             const level = Math.max(0, Math.min(LEVELS - 1, Math.round(totalInf * (LEVELS - 1))))
@@ -331,7 +368,7 @@ export default function GalleryHalftone({ pulseProgress: pulseProgressProp, head
       io.disconnect()
       if (unsubHeader) unsubHeader()
     }
-  }, [pulseProgressProp])
+  }, [pulseProgressProp, lineProgressProp])
 
   return (
     <canvas
