@@ -328,14 +328,9 @@ export default function Gallery() {
   const containerRef = useRef(null)
   const lenisRef = useLenisContext()
 
-  const [activeHeight, setActiveHeight] = useState(0)
-  useEffect(() => {
-    // Sticky travel = container (340vh) − viewport (100vh) = 240vh,
-    // trimmed from 300vh so the run-out into Contact doesn't drag.
-    setActiveHeight(window.innerHeight * 2.4)
-  }, [])
-
-  const rawProgress = useScrollTimeline(containerRef, activeHeight)
+  // Sticky travel = container (340vh) − viewport (100vh) = 240vh,
+  // trimmed from 300vh so the run-out into Contact doesn't drag.
+  const rawProgress = useScrollTimeline(containerRef, 2.4)
   const progress = useSpring(rawProgress, { stiffness: 240, damping: 30 })
 
   // ── Scroll gap progress ──────────────────────────────────────────
@@ -343,6 +338,7 @@ export default function Gallery() {
   const gapProgress = useSpring(gapProgressRaw, { stiffness: 300, damping: 40 })
 
   useEffect(() => {
+    let unlisten = () => {}
     const t = setTimeout(() => {
       const lenis = lenisRef?.current
       if (!lenis) return
@@ -367,9 +363,9 @@ export default function Gallery() {
       check({ scroll: lenis.scroll ?? window.scrollY })
 
       lenis.on('scroll', check)
-      return () => lenis.off('scroll', check)
+      unlisten = () => lenis.off('scroll', check)
     }, 0)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); unlisten() }
   }, [lenisRef, gapProgressRaw])
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])

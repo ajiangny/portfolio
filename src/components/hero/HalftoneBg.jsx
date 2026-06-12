@@ -166,8 +166,7 @@ export default function HalftoneBg({ containerId, colorRgbValue }) {
                const dist = Math.sqrt(d2)
                const influence = Math.pow(1 - dist / HOVER_R, 2) * hoverStrength
                radius = Math.min(radius + HOVER_BOOST * influence, HALF_CELL)
-               let oi = Math.round(Math.min(0.99, baseOpac + influence * 0.4) * 100)
-               
+
                // Clear the base dot so alpha doesn't stack
                ctx.clearRect(cx - radius - 1, cy - radius - 1, radius * 2 + 2, radius * 2 + 2)
                

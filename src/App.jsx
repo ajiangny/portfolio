@@ -11,7 +11,7 @@
 import { MotionConfig } from 'framer-motion'
 import useLenis from './hooks/useLenis'
 import { LenisContext } from './context/LenisContext'
-import { TransitionProvider } from './context/TransitionContext'
+import { TransitionProvider } from './context/TransitionProvider'
 import PageTransition from './components/PageTransition'
 import Hero from './components/Hero'
 import About from './components/About'

@@ -30,7 +30,7 @@ const TECH_ICON_MAP = {
   'Automation scripts': { custom: 'Sh', color: '#4CAF50' }
 };
 
-const ProjectCard = ({ work, i, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, washOpacity, cardShadow, onClick, worksLength, distForStyle, clampedRel, globalSpringX, globalSpringY, progress, cardTransforms, isMobile }) => {
+const ProjectCard = ({ work, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, washOpacity, cardShadow, onClick, distForStyle, clampedRel, globalSpringX, globalSpringY, cardTransforms, isMobile }) => {
   const isPrimary = distForStyle === 0;
 
   // Destructure shared transforms passed from parent to avoid redefining them 20 times
@@ -254,17 +254,11 @@ export default function Projects() {
   const containerRef = useRef(null)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
-  const [activeHeight, setActiveHeight] = useState(0)
-
-  useEffect(() => {
-    // A sticky top-0 h-screen inside a 400vh parent unpins when the section's bottom
-    // exits the viewport: at scroll = offsetTop + (400vh - 100vh) = offsetTop + 300vh.
-    // So the sticky is only visible over 300vh of scroll travel.
-    // activeHeight must equal that travel so rawProgress 0→1 maps to the full visible range.
-    setActiveHeight(window.innerHeight * 3)
-  }, [])
-
-  const rawProgress = useScrollTimeline(containerRef, activeHeight)
+  // A sticky top-0 h-screen inside a 400vh parent unpins when the section's bottom
+  // exits the viewport: at scroll = offsetTop + (400vh - 100vh) = offsetTop + 300vh.
+  // So the sticky is only visible over 300vh of scroll travel, and progress 0→1
+  // must map to exactly that range.
+  const rawProgress = useScrollTimeline(containerRef, 3)
   const progress = useSpring(rawProgress, { stiffness: 400, damping: 40 })
 
   // ── Card exit transforms (computed once, shared across all cards) ───────
@@ -294,12 +288,7 @@ export default function Projects() {
   const labelY = useTransform(progress, [0.00, 0.06], [60, 0]);
   const labelOpacity = useTransform(progress, [0.00, 0.06, 0.55, 0.63], [0, 1, 1, 0]);
 
-  // "Featured Projects" heading — enters second with scale + rise
-  const headingY = useTransform(progress, [0.04, 0.12], [120, 0]);
-  const headingOpacity = useTransform(progress, [0.04, 0.12, 0.55, 0.63], [0, 1, 1, 0]);
-  const headingScale = useTransform(progress, [0.04, 0.12], [0.92, 1]);
-
-  // Carousel — enters third
+  // Carousel — enters second
   const carouselY = useTransform(progress, [0.08, 0.16], [150, 0]);
   const carouselOpacity = useTransform(progress, [0.08, 0.16], [0, 1]);
 
@@ -353,24 +342,30 @@ export default function Projects() {
   const [hasSwiped, setHasSwiped] = useState(false)
   const hasSwipedRef = useRef(false)
 
+  // Mirror of activeIndex for the centering effect below, so it can read
+  // the current card without re-running on every card change.
+  const activeIndexRef = useRef(activeIndex)
   useEffect(() => {
-    // Initial center position to allow scrolling backwards immediately.
-    // Mobile is a vertical carousel, desktop a horizontal one — read the
-    // media query at call time so the right axis is centred.
-    if (scrollRef.current && scrollRef.current.children.length > 0) {
-      setTimeout(() => {
-        const el = scrollRef.current
-        if (el && el.children[works.length]) {
-          const target = el.children[works.length];
-          if (window.matchMedia('(max-width: 767px)').matches) {
-            el.scrollTop = target.offsetTop + (target.offsetHeight / 2) - (el.clientHeight / 2);
-          } else {
-            el.scrollLeft = target.offsetLeft + (target.offsetWidth / 2) - (el.clientWidth / 2);
-          }
-        }
-      }, 100)
-    }
-  }, [])
+    activeIndexRef.current = activeIndex
+  }, [activeIndex])
+
+  useEffect(() => {
+    // Centre the active card. Runs on mount (initial position lets the user
+    // scroll backwards immediately) and again whenever the 768px breakpoint
+    // flips — the carousel axis swaps (vertical ↔ horizontal), so the old
+    // scroll offset is meaningless on the new axis.
+    const t = setTimeout(() => {
+      const el = scrollRef.current
+      const target = el?.children[activeIndexRef.current]
+      if (!el || !target) return
+      if (isMobile) {
+        el.scrollTop = target.offsetTop + target.offsetHeight / 2 - el.clientHeight / 2
+      } else {
+        el.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - el.clientWidth / 2
+      }
+    }, 100)
+    return () => clearTimeout(t)
+  }, [isMobile])
 
   // Lock scrolling when transition begins
   // Since overflowX is already hidden for native scroll, we just disable pointer events
@@ -678,7 +673,6 @@ export default function Projects() {
                   <ProjectCard
                     key={`${work.title}-${i}`}
                     work={work}
-                    i={i}
                     isActive={isActive}
                     isActiveIndex={i === activeIndex}
                     widthClass={widthClass}
@@ -687,12 +681,10 @@ export default function Projects() {
                     zIndexClass={zIndexClass}
                     washOpacity={washOpacity}
                     cardShadow={cardShadow}
-                    worksLength={works.length}
                     distForStyle={distForStyle}
                     clampedRel={clampedRel}
                     globalSpringX={globalSpringX}
                     globalSpringY={globalSpringY}
-                    progress={progress}
                     cardTransforms={cardTransforms}
                     isMobile={isMobile}
                     onClick={() => {

@@ -133,7 +133,6 @@ export default function ProfileHalftone({ scrollProgress, scrollRange, waveHeigh
     }
 
     const HALF_CELL = GRID / 2 - 0.5
-    const TAU = Math.PI * 2
 
     let hoverStrength = 0
     let lastMoveTime = 0
