@@ -118,6 +118,31 @@ body {
   to { transform: translateX(-50%); }
 }
 
+/* ── Pulse glow/ring — cream attention pulses ─────── */
+/* Used by the About profile photo overlay and the Resume /
+   Send Message buttons (About.jsx, AboutTextPanel.jsx). */
+@keyframes pulse-glow {
+  0% {
+    background-color: rgba(245, 240, 232, 0.15);
+    box-shadow: 0px 0px 20px 0px rgba(245, 240, 232, 0.2);
+  }
+  100% {
+    background-color: rgba(245, 240, 232, 0);
+    box-shadow: 0px 0px 0px 0px rgba(245, 240, 232, 0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
 /* ── Keyboard focus ──────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-cobalt);

@@ -7,7 +7,33 @@
  *
  * The last entry is a special `isGithubCard` — a CTA card that
  * links to the full GitHub profile instead of a specific project.
+ *
+ * TECH_ICON_MAP translates each tech label to a tech-stack-icons name,
+ * or a custom two-letter fallback chip; project cards look entries up
+ * by the exact strings used in `tech` arrays below.
  */
+
+export const TECH_ICON_MAP = {
+  'React': { icon: 'react' },
+  'Tailwind CSS': { icon: 'tailwindcss' },
+  'Tailwind': { icon: 'tailwindcss' },
+  'Framer Motion': { icon: 'framer' },
+  'Vite': { icon: 'vitejs' },
+  'Python': { icon: 'python' },
+  'Photoshop': { icon: 'photoshop' },
+  'Next.js': { icon: 'nextjs' },
+  'JavaScript': { icon: 'js' },
+  'TypeScript': { icon: 'typescript' },
+  'Express': { icon: 'expressjs' },
+  'Three.js': { icon: 'threejs' },
+  'Gemini API': { icon: 'gemini' },
+  'SQLite': { icon: 'sqlite' },
+  'Flet': { custom: 'Fl', color: '#1B3A8C' },
+  'Figma': { icon: 'figma' },
+  'Illustrator': { icon: 'adobeillustrator' },
+  'Design': { custom: 'UI', color: '#E84545' },
+  'Automation scripts': { custom: 'Sh', color: '#4CAF50' },
+}
 export const works = [
   {
     title: 'Interactive Portfolio',

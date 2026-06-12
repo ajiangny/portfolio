@@ -2,7 +2,7 @@
  * screenshot.mjs — capture the portfolio at multiple scroll positions
  * and viewport sizes for a UI/UX audit.
  *
- * Run (dev server must be up):  node scripts/screenshot.mjs [setName]
+ * Run (dev server must be up):  node scripts/screenshot.mjs [setName] [url]
  * Shots land in scripts/shots/<setName>/ (default "current") so a
  * "baseline" set can be captured before a change and diffed after.
  */
@@ -13,7 +13,7 @@ const setName = process.argv[2] || 'current'
 const OUT = `scripts/shots/${setName}`
 fs.mkdirSync(OUT, { recursive: true })
 
-const URL = 'http://localhost:5173/'
+const URL = process.argv[3] || 'http://localhost:5173/'
 
 // scroll positions expressed in viewport-heights
 const STOPS = [
