@@ -3,7 +3,12 @@
 import puppeteer from 'puppeteer'
 
 const url = process.argv[2] || 'http://localhost:5173/'
-const browser = await puppeteer.launch()
+// Force software WebGL (ANGLE/SwiftShader) so the WebGL gradient background
+// actually renders headlessly — default headless Chrome has no GPU/WebGL, which
+// would silently show the cream fallback and hide real shader/runtime errors.
+const browser = await puppeteer.launch({
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+})
 const page = await browser.newPage()
 page.on('console', (msg) => {
   if (msg.type() === 'error' || msg.type() === 'warning') console.log(`[${msg.type()}]`, msg.text())
