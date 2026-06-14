@@ -12,6 +12,7 @@ import { MotionConfig } from 'framer-motion'
 import useLenis from './hooks/useLenis'
 import { LenisContext } from './context/LenisContext'
 import { TransitionProvider } from './context/TransitionProvider'
+import { GradientProvider } from './context/GradientProvider'
 import PageTransition from './components/PageTransition'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -27,6 +28,7 @@ function App() {
       {/* reducedMotion="user" lets Framer Motion honour OS-level
           prefers-reduced-motion for its spring/transform animations */}
       <MotionConfig reducedMotion="user">
+      <GradientProvider>
       <TransitionProvider>
         <div className="bg-cream text-ink min-h-screen overflow-x-clip">
           <PageTransition />
@@ -39,6 +41,7 @@ function App() {
           </main>
         </div>
       </TransitionProvider>
+      </GradientProvider>
       </MotionConfig>
     </LenisContext.Provider>
   )
