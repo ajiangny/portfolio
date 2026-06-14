@@ -172,33 +172,6 @@ body {
   }
 }
 
-/* ── Scroll hint — Hero scroll affordance ────────── */
-/* Faint track with a bright segment sweeping downward; the global
-   reduced-motion rule freezes the sweep, leaving the static track. */
-.scroll-hint-line {
-  position: relative;
-  width: 1.5px;
-  height: 30px;
-  border-radius: 1px;
-  background: rgba(245, 240, 232, 0.28);
-  overflow: hidden;
-}
-
-.scroll-hint-line::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 45%;
-  border-radius: 1px;
-  background: var(--color-cream);
-  animation: scroll-hint-sweep 1.9s cubic-bezier(0.45, 0, 0.2, 1) infinite;
-}
-
-@keyframes scroll-hint-sweep {
-  0%        { transform: translateY(-130%); }
-  65%, 100% { transform: translateY(240%); }
-}
-
 /* ── Keyboard focus ──────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-cobalt);

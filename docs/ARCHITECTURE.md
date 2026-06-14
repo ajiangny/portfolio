@@ -45,10 +45,10 @@ Progress = how far the Hero has scrolled out (`['start start','end start']`).
 Hover (scroll ≤ 0.05): hovering/tapping a bubble retints the whole hero to
 that section's `themeRgb` from `config/sections.js` (`updateColor`).
 Bubble geometry: `OrbitBubble.jsx` — desktop (≥768) is an elliptical orbit
-around the wordmark; mobile (<768) parks the four blobs in a fixed **2×2
-cluster below the wordmark** (with a tiny drift) so they never cross the
-cobalt "Portfolio" letters. Both paths share the scroll-explode
-(`outward = 1+scroll×3.5`) and opacity fade. Orbit speed in
+around the wordmark; mobile (<768) **flanks the wordmark** with the four
+blobs (About/Projects above, Gallery/Contact below, with a tiny drift) so
+they never cross the cobalt "Portfolio" letters. Both paths share the
+scroll-explode (`outward = 1+scroll×3.5`) and opacity fade. Orbit speed in
 `hero/orbitConstants.js` (ORBIT_DURATION).
 
 ### About (`About.jsx`) — the long one
@@ -194,7 +194,8 @@ vertical dropdown. Colours adapt to the section background (`isDarkBg` /
 - One JS breakpoint: `(max-width: 767px)` via `useMediaQuery`.
 - Mobile is a different layout, not a scaled-down one: vertical snap
   carousel (Projects), skills marquee instead of a wrapped grid, top-centre
-  portrait with text below (About), 3×5 gallery grid, 2×2 hero nav cluster.
+  portrait with text below (About), 3×5 gallery grid, hero nav blobs
+  flanking the wordmark.
 - `useScrollTimeline` re-reads `window.innerHeight` per tick and on resize,
   so orientation changes / URL-bar collapses can't skew progress;
   `useInfiniteCarousel` re-centres on breakpoint flips; About re-measures
@@ -220,7 +221,7 @@ read the same source. Tiers:
 | `text-body` | `clamp(.75rem,2.6vw,.875rem)` | paragraphs (fluid 12→14px) |
 | `text-eyebrow` | 12px | prominent eyebrow (Hero name tag) |
 | `text-label` | 11px | nav / field / section labels |
-| `text-meta` | 10px | counters, footer, scroll hint |
+| `text-meta` | 10px | counters, footer fine print |
 
 `letter-spacing`/`font-weight` stay at the call site; only size + line-height
 move to tokens. Interactive button text and a few specialised chips
