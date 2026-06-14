@@ -42,8 +42,8 @@ export default function Hero() {
     }
 
     // Mobile has no hover preview, so on tap flash the section's colour
-    // scheme first, then run the transition. The colour is reset when the
-    // transition activates (see the isActive effect below).
+    // scheme first, then run the transition. The tint is cleared after the
+    // curtain covers the screen (the setTimeout above).
     if (isMobile && clickedIdx !== undefined && clickedIdx !== null) {
       setHovIdx(clickedIdx)
       setTimeout(go, 300)
