@@ -20,14 +20,14 @@
  * transforms are computed once here and shared via `cardTransforms`.
  */
 import { useRef, useEffect } from 'react'
-import { motion, useTransform, useSpring, useMotionValue, useMotionTemplate, useScroll } from 'framer-motion'
+import { motion, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useInfiniteCarousel from '../hooks/useInfiniteCarousel'
-import ProjectsHalftone from './projects/ProjectsHalftone'
 import ProjectCard from './projects/ProjectCard'
 import SectionNav from './SectionNav'
 import { works } from '../data/projectsData'
+import { useGradientSignal } from '../context/GradientContext'
 
 export default function Projects() {
   const containerRef = useRef(null)
@@ -75,17 +75,12 @@ export default function Projects() {
   const bottomY = useTransform(progress, [0.13, 0.20], [100, 0]);
   const bottomOpacity = useTransform(progress, [0.13, 0.20, 0.55, 0.63], [0, 1, 1, 0]);
 
-  // Halftone wave: rises slightly at first, then floods the entire screen right as the card turns blue
-  const projectsWaveFront = useTransform(progress, [0, 0.52, 0.56, 0.73], [0, 0.20, 0.20, 1.5])
+  // Flood: a radial cobalt bloom that floods the gradient as the active card
+  // exits to black (drives the gradient's uFlood; 0 during browse).
+  const floodProgress = useTransform(progress, [0.55, 0.73], [0, 1.5])
 
-  // Track the native scroll transition from About to Projects
-  const { scrollYProgress: transitionProgress } = useScroll({
-    target: containerRef,
-    offset: ['start end', 'start start'] // Tracks the exact same 100vh native scroll as About unpins and Projects scrolls in
-  })
-
-  // Second half of the continuous wave sweeps from -1 to 1 on Projects' canvas
-  const lineWaveFront = useTransform(transitionProgress, [0, 1], [-1, 1])
+  // Drive the gradient's radial cobalt bloom as the cards exit.
+  useGradientSignal('flood', floodProgress)
 
   // Expanding Overlay logic
   // By mapping the scale non-linearly (slowly to 5, then rapidly to 150),
@@ -194,7 +189,6 @@ export default function Projects() {
     <div
       id="projects"
       ref={containerRef}
-      className="bg-cream"
       style={{ height: '400vh', marginTop: '-2px' }}
     >
 
@@ -204,8 +198,6 @@ export default function Projects() {
             nav blob, so the section needs a real heading in the outline. */}
         <h2 className="sr-only">Projects</h2>
 
-        {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
-        <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} lineWaveFront={lineWaveFront} lineWaveHeight={0.15} fadeProgress={progress} />
 
         {/* Section Label — outside the z-1 content wrapper so its dropdown
             stacks above the project cards (z-30) on mobile */}
