@@ -27,6 +27,11 @@ uniform float uFlood;          // 0..~1.5 radial bloom
 uniform float uPulse;          // 0..1 ring
 uniform float uCursorR;        // cursor warp radius (normalized)
 
+uniform sampler2D uVelocity;   // sim velocity field (.xy)
+uniform float uSimEnabled;     // 1 = sim drives the field, 0 = fallback warp
+uniform float uDispScale;      // velocity → warp displacement
+uniform float uWakeBoost;      // wake highlight from |velocity|
+
 uniform vec3  uCobalt;
 uniform vec3  uCream;
 
@@ -73,12 +78,16 @@ void main() {
   vec2 r = vec2(fbm(p + q + vec2(1.7, 9.2) + 0.15 * t),
                 fbm(p + q + vec2(8.3, 2.8) - 0.12 * t));
 
-  // cursor warp — bend the field toward the pointer
+  // liquid displacement from the sim (desktop/touch), else legacy cursor warp
+  vec2 vel = texture2D(uVelocity, uv).xy;
+  r += uSimEnabled * vel * uDispScale;
+
+  // fallback Gaussian cursor warp only when the sim is off
   vec2 m = uMouse / uResolution.xy;
   m.x *= aspect;
   float md = distance(p, m);
   float infl = uMouseStrength * exp(-(md * md) / (2.0 * uCursorR * uCursorR));
-  r += infl * 0.6;
+  r += (1.0 - uSimEnabled) * infl * 0.6;
 
   float f = fbm(p + r);
   float n = clamp(f * 0.6 + 0.4 * r.x + 0.3, 0.0, 1.0);
@@ -86,6 +95,10 @@ void main() {
   vec3 colA = palette(uPalA0, uPalA1, uPalA2, n);
   vec3 colB = palette(uPalB0, uPalB1, uPalB2, n);
   vec3 col = mix(colA, colB, uPalMix);
+
+  // wake highlight — advected velocity magnitude leaves a luminous trail
+  float speed = length(vel) * uSimEnabled;
+  col = mix(col, uCream, clamp(speed * uWakeBoost, 0.0, 0.5));
 
   // seam — bright band sweeping top->bottom while 0<uSeam<1
   float seamActive = step(0.001, uSeam) * step(uSeam, 0.999);
