@@ -33,3 +33,30 @@ export const GRADIENT = {
   MOBILE_SCALE: 0.5,   // render-buffer downscale on mobile (upscaled by CSS)
   SEAM_FADE: 0.85,     // section progress at which palette starts crossfading to the next
 }
+
+// Fluid sim (Stam velocity field). Numbers are starting points — tune live.
+export const SIM = {
+  RES_DESKTOP: 256,       // sim grid (square)
+  RES_MOBILE: 128,
+  JACOBI_DESKTOP: 20,     // pressure-solve iterations
+  JACOBI_MOBILE: 12,
+  DT: 1.0,                // advection step (folded with FORCE/dissipation)
+  VEL_DISSIPATION: 0.985, // velocity decay per frame → wake settles
+  SPLAT_RADIUS: 0.0035,   // gaussian denominator (smaller = tighter)
+  FORCE: 0.9,             // pointer-velocity → injected force scale
+  FORCE_CLAMP: 0.06,      // max |pointer delta| (uv/frame) contributing to force
+  DISP_SCALE: 0.16,       // velocity → display warp displacement
+  WAKE_BOOST: 0.5,        // wake highlight intensity from |velocity|
+  SETTLE_EPS: 0.0006,     // residual speed below which the sim idles
+}
+
+// Per-section flow lean (radians, screen-space) applied on hover. Keyed by id.
+export const FLOW_ANGLES = {
+  hero:     0.0,
+  about:    Math.PI * 0.30,  // up-right
+  projects: 0.0,             // right
+  gallery: -Math.PI * 0.5,   // down
+  contact:  Math.PI,         // left
+}
+
+export const HOVER = { CROSSFADE_SEC: 0.35 } // field + element recolor duration
