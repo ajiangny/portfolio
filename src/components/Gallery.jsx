@@ -10,8 +10,8 @@
  *     scrolls past, transitioning into the Contact section
  *   • Lightbox — clicking any artwork opens a fullscreen viewer with
  *     keyboard navigation and a thumbnail carousel strip
- *   • GalleryHalftone — cream dot canvas with a radial pulse ring
- *     that expands as the section scrolls into view
+ *   • Pulse — registers a 'pulse' signal so the site-wide fluid gradient
+ *     expands a radial ring as the section scrolls into view
  *
  * Grid cells beyond the artwork count are filled with blank placeholders
  * to maintain the grid structure.

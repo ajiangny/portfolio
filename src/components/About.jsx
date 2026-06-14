@@ -16,8 +16,9 @@
  *   profile photo in a staggered cascade.
  *
  * Fade-out (progress 0.85→1.0):
- *   Content fades via a CSS mask gradient while ProjectsHalftone dots
- *   rise in to create a seamless handoff to the Projects section.
+ *   Content fades via a CSS mask gradient, revealing the site-wide fluid
+ *   gradient as it crossfades cobalt→cream into the Projects section. About
+ *   registers the 'seam' signal so the gradient sweeps a band at the handoff.
  */
 import { useRef, useEffect } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate, useScroll } from 'framer-motion'

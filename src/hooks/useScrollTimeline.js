@@ -6,7 +6,7 @@
  * to 1 (the section's sticky viewport unpins).
  *
  * Used by Projects and Gallery to drive scroll-linked animations
- * (card transforms, halftone waves, entry/exit sequences).
+ * (card transforms, gradient signals, entry/exit sequences).
  *
  * @param {React.RefObject} containerRef - Ref to the tall scrolling wrapper (e.g. 400vh div).
  * @param {number} [activeVh] - Scroll travel in viewport-heights over which progress

@@ -5,7 +5,7 @@
  *
  * Entry (progress 0→0.20):
  *   Section label, carousel, and progress pill stagger in from below
- *   while the About→Projects line wave sweeps the halftone canvas.
+ *   while the About→Projects seam band sweeps the site-wide gradient.
  *
  * Browse (0.20→0.55):
  *   Carousel is interactive — horizontal click-to-navigate on desktop,
@@ -377,7 +377,7 @@ export default function Projects() {
             className="absolute bottom-16 md:bottom-12 left-0 right-0 flex justify-center pointer-events-none"
             style={{ y: bottomY, opacity: bottomOpacity }}
           >
-            {/* Solid pill keeps the track legible over the halftone dots.
+            {/* Solid pill keeps the track legible over the gradient.
                 Segments are buttons — tap/click jumps to that project. */}
             <div className="flex items-center gap-3 rounded-full bg-cream/85 border border-ink/5 px-4 py-1 pointer-events-auto">
               <span className="font-mono text-meta tracking-[0.2em] text-ink/40 tabular-nums">

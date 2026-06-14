@@ -7,7 +7,7 @@
  *     visitor's email client via a prefilled mailto: link
  *   • Social links (GitHub, LinkedIn)
  *   • Staggered entrance animations via Framer Motion variants
- *   • GalleryHalftone background (fixed position, shared grid with Gallery)
+ *   • Background-transparent — the site-wide fluid gradient (dark) shows through
  *   • SectionNav floating navigation bar
  */
 import { useRef, useState } from 'react'
