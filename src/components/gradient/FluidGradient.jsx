@@ -1,0 +1,121 @@
+/**
+ * FluidGradient.jsx — Site-wide fluid mesh-gradient background.
+ *
+ * One fixed full-viewport WebGL canvas behind all content. Each frame it:
+ *   • picks the section holding the viewport center and crossfades that
+ *     palette toward the next near the bottom of the section (SEAM_FADE),
+ *   • reads registered transition signals (seam/flood/pulse) — Task 8–11,
+ *   • reads cursor strength (Task 6),
+ *   • uploads uniforms and draws.
+ * Throttled to ~30fps; pauses when no section is on screen. Reduced-motion
+ * renders a single frame (Task 7). Falls back to the CSS body cream when
+ * WebGL is unavailable.
+ */
+import { useEffect, useRef } from 'react'
+import { SECTIONS } from '../../config/sections'
+import { createGradientRenderer } from './glRenderer'
+import { SECTION_PALETTES, COBALT, CREAM, GRADIENT } from './gradientConfig'
+import { useGradientSignals } from '../../context/GradientContext'
+
+export default function FluidGradient() {
+  const canvasRef = useRef(null)
+  const ctx = useGradientSignals()
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const renderer = createGradientRenderer(canvas)
+    if (!renderer.supported) return // CSS body cream remains visible
+
+    const signalsRef = ctx?.signalsRef ?? { current: {} }
+
+    let w = 0, h = 0
+    let rafId = null
+    let lastDraw = 0
+    const start = performance.now()
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      w = window.innerWidth
+      h = window.innerHeight
+      renderer.resize(w, h, dpr)
+    }
+
+    // Which section palette to show + crossfade toward the next.
+    function paletteUniforms() {
+      const center = h / 2
+      let idx = 0
+      let through = 0
+      for (let i = 0; i < SECTIONS.length; i++) {
+        const el = document.getElementById(SECTIONS[i].id)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        if (r.top <= center && center < r.bottom) {
+          idx = i
+          through = r.height > 0 ? (center - r.top) / r.height : 0
+          break
+        }
+        if (center >= r.bottom) idx = i // fallback: last passed section
+      }
+      const cur = SECTION_PALETTES[SECTIONS[idx].id].stops
+      const nextIdx = Math.min(idx + 1, SECTIONS.length - 1)
+      const nxt = SECTION_PALETTES[SECTIONS[nextIdx].id].stops
+      const mix =
+        through > GRADIENT.SEAM_FADE
+          ? (through - GRADIENT.SEAM_FADE) / (1 - GRADIENT.SEAM_FADE)
+          : 0
+      return {
+        uPalA0: cur[0], uPalA1: cur[1], uPalA2: cur[2],
+        uPalB0: nxt[0], uPalB1: nxt[1], uPalB2: nxt[2],
+        uPalMix: mix,
+      }
+    }
+
+    function sig(key) {
+      const mv = signalsRef.current[key]
+      return mv ? mv.get() : 0
+    }
+
+    function draw(now) {
+      rafId = requestAnimationFrame(draw)
+      if (now - lastDraw < GRADIENT.FRAME_MS) return
+      lastDraw = now
+
+      renderer.setUniforms({
+        uResolution: [canvas.width, canvas.height],
+        uTime: ((now - start) / 1000) * GRADIENT.FLOW_SPEED,
+        uMouse: [-9999, -9999],
+        uMouseStrength: 0,
+        uCursorR: GRADIENT.CURSOR_RADIUS,
+        uCobalt: COBALT,
+        uCream: CREAM,
+        uSeam: sig('seam'),
+        uFlood: sig('flood'),
+        uPulse: sig('pulse'),
+        ...paletteUniforms(),
+      })
+      renderer.render()
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+    rafId = requestAnimationFrame(draw)
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', resize)
+      renderer.dispose()
+    }
+  }, [ctx])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden
+      style={{
+        position: 'fixed', inset: 0,
+        width: '100%', height: '100%',
+        zIndex: -1, pointerEvents: 'none',
+      }}
+    />
+  )
+}
