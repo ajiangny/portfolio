@@ -25,6 +25,9 @@
   <meta name="twitter:description"
     content="Software developer and designer in New York. Frontend engineering, UI design, and digital art." />
   <meta name="twitter:image" content="/thumbnail/portfolio.png" />
+  <!-- Preload the hero wordmark font — it paints the largest above-the-fold
+       element ("Portfolio"), so fetching it early trims the swap flash. -->
+  <link rel="preload" href="/font/EastBlue.otf" as="font" type="font/otf" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link

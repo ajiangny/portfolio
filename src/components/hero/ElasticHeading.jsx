@@ -76,9 +76,10 @@ function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
 export default function ElasticHeading({
   text = "Portfolio",
   className = "font-display text-cobalt leading-none select-none",
-  style = { fontSize: 'clamp(3rem, 13vw, 14rem)', letterSpacing: '-0.01em' },
+  style = { fontSize: 'var(--text-hero)', letterSpacing: '-0.01em' },
   as: Tag = 'h1',
-  waveEffect = false
+  waveEffect = false,
+  ariaLabel,        // override the heading's accessible name (defaults to `text`)
 }) {
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
@@ -99,7 +100,7 @@ export default function ElasticHeading({
       onMouseLeave={() => { mouseX.set(OFF); mouseY.set(OFF) }}
       style={{ display: 'inline-block', pointerEvents: 'auto' }}
     >
-      <Tag className={className} style={style} aria-label={text}>
+      <Tag className={className} style={style} aria-label={ariaLabel ?? text}>
         <span aria-hidden="true">
           {words.map(({ word, start }, w) => (
             <span key={w}>

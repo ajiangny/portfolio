@@ -200,12 +200,16 @@ export default function Projects() {
 
       <div className="sticky top-0 h-screen flex flex-col justify-center" style={{ overflowX: 'clip', overflowY: 'visible' }}>
 
+        {/* Screen-reader landmark — the visible label is a motion-driven
+            nav blob, so the section needs a real heading in the outline. */}
+        <h2 className="sr-only">Projects</h2>
+
         {/* Halftone canvas - first in DOM = paints behind everything, no z-index needed */}
         <ProjectsHalftone containerId="projects" waveFront={projectsWaveFront} waveHeight={0.25} lineWaveFront={lineWaveFront} lineWaveHeight={0.15} fadeProgress={progress} />
 
         {/* Section Label — outside the z-1 content wrapper so its dropdown
             stacks above the project cards (z-30) on mobile */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-[45]">
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-45">
           <SectionNav
             currentSection="Projects"
             style={{ y: labelY, opacity: labelOpacity }}
@@ -360,7 +364,7 @@ export default function Projects() {
               >
                 <path d="M2.5 7.5L6 4l3.5 3.5" />
               </motion.svg>
-              <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-ink/40">swipe</span>
+              <span className="font-mono text-meta tracking-[0.3em] uppercase text-ink/40">swipe</span>
               <motion.svg
                 width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor"
                 className="text-ink/40" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
@@ -381,7 +385,7 @@ export default function Projects() {
             {/* Solid pill keeps the track legible over the halftone dots.
                 Segments are buttons — tap/click jumps to that project. */}
             <div className="flex items-center gap-3 rounded-full bg-cream/85 border border-ink/5 px-4 py-1 pointer-events-auto">
-              <span className="font-mono text-[10px] tracking-[0.2em] text-ink/40 tabular-nums">
+              <span className="font-mono text-meta tracking-[0.2em] text-ink/40 tabular-nums">
                 {String((activeIndex % works.length) + 1).padStart(2, '0')}
               </span>
               <div className="flex items-center gap-1">
@@ -407,7 +411,7 @@ export default function Projects() {
                   )
                 })}
               </div>
-              <span className="font-mono text-[10px] tracking-[0.2em] text-ink/40 tabular-nums">
+              <span className="font-mono text-meta tracking-[0.2em] text-ink/40 tabular-nums">
                 {String(works.length).padStart(2, '0')}
               </span>
             </div>

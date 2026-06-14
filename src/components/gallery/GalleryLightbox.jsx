@@ -128,11 +128,11 @@ export default function GalleryLightbox({ artworks, initialIndex, onClose }) {
                 {current.title}
               </p>
             )}
-            <p className="font-mono text-cream/50 text-[10px] md:text-xs uppercase tracking-[0.15em]">
+            <p className="font-mono text-cream/50 text-meta uppercase tracking-[0.15em]">
               {current.medium}
             </p>
           </div>
-          <p className="font-mono text-cream/30 text-[10px] tracking-wider">
+          <p className="font-mono text-cream/30 text-meta tracking-wider">
             {currentIndex + 1} / {artworks.length}
           </p>
         </div>
