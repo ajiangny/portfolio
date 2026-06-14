@@ -112,18 +112,18 @@ export default function OrbitBubble({
           borderRadius: isHovered ? BLOB_ACTIVE : blobShape,
           scale:   isHovered ? 2.25 : shrunkScale,
           opacity: 1,
-          backgroundColor: 'var(--color-cobalt)',
+          backgroundColor: 'var(--hero-bubble-fill)',
           boxShadow: isHovered
-            ? '0 16px 44px rgba(var(--color-cobalt-rgb), 0.65)'
+            ? '0 16px 44px rgba(12, 20, 50, 0.45)'
             : isShrunk
-            ? '0 2px 10px rgba(var(--color-cobalt-rgb), 0.2)'
-            : '0 4px 18px rgba(var(--color-cobalt-rgb), 0.28)',
+            ? '0 2px 10px rgba(12, 20, 50, 0.18)'
+            : '0 4px 18px rgba(12, 20, 50, 0.26)',
         }}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
 
         className="flex items-center justify-center gap-1.5 font-sans font-bold uppercase tracking-[0.18em] whitespace-nowrap select-none cursor-pointer"
         style={{
-          color: 'var(--color-cobalt-text, var(--color-cream))',
+          color: 'var(--hero-bubble-text)',
           fontSize: 'var(--text-label)',
           padding: '0.625rem 1.25rem',
           borderRadius: blobShape,
