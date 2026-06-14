@@ -63,22 +63,39 @@ export function createGradientRenderer(canvas) {
 
   return {
     supported: true,
+    gl,
     resize(cssW, cssH, dpr) {
       canvas.width = Math.max(1, Math.floor(cssW * dpr))
       canvas.height = Math.max(1, Math.floor(cssH * dpr))
       gl.viewport(0, 0, canvas.width, canvas.height)
     },
     setUniforms(obj) {
+      // uniform* targets the active program; the sim may have left its own
+      // program current, so re-select the display program first.
+      gl.useProgram(program)
       for (const name in obj) {
         const l = loc(name)
         if (l === null) continue
         const v = obj[name]
-        if (typeof v === 'number') gl.uniform1f(l, v)
+        // sampler texture, passed as { tex, unit }
+        if (v && typeof v === 'object' && 'tex' in v) {
+          gl.activeTexture(gl.TEXTURE0 + v.unit)
+          gl.bindTexture(gl.TEXTURE_2D, v.tex)
+          gl.uniform1i(l, v.unit)
+        } else if (typeof v === 'number') gl.uniform1f(l, v)
         else if (v.length === 2) gl.uniform2f(l, v[0], v[1])
         else if (v.length === 3) gl.uniform3f(l, v[0], v[1], v[2])
       }
     },
     render() {
+      // The sim shares this GL context and leaves its own program / FBO /
+      // viewport / buffer bound, so restore the display pass's state each draw.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+      gl.viewport(0, 0, canvas.width, canvas.height)
+      gl.useProgram(program)
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+      gl.enableVertexAttribArray(aPos)
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     },
     dispose() {
