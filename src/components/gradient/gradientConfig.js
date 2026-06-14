@@ -14,8 +14,8 @@ const rgb = (r, g, b) => [r / 255, g / 255, b / 255]
 // stops: [stop0 (low noise), stop1 (mid), stop2 (high noise)]
 export const SECTION_PALETTES = {
   hero:     { stops: [rgb(18, 42, 107), rgb(27, 58, 140), rgb(43, 82, 180)] }, // cobalt range (matches old hue-shift band)
-  about:    { stops: [rgb(234, 228, 217), rgb(245, 240, 232), rgb(250, 248, 244)] }, // cream
-  projects: { stops: [rgb(221, 228, 245), rgb(245, 240, 232), rgb(27, 58, 140)] }, // cream → cobalt
+  about:    { stops: [rgb(18, 42, 107), rgb(27, 58, 140), rgb(43, 82, 180)] }, // cobalt — About is a dark/cobalt section; its cream text+content needs a dark field
+  projects: { stops: [rgb(234, 228, 217), rgb(245, 240, 232), rgb(250, 248, 244)] }, // cream (cobalt enters only via the exit flood; dark text needs a light field)
   gallery:  { stops: [rgb(0, 0, 0), rgb(10, 10, 14), rgb(20, 30, 64)] }, // black + faint cobalt
   contact:  { stops: [rgb(0, 0, 0), rgb(8, 8, 10), rgb(40, 40, 46)] }, // black + faint warm
 }

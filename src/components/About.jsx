@@ -189,10 +189,6 @@ export default function About() {
   const labelY = useTransform(progress, [0.505, 0.545], ['-50px', '0px'])
   const labelO = useTransform(progress, [0.505, 0.525], [0, 1])
 
-  // Fade starts at 0.85 (which is 510vh), and ends at 1.0 (which is 600vh).
-  // This provides a comfortable pause from 0.5 to 0.85 before the fade out begins.
-  const bgFadeOpacity = useTransform(progress, [0.85, 1.0], [0, 1])
-
   // Gradient fade out from bottom to top
   const fadeStop1 = useTransform(progress, [0.85, 1.0], [-100, 100])
   const fadeStop2 = useTransform(progress, [0.85, 1.0], [0, 200])
@@ -294,12 +290,6 @@ export default function About() {
       className="relative"
       style={{ height: '700vh', backgroundColor: 'transparent' }}
     >
-      {/* bottom:-2px overlaps Projects so device-pixel rounding on phones
-          can't expose a cobalt hairline between the sections */}
-      <motion.div
-        className="absolute left-0 right-0 top-0 pointer-events-none"
-        style={{ backgroundColor: 'var(--color-cream)', opacity: bgFadeOpacity, zIndex: 0, bottom: '-2px' }}
-      />
       {/* ── Top Boundary Gradient ───────────────────────────────────────── */}
       {/* Fades out the film columns and dots so they don't hit the Hero   */}
       {/* boundary abruptly. Since it's absolute (not sticky), it scrolls  */}
