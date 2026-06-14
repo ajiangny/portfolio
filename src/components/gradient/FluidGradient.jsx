@@ -12,6 +12,7 @@
  * WebGL is unavailable.
  */
 import { useEffect, useRef } from 'react'
+import useMediaQuery from '../../hooks/useMediaQuery'
 import { SECTIONS } from '../../config/sections'
 import { createGradientRenderer } from './glRenderer'
 import { SECTION_PALETTES, COBALT, CREAM, GRADIENT } from './gradientConfig'
@@ -20,6 +21,8 @@ import { useGradientSignals } from '../../context/GradientContext'
 export default function FluidGradient() {
   const canvasRef = useRef(null)
   const ctx = useGradientSignals()
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -46,7 +49,8 @@ export default function FluidGradient() {
     const onLeave = () => { mouse.x = -9999; mouse.y = -9999; mouseStrength = 0 }
 
     function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const base = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = isMobile ? base * GRADIENT.MOBILE_SCALE : base
       w = window.innerWidth
       h = window.innerHeight
       renderer.resize(w, h, dpr)
@@ -92,7 +96,8 @@ export default function FluidGradient() {
       if (now - lastDraw < GRADIENT.FRAME_MS) return
       lastDraw = now
 
-      if (now - lastMove > 60) mouseStrength = Math.max(0, mouseStrength - GRADIENT.CURSOR_DECAY)
+      if (isMobile) mouseStrength = 0
+      else if (now - lastMove > 60) mouseStrength = Math.max(0, mouseStrength - GRADIENT.CURSOR_DECAY)
       else mouseStrength = Math.min(1, mouseStrength + GRADIENT.CURSOR_BUILD)
 
       renderer.setUniforms({
@@ -115,16 +120,32 @@ export default function FluidGradient() {
     window.addEventListener('resize', resize)
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseleave', onLeave)
-    rafId = requestAnimationFrame(draw)
+    if (reduceMotion) {
+      draw(performance.now())     // single static frame
+      if (rafId) cancelAnimationFrame(rafId) // draw() scheduled one; stop the loop
+      rafId = null
+    } else {
+      rafId = requestAnimationFrame(draw)
+    }
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+      } else if (!rafId && !reduceMotion) {
+        rafId = requestAnimationFrame(draw)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId)
       window.removeEventListener('resize', resize)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseleave', onLeave)
+      document.removeEventListener('visibilitychange', onVisibility)
       renderer.dispose()
     }
-  }, [ctx])
+  }, [ctx, reduceMotion, isMobile])
 
   return (
     <canvas
