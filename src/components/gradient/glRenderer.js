@@ -84,8 +84,12 @@ export function createGradientRenderer(canvas) {
     dispose() {
       gl.deleteBuffer(buffer)
       gl.deleteProgram(program)
-      const ext = gl.getExtension('WEBGL_lose_context')
-      if (ext) ext.loseContext()
+      // Intentionally do NOT call WEBGL_lose_context.loseContext() here.
+      // FluidGradient lives at the app root and only "unmounts" during React
+      // StrictMode's dev double-invoke; a canvas hands back the SAME context on
+      // the next getContext(), so losing it would make the remount compile on a
+      // dead context (fails with a null infolog → silent cream fallback).
+      // Dropping the program/buffer is enough; the context is reused cleanly.
     },
   }
 }
