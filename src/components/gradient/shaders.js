@@ -98,9 +98,11 @@ void main() {
   float flood = smoothstep(floodR, floodR - 0.15, dc) * clamp(uFlood, 0.0, 1.0);
   col = mix(col, uCobalt, flood);
 
-  // pulse — expanding ring on scroll-in
+  // pulse — expanding ring on scroll-in (gated off when uPulse==0, else the
+  // (1.0 - uPulse) term would leave a full-strength ring at screen centre)
+  float pulseActive = step(0.001, uPulse) * step(uPulse, 0.999);
   float pr = uPulse * 1.3;
-  float ring = smoothstep(0.08, 0.0, abs(dc - pr)) * (1.0 - uPulse);
+  float ring = smoothstep(0.08, 0.0, abs(dc - pr)) * (1.0 - uPulse) * pulseActive;
   col += uCream * ring * 0.4;
 
   gl_FragColor = vec4(col, 1.0);
