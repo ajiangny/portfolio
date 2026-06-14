@@ -28,7 +28,7 @@ import { SECTIONS, goToSection } from '../config/sections';
 import useMediaQuery from '../hooks/useMediaQuery';
 
 const ITEM_GAP = 105;   // desktop horizontal spacing
-const ROW_GAP = 50;     // mobile vertical spacing
+const ROW_GAP = 56;     // mobile vertical spacing (≥8px between 46px blobs)
 
 export default function SectionNav({ currentSection, style = {}, defaultTextColor = 'rgba(28,28,28,0.4)' }) {
   const { navigate: transitionNavigate } = useTransitionContext();
@@ -186,11 +186,11 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
                       key={section.id}
                       className="absolute flex items-center justify-center whitespace-nowrap font-sans font-bold uppercase tracking-[0.18em] cursor-pointer"
                       style={{
-                        width: 95,
-                        height: 42,
-                        left: -47.5,
-                        top: -21,
-                        fontSize: '0.65rem',
+                        width: 100,
+                        height: 46,
+                        left: -50,
+                        top: -23,
+                        fontSize: 'var(--text-label)',
                         color: blobTextColor,
                         borderRadius: section.blobShape,
                       }}
@@ -257,7 +257,7 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
             scale: isOpen ? 0.8 : 1,
           }}
           transition={{ duration: 0.2 }}
-          className="absolute flex items-center justify-center font-sans font-bold text-[11px] sm:text-[13px] tracking-[0.22em] uppercase whitespace-nowrap"
+          className="absolute flex items-center justify-center font-sans font-bold text-label tracking-[0.22em] uppercase whitespace-nowrap"
         >
           {/* Periodic diagonal shine doubles as the "I'm interactive" cue */}
           <span className="shine-text" style={{ '--shine-base': defaultTextColor }}>

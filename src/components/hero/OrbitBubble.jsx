@@ -48,18 +48,32 @@ export default function OrbitBubble({
     lastTRef.current = t
 
     const scroll = scrollYProgress ? scrollYProgress.get() : 0
-
-    // Mobile: clamp the orbit so bubbles always stay fully on screen
-    // (they pass behind the wordmark instead of leaving the viewport).
-    const rx = window.innerWidth < 768
-      ? window.innerWidth / 2 - 62
-      : window.innerWidth * 0.39
-    const ry = Math.min(window.innerHeight * 0.26, 220)
-
-    // Push radius outward as user scrolls — bubbles explode away from centre
+    // Push outward as the user scrolls — bubbles explode away on exit
     const outward = 1 + scroll * 3.5
-    const ox = Math.cos(angleRef.current) * rx * outward
-    const oy = Math.sin(angleRef.current) * ry * outward
+
+    let ox, oy
+    if (window.innerWidth < 768) {
+      // Mobile: a fixed 2×2 constellation parked BELOW the wordmark so the
+      // blobs never cross the heading (the old elliptical orbit swept its
+      // horizontal extremes straight through the cobalt "Portfolio" letters).
+      // A tiny sine/cosine drift keeps them alive — and freezes cleanly under
+      // reduced-motion, since angleRef stops advancing there.
+      const col = myIdx % 2 === 0 ? -1 : 1          // idx 0,2 left · 1,3 right
+      const row = myIdx < 2 ? -1 : 1                // idx 0,1 top  · 2,3 bottom
+      const colGap = Math.min(window.innerWidth * 0.24, 104)
+      const rowGap = 46
+      const clusterY = window.innerHeight * 0.20    // sits below heading centre
+      const driftX = Math.cos(angleRef.current + myIdx) * 5
+      const driftY = Math.sin(angleRef.current * 0.6 + myIdx) * 6
+      ox = (col * colGap + driftX) * outward
+      oy = (clusterY + row * rowGap + driftY) * outward
+    } else {
+      // Desktop: elliptical orbit around the heading (unchanged).
+      const rx = window.innerWidth * 0.39
+      const ry = Math.min(window.innerHeight * 0.26, 220)
+      ox = Math.cos(angleRef.current) * rx * outward
+      oy = Math.sin(angleRef.current) * ry * outward
+    }
 
     const px = smoothMouseX.get() * parallaxStrength
     const py = smoothMouseY.get() * parallaxStrength
@@ -67,8 +81,11 @@ export default function OrbitBubble({
     if (posRef.current) {
       posRef.current.style.left    = `calc(50% + ${ox + px}px)`
       posRef.current.style.top     = `calc(50% + ${oy + py}px)`
-      // Fade out: fully gone by scroll = 0.4
-      posRef.current.style.opacity = String(Math.max(0, 1 - scroll / 0.4))
+      // Fade out: fully gone by scroll = 0.4 — and stop catching taps
+      // once nearly invisible (the link otherwise stays clickable).
+      const op = Math.max(0, 1 - scroll / 0.4)
+      posRef.current.style.opacity = String(op)
+      posRef.current.style.pointerEvents = op < 0.15 ? 'none' : ''
     }
   })
 
@@ -83,7 +100,9 @@ export default function OrbitBubble({
       href={href}
       onClick={(e) => { e.preventDefault(); onNavigate(href, e, myIdx) }}
       className="absolute z-0"
-      style={{ transform: 'translate(-50%, -50%)' }}
+      /* 10px padding is invisible hit-slop: the bubble visual is ~32px
+         tall, so this brings the tap target past the 44px minimum. */
+      style={{ transform: 'translate(-50%, -50%)', padding: '10px' }}
       aria-label={`Go to ${label}`}
     >
       <motion.span
@@ -106,7 +125,7 @@ export default function OrbitBubble({
         className="flex items-center justify-center gap-1.5 font-sans font-bold uppercase tracking-[0.18em] whitespace-nowrap select-none cursor-pointer"
         style={{
           color: 'var(--color-cobalt-text, var(--color-cream))',
-          fontSize: '0.65rem',
+          fontSize: 'var(--text-label)',
           padding: '0.625rem 1.25rem',
           borderRadius: blobShape,
           overflow: 'visible',

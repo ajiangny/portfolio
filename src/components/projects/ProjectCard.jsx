@@ -181,7 +181,7 @@ export default function ProjectCard({ work, isActive, isActiveIndex, widthClass,
                       </div>
                     </div>
                   ) : (
-                    <span className={`font-bold text-[11px] transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
+                    <span className={`font-bold text-label transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
                       {mapped.custom}
                     </span>
                   )}
@@ -210,7 +210,7 @@ export default function ProjectCard({ work, isActive, isActiveIndex, widthClass,
           style={{ pointerEvents: isActive ? 'auto' : 'none' }}
         >
           <div className="flex-1 pr-4">
-            <h3 className="font-sans font-semibold text-lg md:text-xl lg:text-2xl text-ink mb-1 tracking-tight">
+            <h3 className="font-sans font-semibold text-title text-ink mb-1 tracking-tight">
               {work.title}
             </h3>
             <p className="font-mono text-ink/50 text-[11px] md:text-xs line-clamp-2">

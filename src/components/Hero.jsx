@@ -19,7 +19,7 @@ import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionVa
 import { useTransitionContext } from '../context/TransitionContext'
 import { NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
-import HalftoneBg    from './hero/HalftoneBg'
+import HalftoneBg from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
@@ -30,13 +30,13 @@ export default function Hero() {
   const { navigate: transitionNavigate, isActive } = useTransitionContext()
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [hovIdx, setHovIdx] = useState(null)
-  const isOrbitPausedRef    = useRef(false)
+  const isOrbitPausedRef = useRef(false)
   const isTransitionActiveRef = useRef(isActive)
-  
+
   useEffect(() => {
     isTransitionActiveRef.current = isActive
   }, [isActive])
-  
+
   const navigate = (href, e, clickedIdx) => {
     const go = () => {
       // Colour + landing offset both come from config/sections.js
@@ -155,16 +155,19 @@ export default function Hero() {
     }
   }, [])
   // Heading: scale up + rise + fade
-  const headingScale   = useTransform(scrollYProgress, [0, 0.55], [1, 1.18])
-  const headingY       = useTransform(scrollYProgress, [0, 0.55], [0, -70])
+  const headingScale = useTransform(scrollYProgress, [0, 0.55], [1, 1.18])
+  const headingY = useTransform(scrollYProgress, [0, 0.55], [0, -70])
   const headingOpacity = useTransform(scrollYProgress, [0, 0.45], [1, 0])
 
   // Name tag: fly up + fade
-  const nameY       = useTransform(scrollYProgress, [0, 0.35], [0, -110])
-  const nameOpacity = useTransform(scrollYProgress, [0, 0.3],  [1, 0])
+  const nameY = useTransform(scrollYProgress, [0, 0.35], [0, -110])
+  const nameOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0])
 
   // Halftone background: fade out
   const bgOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
+
+  // Scroll hint: gone as soon as the journey starts
+  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
 
   // ── Mouse parallax ───────────────────────────────────────────────────────
   const heroMouseX = useMotionValue(0)
@@ -178,8 +181,8 @@ export default function Hero() {
 
   const trackMouse = (e) => {
     const r = e.currentTarget.getBoundingClientRect()
-    heroMouseX.set(e.clientX - r.left - r.width  / 2)
-    heroMouseY.set(e.clientY - r.top  - r.height / 2)
+    heroMouseX.set(e.clientX - r.left - r.width / 2)
+    heroMouseY.set(e.clientY - r.top - r.height / 2)
   }
   const resetMouse = () => { heroMouseX.set(0); heroMouseY.set(0) }
 
@@ -201,7 +204,7 @@ export default function Hero() {
           shine-text adds the periodic diagonal sweep (faster on hover). */}
       <motion.p
         style={{ y: nameY, opacity: nameOpacity, zIndex: 50, '--shine-base': 'rgba(var(--color-cobalt-rgb), 0.55)' }}
-        className="shine-text absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 font-sans text-sm font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-auto cursor-default"
+        className="shine-text absolute top-8 left-1/2 -translate-x-1/2 flex items-center gap-3 font-sans text-eyebrow font-semibold tracking-[0.28em] uppercase select-none whitespace-nowrap pointer-events-auto cursor-default"
       >
         {/* shine-text sits on the parent so one highlight band sweeps the
             whole header (name, dot, year) as a single continuous surface */}
@@ -231,8 +234,9 @@ export default function Hero() {
           >
             <motion.div style={{ x: headingParallaxX, y: headingParallaxY }}>
               <ElasticHeading
+                ariaLabel="Andrew Jiang — Portfolio. Developer and designer."
                 style={{
-                  fontSize: isMobile ? 'clamp(2.5rem, 11vw, 4rem)' : 'clamp(3rem, 13vw, 14rem)',
+                  fontSize: 'var(--text-hero)',
                   letterSpacing: '-0.01em',
                 }}
               />
@@ -270,6 +274,26 @@ export default function Hero() {
           background: 'linear-gradient(to bottom, transparent 0%, var(--color-cobalt) 100%)',
         }}
       />
+
+      {/* Scroll affordance — sits on the cobalt gradient band; the sweep
+          animation lives in CSS so prefers-reduced-motion freezes it. */}
+      <motion.div
+        aria-hidden="true"
+        style={{ opacity: scrollHintOpacity }}
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
+      >
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <span className="scroll-hint-line" />
+          <span className="font-sans font-bold text-meta tracking-[0.32em] uppercase text-cream/85">
+            Scroll
+          </span>
+        </motion.div>
+      </motion.div>
     </section>
   )
 }

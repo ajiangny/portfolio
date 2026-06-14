@@ -75,7 +75,7 @@ export default function AboutTextPanel({ progress, isMobile }) {
           as="h2"
           style={{
             fontFamily: "'EastBlue', 'Abril Fatface', serif",
-            fontSize: 'clamp(34px, 7vw, 96px)',
+            fontSize: 'var(--text-section)',
             lineHeight: 0.95,
             color: 'var(--color-cream)'
           }}
@@ -88,8 +88,8 @@ export default function AboutTextPanel({ progress, isMobile }) {
       <motion.p
         style={{
           fontFamily: "'Space Mono', monospace",
-          fontSize: isMobile ? '12px' : '14px',
-          lineHeight: isMobile ? 1.6 : 1.9,
+          fontSize: 'var(--text-body)',
+          lineHeight: 1.7,
           color: 'var(--color-cream)',
           marginBottom: '12px',
           x: bodyX,
@@ -108,8 +108,8 @@ export default function AboutTextPanel({ progress, isMobile }) {
         style={{
           display: isMobile ? 'none' : 'block',
           fontFamily: "'Space Mono', monospace",
-          fontSize: isMobile ? '12px' : '14px',
-          lineHeight: isMobile ? 1.6 : 1.9,
+          fontSize: 'var(--text-body)',
+          lineHeight: 1.7,
           color: 'var(--color-cream)',
           marginBottom: isMobile ? '16px' : '28px',
           x: bioX,
@@ -127,7 +127,7 @@ export default function AboutTextPanel({ progress, isMobile }) {
           opacity: skillsO,
           fontFamily: "'DM Sans', sans-serif",
           fontWeight: 700,
-          fontSize: '10px',
+          fontSize: 'var(--text-label)',
           letterSpacing: '0.2em',
           textTransform: 'uppercase',
           color: 'rgba(245,240,232,0.4)',

@@ -28,7 +28,7 @@ before retiming animations or touching a canvas.**
 | Project cards + tech-icon mapping | [src/data/projectsData.js](src/data/projectsData.js) |
 | Gallery artworks | [src/data/galleryData.js](src/data/galleryData.js) |
 | About filmstrip images + skills lists | [src/data/aboutData.js](src/data/aboutData.js) |
-| Design tokens (colors, fonts) | `@theme` in [src/index.css](src/index.css) |
+| Design tokens (colors, fonts, **type scale** `--text-*`) | `@theme` in [src/index.css](src/index.css) |
 | Contact email + social links | [src/components/Contact.jsx](src/components/Contact.jsx) |
 
 ## Core patterns

@@ -84,7 +84,7 @@ function ArtCard({ art, artIndex, index, totalCells, revealProgress, exitProgres
       />
       {/* Hover overlay */}
       <div className="gallery-cell-overlay">
-        <span className="font-mono text-cream/90 text-[9px] md:text-[11px] uppercase tracking-[0.2em]">
+        <span className="font-mono text-cream/90 text-label uppercase tracking-[0.2em]">
           {art.medium}
         </span>
       </div>
@@ -258,6 +258,10 @@ export default function Gallery() {
 
   return (
     <div id="gallery" ref={containerRef} style={{ height: '340vh' }}>
+
+      {/* Screen-reader landmark — kept outside the visibility-gated fixed
+          header so it stays in the document outline at all times. */}
+      <h2 className="sr-only">Gallery</h2>
 
       {/* ── Fixed header — z-50 puts it ABOVE the Projects overlay (z-40) ── */}
       <motion.div

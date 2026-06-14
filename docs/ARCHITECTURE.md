@@ -44,8 +44,12 @@ Progress = how far the Hero has scrolled out (`['start start','end start']`).
 
 Hover (scroll ≤ 0.05): hovering/tapping a bubble retints the whole hero to
 that section's `themeRgb` from `config/sections.js` (`updateColor`).
-Bubble geometry: `OrbitBubble.jsx` (mobile clamps rx to keep bubbles
-on-screen); orbit speed in `hero/orbitConstants.js` (ORBIT_DURATION).
+Bubble geometry: `OrbitBubble.jsx` — desktop (≥768) is an elliptical orbit
+around the wordmark; mobile (<768) parks the four blobs in a fixed **2×2
+cluster below the wordmark** (with a tiny drift) so they never cross the
+cobalt "Portfolio" letters. Both paths share the scroll-explode
+(`outward = 1+scroll×3.5`) and opacity fade. Orbit speed in
+`hero/orbitConstants.js` (ORBIT_DURATION).
 
 ### About (`About.jsx`) — the long one
 
@@ -190,7 +194,7 @@ vertical dropdown. Colours adapt to the section background (`isDarkBg` /
 - One JS breakpoint: `(max-width: 767px)` via `useMediaQuery`.
 - Mobile is a different layout, not a scaled-down one: vertical snap
   carousel (Projects), skills marquee instead of a wrapped grid, top-centre
-  portrait with text below (About), 3×5 gallery grid, clamped hero orbits.
+  portrait with text below (About), 3×5 gallery grid, 2×2 hero nav cluster.
 - `useScrollTimeline` re-reads `window.innerHeight` per tick and on resize,
   so orientation changes / URL-bar collapses can't skew progress;
   `useInfiniteCarousel` re-centres on breakpoint flips; About re-measures
@@ -199,6 +203,28 @@ vertical dropdown. Colours adapt to the section background (`isDarkBg` /
   because the SVG duotone filter re-rasterises every frame and janks.
 - Known tradeoff: ~768px portrait crops the Gallery mosaic's outer columns
   (incl. View All). Revisit if tablet traffic matters.
+
+### Type scale (single source of truth)
+
+All text sizes come from `--text-*` tokens in the `@theme` block of
+`src/index.css`. Tailwind v4 turns each into a `text-*` utility **and** a CSS
+var, so both class names (`text-label`) and inline style objects
+(`fontSize: 'var(--text-hero)'`, used for motion-/`isMobile`-driven sizing)
+read the same source. Tiers:
+
+| Token | Size | Use |
+|---|---|---|
+| `text-hero` | `clamp(3rem,13vw,13rem)` | Hero wordmark only |
+| `text-section` | `clamp(2.25rem,7.5vw,6rem)` | About + Contact display headings |
+| `text-title` | `clamp(1.125rem,2vw,1.5rem)` | card / modal titles |
+| `text-body` | `clamp(.75rem,2.6vw,.875rem)` | paragraphs (fluid 12→14px) |
+| `text-eyebrow` | 12px | prominent eyebrow (Hero name tag) |
+| `text-label` | 11px | nav / field / section labels |
+| `text-meta` | 10px | counters, footer, scroll hint |
+
+`letter-spacing`/`font-weight` stay at the call site; only size + line-height
+move to tokens. Interactive button text and a few specialised chips
+(`SkillIcon`, the Gallery View-All CSS clamp) keep bespoke sizes.
 
 ## 6. Recipes
 
