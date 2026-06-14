@@ -41,7 +41,12 @@ const VIEWPORTS = [
   ['mobile', { width: 390, height: 844, isMobile: true, hasTouch: true }],
 ]
 
-const browser = await puppeteer.launch()
+// Force software WebGL (ANGLE/SwiftShader) so the WebGL gradient background
+// renders in headless capture — default headless Chrome has no GPU/WebGL and
+// would show only the cream fallback.
+const browser = await puppeteer.launch({
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+})
 for (const [vpName, vp] of VIEWPORTS) {
   const page = await browser.newPage()
   await page.setViewport(vp)
