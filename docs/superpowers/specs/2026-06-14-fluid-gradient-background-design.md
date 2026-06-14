@@ -47,6 +47,16 @@ timing.
 stack (same band the halftone canvases occupy now — below all section
 content). One fullscreen-quad fragment shader.
 
+> **Refinement (added during implementation):** because the gradient is one
+> fixed canvas behind everything, sections must become **background-transparent**
+> for it to show (root `bg-cream`, About's `--color-cobalt`, Gallery/Contact
+> `#000` all removed). The gradient therefore *is* the page background, and each
+> section's at-rest palette reproduces its former background colour so text
+> contrast holds — and the palettes had to be corrected against the *actual*
+> backgrounds: **About is cobalt, not cream**, and Projects is cream (cobalt
+> there comes only from the exit flood). `body` keeps cream as the no-WebGL
+> fallback.
+
 Benefits over the current 5-canvas approach:
 - Cross-section continuity is free (one physical surface) — no offset alignment
   math.

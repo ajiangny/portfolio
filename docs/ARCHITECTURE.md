@@ -38,7 +38,6 @@ Progress = how far the Hero has scrolled out (`['start start','end start']`).
 | 0→0.45 | heading opacity 1→0 |
 | 0→0.55 | heading scale 1→1.18, y 0→−70 |
 | 0→0.3 / 0→0.35 | name tag fades / flies up −110px |
-| 0→0.5 | halftone background opacity 1→0 |
 | 0→0.4 | orbit bubbles fade out; radius multiplier 1+scroll×3.5 (explode) |
 | 0→1 | cobalt shifts 27,58,140 → 37,79,193 (writes `--color-cobalt*` CSS vars) |
 
@@ -72,23 +71,22 @@ Two clocks:
 | progress | 0.45→0.52 | photo stage B: glides to resting spot (desktop: right panel at 63vw; mobile: top-centre, 78vw wide at y=104px) |
 | progress | 0.504→0.5725 | text cascade (in `AboutTextPanel.jsx`): heading 0.514, bio 0.523, second bio 0.53, skills 0.537, resume 0.544; SectionNav label 0.505→0.545 |
 | progress | 0.5725→0.85 | rest — fully revealed state (nav lands here: offset 3.6vh ≈ progress 0.6) |
-| progress | 0.85→1.0 | fade-out: cream layer + bottom-up mask + ProjectsHalftone dots fade in |
+| progress | 0.85→1.0 | fade-out: content fades via a bottom-up CSS mask, revealing the gradient as it crossfades cobalt→cream into Projects |
 
-Waves: global background `[0,0.5,0.7,0.85,1] → [0,0,0.2,0.2,1]`; photo
-overlay desktop `[0,0.606,0.75,0.85,1] → [0,0,0.4,0.4,1]`, mobile only during
-the final fade. The photo expansion is rect-driven: it reads the filmstrip
+About is a **cobalt** section (background-transparent; the gradient's cobalt
+`about` palette shows through), so its cream text/filmstrip stay legible. The
+photo expansion is rect-driven: it reads the filmstrip
 card's `getBoundingClientRect` and lerps between start/centre/final rects in
 a `useMotionValueEvent` — retime by editing the 0.31 / 0.37 / 0.45 / 0.52
 breakpoints there (and the text windows in `AboutTextPanel.jsx` to follow).
 
-### About→Projects seam (the continuous line wave)
+### About→Projects seam
 
-The 100vh of native scroll where About unpins and Projects slides in.
-Both halftone canvases draw one continuous horizontal band:
-- About's canvas: `useScroll ['end end','end start']` → line front 0→2
-- Projects' canvas: `useScroll ['start end','start start']` → line front −1→1
-
-The band is scroll-position-driven and persists if the user pauses mid-seam.
+The 100vh of native scroll where About unpins and Projects slides in. About
+registers a single `seam` gradient signal — its `transitionProgress`
+(`useScroll ['end end','end start']`, 0→1). The shader sweeps a bright
+luminance band across the field while the per-section palette crossfades
+cobalt→cream. Scroll-position-driven, so it holds if the user pauses mid-seam.
 
 ### Projects (`Projects.jsx`)
 
@@ -104,7 +102,10 @@ The band is scroll-position-driven and persists if the user pauses mid-seam.
 | 0.63→0.65 | expanding overlay appears (synced to active card's rect; sync RAF runs 0.57–0.85) |
 | 0.65→0.92 | overlay scale 0.5→5 (→0.82) →150 (→0.92); radius 16→0 (→0.73); carousel pointer-events locked > 0.65 |
 
-Radial halftone wave `[0,0.52,0.56,0.73] → [0,0.2,0.2,1.5]`.
+Exit flood: Projects registers the `flood` gradient signal
+`useTransform(progress,[0.55,0.73,1.0],[0,1.5,0])` — a radial cobalt bloom
+floods the gradient as the card exits, then returns to 0 (so it doesn't bleed
+into Gallery; the 0.73→1.0 fade is hidden behind the expanding black overlay).
 Carousel: works ×3 runway; `useInfiniteCarousel` keeps the user in the middle
 set with silent jumps, handles click-to-centre (desktop spring on scrollLeft,
 mobile native smooth + scroll-snap), and re-centres when the 768px breakpoint
@@ -115,7 +116,8 @@ Projects.jsx as `cardTransforms`.
 ### Gallery (`Gallery.jsx`)
 
 Content lives in a `position:fixed` z-50 overlay (so it can sit above the
-Projects expanding overlay); the section itself is just a black sticky frame.
+Projects expanding overlay); the section itself is a transparent sticky frame
+(the gradient's dark `gallery` palette shows through).
 
 Clocks: `gapProgress` — approach, from 1.45vh before the section top to the
 top; `progress` — 240vh sticky travel.
@@ -123,9 +125,8 @@ top; `progress` — 240vh sticky travel.
 | Clock | Window | Effect |
 |---|---|---|
 | gap | 0→0.05 | header layer fades in (visibility-gated) |
-| gap | 0→0.70 | halftone pulse ring expands |
+| gap | 0→0.70 | gradient pulse ring expands (registers `pulse` signal = `pulseProgress`) |
 | gap (reveal = gap 0.35→1 → 0→1) | per cell: in at `0.55 + (i/cells)·0.30`, +0.14 long | staggered cell reveal |
-| progress | 0→1 | in-canvas progress line sweeps 0.02→0.94 |
 | progress | per cell: out at `0.80 + (i/cells)·0.11`, +0.08 long | staggered exit |
 | progress | 0.82→1.0 | header fades toward Contact |
 
@@ -137,40 +138,62 @@ View All at 14. Cell styles in `index.css` (`.gallery-*`). Lightbox in
 ### Contact (`Contact.jsx`)
 
 WhileInView staggered entrance; SectionNav label via `useScroll`
-`['start end','start 0.4']`. The GalleryHalftone layer is fixed and
-opacity-gated `[0,0.04,0.96,1]`, with `headerOpacity` passed so the canvas
-skips drawing while hidden. Form submit = `mailto:` handoff (no backend);
-footer nav maps over `SECTIONS`.
+`['start end','start 0.4']`. Background-transparent, so the site-wide gradient
+(dark `contact` palette) continues seamlessly from Gallery — no per-section
+canvas. Form submit = `mailto:` handoff (no backend); footer nav maps over
+`SECTIONS`.
 
-## 3. Halftone engine (`src/components/halftone/`)
+## 3. Fluid gradient background (`src/components/gradient/`)
 
-- `halftoneCore.js` — GRID (18px), sprite-sheet + base-layer builders,
-  `computeGlobalOffsetY(containerId)` (aligns a canvas's lattice to the
-  page so sections tile seamlessly), hover constants (HOVER_R 160).
-- `HalftoneCanvas.jsx` — lifecycle owner: ResizeObserver rebuild,
-  IntersectionObserver RAF pause, ~30fps throttle (FRAME_MS), hover
-  build-up/decay, dirty-check skip, optional `headerOpacity` gate for
-  position:fixed layers. Reads `values` through a ref every frame, so
-  passing different MotionValue identities between renders is safe.
-- `halftoneStrategies.js` — the per-frame painters:
-  - `waveUpStrategy` (About): bottom-up wave; values `waveFront, waveHeight`
-  - `radialLineStrategy` (Projects): radial wave (precomputed `waveDists`)
-    + fractional line band; values `waveFront, waveHeight, lineWaveFront,
-    lineWaveHeight`
-  - `pulseLineStrategy` (Gallery/Contact): pulse ring (PULSE_THICKNESS 500px)
-    + pixel line band (LINE_HALF 48, LINE_STRENGTH 0.8); values
-    `pulseProgress, lineProgress`
-- Presets (keep call sites stable): `about/ProfileHalftone` (cream, 0.05),
-  `projects/ProjectsHalftone` (cobalt, 0.08, + grayscale filter via
-  `fadeProgress`), `gallery/GalleryHalftone` (cream on black, 0.05).
-- `hero/HalftoneBg.jsx` is intentionally **not** on the engine: per-row
-  radius gradient (0.6→8.5px) + dynamic `source-in` tint from
-  `--color-cobalt`. It reuses core helpers and pauses offscreen.
+One fixed full-viewport WebGL canvas behind all content (`position:fixed`,
+z-index −1) renders a domain-warped fBm mesh gradient. It replaced the old
+per-section halftone canvases, so the gradient **is** the page background and
+every section is background-transparent (`body` keeps `--color-cream` as the
+no-WebGL fallback). Because it is one continuous surface, cross-section
+continuity is free — no lattice-alignment math.
 
-Tuning cheat-sheet: dot density → GRID; resting look → preset
-`baseOpacity` / engine `baseRadius`; hover feel → HOVER_R / hoverBoost /
-the 0.15 build & 0.03 decay rates in HalftoneCanvas; effect shapes → the
-constants at the top of each strategy.
+Modules:
+- `gradientConfig.js` — single source of truth. `SECTION_PALETTES` (3 stops
+  per section, normalized 0–1; ordered to match `SECTIONS`), accent `COBALT`/
+  `CREAM`, and the `GRADIENT` tuning block (`FRAME_MS` ~30fps, `FLOW_SPEED`,
+  `CURSOR_RADIUS/BUILD/DECAY`, `MOBILE_SCALE` 0.5, `SEAM_FADE` 0.85).
+  Palettes mirror each section's former look so text contrast holds: Hero +
+  About **cobalt** (dark; cream text), Projects **cream** (light; dark text),
+  Gallery + Contact **near-black**.
+- `shaders.js` — `VERT_SRC`/`FRAG_SRC` (WebGL1 / GLSL ES 1.00). fBm + domain
+  warp drives a 3-stop palette mix; `uPalMix` crossfades current→next palette.
+  Uniforms: `uResolution,uTime,uMouse,uMouseStrength,uCursorR,uCobalt,uCream,
+  uPalA0..2,uPalB0..2,uPalMix,uSeam,uFlood,uPulse`.
+- `glRenderer.js` — `createGradientRenderer(canvas)`: compiles the program,
+  one fullscreen quad, cached uniform locations, null-safe `{ supported,
+  resize, setUniforms, render, dispose }`. `dispose` deliberately does NOT
+  `loseContext()` (StrictMode remount would inherit the dead context).
+- `FluidGradient.jsx` — lifecycle + per-frame orchestration: ~30fps throttle;
+  picks the palette from the section holding the viewport centre and
+  crossfades to the next past `SEAM_FADE`; reads `seam`/`flood`/`pulse`
+  signals and cursor strength through refs; reduced-motion → one static frame;
+  mobile → half-res + no cursor; pauses RAF on `visibilitychange`.
+- `src/context/GradientContext.js` (+ `GradientProvider.jsx`) — decoupled
+  signal registry. Sections call `useGradientSignal(key, motionValue)` so the
+  gradient never imports section internals.
+
+Transition signals (each a MotionValue the section already computes):
+
+| key | registered by | source | shader effect |
+|---|---|---|---|
+| `seam` | About | `transitionProgress` 0→1 | bright luminance band sweeps at the About→Projects seam |
+| `flood` | Projects | `[0.55,0.73,1.0]→[0,1.5,0]` | radial cobalt bloom on card exit (returns to 0 so it doesn't bleed) |
+| `pulse` | Gallery | `pulseProgress` 0→1 | expanding ring on scroll-in |
+
+Signals are GLOBAL uniforms: they must rest at an "off" value once the section
+leaves. `seam`/`pulse` self-gate at 1 (`step(uX,0.999)`); `flood` peaks at 1.5
+with no upper gate, so its MotionValue ramps back to 0 (hidden behind the
+Projects black overlay).
+
+Tuning cheat-sheet: resting colour → `SECTION_PALETTES`; flow speed →
+`GRADIENT.FLOW_SPEED`; cursor feel → `CURSOR_RADIUS/BUILD/DECAY`; transition
+shapes → the `uSeam`/`uFlood`/`uPulse` blocks at the bottom of `shaders.js`
+and the signal mappings in each section.
 
 ## 4. Navigation & transitions
 
