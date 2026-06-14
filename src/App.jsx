@@ -19,6 +19,7 @@ import About from './components/About'
 import Projects from './components/Projects'
 import Gallery from './components/Gallery'
 import Contact from './components/Contact'
+import FluidGradient from './components/gradient/FluidGradient'
 
 function App() {
   const lenisRef = useLenis()
@@ -30,7 +31,8 @@ function App() {
       <MotionConfig reducedMotion="user">
       <GradientProvider>
       <TransitionProvider>
-        <div className="bg-cream text-ink min-h-screen overflow-x-clip">
+        <div className="text-ink min-h-screen overflow-x-clip">
+          <FluidGradient />
           <PageTransition />
           <main>
             <Hero />

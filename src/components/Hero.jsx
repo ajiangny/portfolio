@@ -19,7 +19,6 @@ import { motion, useMotionValue, useSpring, useScroll, useTransform, useMotionVa
 import { useTransitionContext } from '../context/TransitionContext'
 import { NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
-import HalftoneBg from './hero/HalftoneBg'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
@@ -70,7 +69,6 @@ export default function Hero() {
     bgR: 245, bgG: 240, bgB: 232,
     txtR: 245, txtG: 240, txtB: 232
   })
-  const colorRgbValue = useMotionValue('27,58,140')
   const animationRef = useRef(null)
 
   // useCallback keeps the identity stable (only refs/motion values inside)
@@ -127,7 +125,6 @@ export default function Hero() {
         colorState.current = { r, g, b, bgR, bgG, bgB, txtR, txtG, txtB }
 
         const rgbStr = `${r},${g},${b}`
-        colorRgbValue.set(rgbStr)
 
         document.documentElement.style.setProperty('--color-cobalt-rgb', rgbStr)
         document.documentElement.style.setProperty('--color-cobalt', `rgb(${r}, ${g}, ${b})`)
@@ -135,7 +132,7 @@ export default function Hero() {
         document.documentElement.style.setProperty('--color-cobalt-text', `rgb(${txtR}, ${txtG}, ${txtB})`)
       }
     })
-  }, [colorRgbValue])
+  }, [])
 
   useMotionValueEvent(scrollYProgress, "change", (latest) => updateColor(latest, hovIdx))
 
@@ -163,9 +160,6 @@ export default function Hero() {
   const nameY = useTransform(scrollYProgress, [0, 0.35], [0, -110])
   const nameOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0])
 
-  // Halftone background: fade out
-  const bgOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
-
   // ── Mouse parallax ───────────────────────────────────────────────────────
   const heroMouseX = useMotionValue(0)
   const heroMouseY = useMotionValue(0)
@@ -188,15 +182,10 @@ export default function Hero() {
       ref={heroRef}
       id="hero"
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
-      style={{ backgroundColor: 'var(--color-hero-bg, var(--color-cream))' }}
+      style={{ backgroundColor: 'transparent' }}
       onMouseMove={trackMouse}
       onMouseLeave={resetMouse}
     >
-      {/* Animated halftone dot field — fades on scroll */}
-      <motion.div style={{ opacity: bgOpacity }} className="absolute inset-0 pointer-events-none">
-        <HalftoneBg containerId="hero" colorRgbValue={colorRgbValue} />
-      </motion.div>
-
       {/* Name + year — pinned to top centre, flies up on scroll.
           shine-text adds the periodic diagonal sweep (faster on hover). */}
       <motion.p
