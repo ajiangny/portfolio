@@ -29,3 +29,6 @@ scripts/shots/
 # Agent
 .claude/
 .agent/
+
+# Brainstorming visual-companion mockups
+.superpowers/
