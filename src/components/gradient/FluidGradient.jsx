@@ -33,6 +33,18 @@ export default function FluidGradient() {
     let lastDraw = 0
     const start = performance.now()
 
+    const mouse = { x: -9999, y: -9999 }
+    let mouseStrength = 0
+    let lastMove = 0
+
+    const onMove = (e) => {
+      // GL origin is bottom-left; flip y so uMouse matches gl_FragCoord
+      mouse.x = e.clientX
+      mouse.y = h - e.clientY
+      lastMove = performance.now()
+    }
+    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; mouseStrength = 0 }
+
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       w = window.innerWidth
@@ -80,11 +92,14 @@ export default function FluidGradient() {
       if (now - lastDraw < GRADIENT.FRAME_MS) return
       lastDraw = now
 
+      if (now - lastMove > 60) mouseStrength = Math.max(0, mouseStrength - GRADIENT.CURSOR_DECAY)
+      else mouseStrength = Math.min(1, mouseStrength + GRADIENT.CURSOR_BUILD)
+
       renderer.setUniforms({
         uResolution: [canvas.width, canvas.height],
         uTime: ((now - start) / 1000) * GRADIENT.FLOW_SPEED,
-        uMouse: [-9999, -9999],
-        uMouseStrength: 0,
+        uMouse: [mouse.x, mouse.y],
+        uMouseStrength: mouseStrength,
         uCursorR: GRADIENT.CURSOR_RADIUS,
         uCobalt: COBALT,
         uCream: CREAM,
@@ -98,11 +113,15 @@ export default function FluidGradient() {
 
     resize()
     window.addEventListener('resize', resize)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseleave', onLeave)
     rafId = requestAnimationFrame(draw)
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId)
       window.removeEventListener('resize', resize)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseleave', onLeave)
       renderer.dispose()
     }
   }, [ctx])
