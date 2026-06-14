@@ -166,9 +166,6 @@ export default function Hero() {
   // Halftone background: fade out
   const bgOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
 
-  // Scroll hint: gone as soon as the journey starts
-  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0])
-
   // ── Mouse parallax ───────────────────────────────────────────────────────
   const heroMouseX = useMotionValue(0)
   const heroMouseY = useMotionValue(0)
@@ -275,25 +272,6 @@ export default function Hero() {
         }}
       />
 
-      {/* Scroll affordance — sits on the cobalt gradient band; the sweep
-          animation lives in CSS so prefers-reduced-motion freezes it. */}
-      <motion.div
-        aria-hidden="true"
-        style={{ opacity: scrollHintOpacity }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 pointer-events-none"
-      >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.1 }}
-          className="flex flex-col items-center gap-2"
-        >
-          <span className="scroll-hint-line" />
-          <span className="font-sans font-bold text-meta tracking-[0.32em] uppercase text-cream/85">
-            Scroll
-          </span>
-        </motion.div>
-      </motion.div>
     </section>
   )
 }

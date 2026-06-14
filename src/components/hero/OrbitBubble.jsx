@@ -53,20 +53,19 @@ export default function OrbitBubble({
 
     let ox, oy
     if (window.innerWidth < 768) {
-      // Mobile: a fixed 2×2 constellation parked BELOW the wordmark so the
-      // blobs never cross the heading (the old elliptical orbit swept its
-      // horizontal extremes straight through the cobalt "Portfolio" letters).
-      // A tiny sine/cosine drift keeps them alive — and freezes cleanly under
-      // reduced-motion, since angleRef stops advancing there.
-      const col = myIdx % 2 === 0 ? -1 : 1          // idx 0,2 left · 1,3 right
-      const row = myIdx < 2 ? -1 : 1                // idx 0,1 top  · 2,3 bottom
+      // Mobile: the four blobs flank the wordmark — About/Projects above it,
+      // Gallery/Contact below — leaving the heading's band clear (the old
+      // elliptical orbit swept its horizontal extremes straight through the
+      // cobalt "Portfolio" letters). A tiny sine/cosine drift keeps them
+      // alive, and freezes cleanly under reduced-motion since angleRef stops.
+      const col = myIdx % 2 === 0 ? -1 : 1          // idx 0,2 left  · 1,3 right
+      const row = myIdx < 2 ? -1 : 1                // idx 0,1 above · 2,3 below
       const colGap = Math.min(window.innerWidth * 0.24, 104)
-      const rowGap = 46
-      const clusterY = window.innerHeight * 0.20    // sits below heading centre
+      const bandY = Math.max(window.innerHeight * 0.16, 124)  // clear of heading
       const driftX = Math.cos(angleRef.current + myIdx) * 5
       const driftY = Math.sin(angleRef.current * 0.6 + myIdx) * 6
       ox = (col * colGap + driftX) * outward
-      oy = (clusterY + row * rowGap + driftY) * outward
+      oy = (row * bandY + driftY) * outward
     } else {
       // Desktop: elliptical orbit around the heading (unchanged).
       const rx = window.innerWidth * 0.39
