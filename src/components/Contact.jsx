@@ -16,7 +16,6 @@ import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, goToSection } from '../config/sections'
 import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
-import GalleryHalftone from './gallery/GalleryHalftone'
 
 const CONTACT_EMAIL = 'andrewjiang74@gmail.com'
 
@@ -76,15 +75,6 @@ export default function Contact() {
   const labelY = useTransform(scrollYProgress, [0, 1], [60, 0])
   const labelOpacity = useTransform(scrollYProgress, [0, 1], [0, 1])
 
-  // Halftone: fixed layer, only visible when Contact is in the viewport
-  // Starts fading in as Contact's top enters the bottom of the viewport,
-  // and fades out as Contact's bottom leaves the top.
-  const { scrollYProgress: halftoneProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'end start'],
-  })
-  const halftoneOpacity = useTransform(halftoneProgress, [0, 0.04, 0.96, 1], [0, 1, 1, 0])
-
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -102,25 +92,8 @@ export default function Contact() {
     <div
       id="contact"
       ref={sectionRef}
-      className="relative overflow-hidden" style={{ backgroundColor: '#000' }}
+      className="relative overflow-hidden" style={{ backgroundColor: 'transparent' }}
     >
-      {/* Halftone: position:fixed so it shares the same coordinate space
-          as Gallery's fixed halftone — grid is perfectly continuous.
-          Opacity gates it to only when Contact is in the viewport, and
-          headerOpacity lets the canvas skip drawing entirely while hidden
-          (a fixed canvas always "intersects", so IO alone can't pause it). */}
-      <motion.div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: halftoneOpacity,
-        }}
-      >
-        <GalleryHalftone headerOpacity={halftoneOpacity} />
-      </motion.div>
-
       {/* SectionNav — absolute, fully isolated, guaranteed on top */}
       <div
         className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-auto"
