@@ -20,8 +20,8 @@ import { useRef, useEffect, useState } from 'react'
 import { motion, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
+import { useGradientSignal } from '../context/GradientContext'
 import useMediaQuery from '../hooks/useMediaQuery'
-import GalleryHalftone from './gallery/GalleryHalftone'
 import GalleryLightbox from './gallery/GalleryLightbox'
 import SectionNav from './SectionNav'
 import { artworks } from '../data/galleryData'
@@ -202,6 +202,9 @@ export default function Gallery() {
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
   const pulseProgress = useTransform(gapProgress, [0.0, 0.70], [0, 1])
 
+  // Drive the gradient's scroll-in pulse ring.
+  useGradientSignal('pulse', pulseProgress)
+
   // ── Combined header opacity: entry × exit ───────────────────────
   const headerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
   const headerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
@@ -212,11 +215,6 @@ export default function Gallery() {
   // making the Gallery nav tappable from the Hero section).
   const headerVisibility = useTransform(headerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
 
-  // Scroll progress is indicated by a line of boosted dots inside the
-  // halftone canvas itself — see GalleryHalftone's lineProgress prop.
-  // Starts just inside the top edge; the canvas ramps its intensity from
-  // zero so the line only materialises once the user starts scrolling.
-  const lineProgress = useTransform(progress, [0, 1], [0.02, 0.94])
   const gridPointerEvents = useTransform(
     [revealRaw, progress],
     ([r, p]) => (r > 0.6 && p < 0.85) ? 'auto' : 'none'
@@ -274,10 +272,6 @@ export default function Gallery() {
           visibility: headerVisibility,
         }}
       >
-        {/* Halftone pulse and background — lineProgress draws the
-            scroll-progress line directly in the dot grid */}
-        <GalleryHalftone pulseProgress={pulseProgress} headerOpacity={headerOpacity} lineProgress={lineProgress} />
-
         {/* Small label */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
           <SectionNav
@@ -340,7 +334,7 @@ export default function Gallery() {
       </AnimatePresence>
 
       {/* ── Sticky pin frame ─────────────────────────────────────────── */}
-      <div className="sticky top-0 h-screen overflow-hidden bg-black">
+      <div className="sticky top-0 h-screen overflow-hidden">
         {/* Empty black background scrolls up behind the fixed Grid and pins */}
       </div>
     </div>
