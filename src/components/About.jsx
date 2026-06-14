@@ -23,12 +23,11 @@ import { useRef, useEffect } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate, useScroll } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
-import ProfileHalftone from './about/ProfileHalftone'
-import ProjectsHalftone from './projects/ProjectsHalftone'
 import { LEFT_COL, CENTER_COL, CENTER_PROFILE_INDEX, RIGHT_COL } from '../data/aboutData'
 import ArtColumn from './about/ArtColumn'
 import AboutTextPanel from './about/AboutTextPanel'
 import SectionNav from './SectionNav'
+import { useGradientSignal } from '../context/GradientContext'
 
 // ─── SVG Gradient Map (duotone) ───────────────────────────────────────────────
 function DuotoneDefs() {
@@ -199,26 +198,14 @@ export default function About() {
   const fadeStop2 = useTransform(progress, [0.85, 1.0], [0, 200])
   const maskImage = useMotionTemplate`linear-gradient(to top, transparent ${fadeStop1}%, black ${fadeStop2}%)`
 
-  // Halftone dots fade in as the About content fades out — seamless handoff to Projects
-  const halftoneDotsOpacity = useTransform(progress, [0.85, 1.0], [0, 1])
-
   // Track the native scroll transition from About to Projects
   const { scrollYProgress: transitionProgress } = useScroll({
     target: containerRef,
     offset: ['end end', 'end start'] // Tracks the 100vh native scroll as About unpins and scrolls away
   })
 
-  // Single continuous wave sweeps from 0 to 2 on About's canvas
-  const lineWaveFront = useTransform(transitionProgress, [0, 1], [0, 2])
-
-  // Halftone waves: original sweep, then pause, then complete to top during fade out
-  const globalWaveFront = useTransform(progress, [0, 0.5, 0.70, 0.85, 1.0], [0, 0, 0.20, 0.20, 1.0])
-  // Desktop: dots creep up the lower part of the portrait at rest.
-  // Mobile: the portrait is small and top-centre — dots crawling over it
-  // read as a glitch, so the wave only runs during the final fade-out.
-  const profileWaveDesktop = useTransform(progress, [0, 0.606, 0.75, 0.85, 1.0], [0, 0, 0.40, 0.40, 1.0])
-  const profileWaveMobile = useTransform(progress, [0, 0.85, 1.0], [0, 0, 1.0])
-  const profileWaveFront = isMobile ? profileWaveMobile : profileWaveDesktop
+  // Drive the gradient's seam band across the About→Projects handoff.
+  useGradientSignal('seam', transitionProgress)
 
   // ── Drive the profile expansion from the card's actual DOM rect ──────────
   useMotionValueEvent(progress, 'change', (v) => {
@@ -305,7 +292,7 @@ export default function About() {
       id="about"
       ref={containerRef}
       className="relative"
-      style={{ height: '700vh', backgroundColor: 'var(--color-cobalt)' }}
+      style={{ height: '700vh', backgroundColor: 'transparent' }}
     >
       {/* bottom:-2px overlaps Projects so device-pixel rounding on phones
           can't expose a cobalt hairline between the sections */}
@@ -329,22 +316,7 @@ export default function About() {
       <DuotoneDefs />
 
       <div className="sticky top-0 overflow-hidden" style={{ height: '100vh' }}>
-        {/* Halftone dots layer — outside masterFade so it persists as content fades */}
-        <motion.div
-          style={{ opacity: halftoneDotsOpacity, zIndex: 5 }}
-          className="absolute inset-0 pointer-events-none"
-          aria-hidden
-        >
-          <ProjectsHalftone containerId="projects" lineWaveFront={lineWaveFront} lineWaveHeight={0.15} />
-        </motion.div>
-
         <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>
-          {/* ── Global Halftone Background ──────────────────────────────────── */}
-          {/* Visible for the entirety of the About section.                     */}
-          <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-            <ProfileHalftone waveFront={globalWaveFront} waveHeight={0.25} containerId="about" />
-          </div>
-
           {/* ── Distant strips — depth cue ahead of the filmstrip ──────────── */}
           <motion.div
             className="absolute inset-0 grid grid-cols-3 gap-4 px-[16vw] md:gap-6 md:px-[30vw]"
@@ -451,7 +423,6 @@ export default function About() {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 style={{ objectPosition: 'top center' }}
               />
-              <ProfileHalftone waveFront={profileWaveFront} waveHeight={0.40} />
             </motion.div>
           </motion.div>
 
