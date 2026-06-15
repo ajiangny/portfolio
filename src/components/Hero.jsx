@@ -14,15 +14,19 @@
  *   • Content fades/explodes; the cobalt gradient persists beneath into About
  */
 import { useRef, useState, useEffect } from 'react'
-import { motion, useMotionValue, useSpring, useScroll, useTransform } from 'framer-motion'
+import { motion, useMotionValue, useSpring, useScroll, useTransform, animate } from 'framer-motion'
 
 import { useTransitionContext } from '../context/TransitionContext'
+import { useGradientSignal } from '../context/GradientContext'
 import { NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
 import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
-import { HERO_REST, applyHeroTheme, clearHeroTheme } from './hero/heroThemes'
+import { HERO_REST, HERO_HOVER, applyHeroTheme, clearHeroTheme } from './hero/heroThemes'
+import { HOVER } from './gradient/gradientConfig'
+
+const rgbStr = (triple) => `rgb(${triple})`
 
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
@@ -31,6 +35,15 @@ export default function Hero() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [hovIdx, setHovIdx] = useState(null)
   const isOrbitPausedRef = useRef(false)
+
+  // Gradient hover signals: which nav section is previewed (-1 = none) and how
+  // strongly (0..1). Both rest at "off" so the preview can't bleed once Hero
+  // leaves the viewport. The gradient reads these each frame.
+  const heroHover = useMotionValue(-1)
+  const heroHoverStrength = useMotionValue(0)
+  useGradientSignal('heroHover', heroHover)
+  useGradientSignal('heroHoverStrength', heroHoverStrength)
+  const strengthAnimRef = useRef(null)
 
   const navigate = (href, e, clickedIdx) => {
     const go = () => {
@@ -59,11 +72,26 @@ export default function Hero() {
     offset: ['start start', 'end start'],
   })
 
-  // ── Hero theme: cream elements on the cobalt field ──────────────────────
+  // ── Hero theme + hover preview ──────────────────────────────────────────
+  // hovIdx is the NAV index (0..3); the SECTIONS index is hovIdx + 1. Bubbles
+  // only register hover at the top of Hero (they fade + go non-interactive on
+  // scroll), so hovIdx != null already implies we're at the top.
+  const sectionIdx = hovIdx == null ? -1 : hovIdx + 1
+  const theme = sectionIdx > 0 ? HERO_HOVER[sectionIdx] : HERO_REST
+
+  // wordmark + name tag recolor via CSS vars (CSS transition smooths it);
+  // the bubbles recolor via Framer props (see below).
+  useEffect(() => { applyHeroTheme(theme) }, [theme])
+  useEffect(() => clearHeroTheme, [])
+
+  // Drive the gradient field: preview the hovered section's palette + flow.
   useEffect(() => {
-    applyHeroTheme(HERO_REST)
-    return clearHeroTheme
-  }, [])
+    heroHover.set(sectionIdx)
+    strengthAnimRef.current?.stop()
+    strengthAnimRef.current = animate(heroHoverStrength, sectionIdx > 0 ? 1 : 0, {
+      duration: HOVER.CROSSFADE_SEC, ease: 'easeOut',
+    })
+  }, [sectionIdx, heroHover, heroHoverStrength])
   // Heading: scale up + rise + fade
   const headingScale = useTransform(scrollYProgress, [0, 0.55], [1, 1.18])
   const headingY = useTransform(scrollYProgress, [0, 0.55], [0, -70])
@@ -158,6 +186,8 @@ export default function Hero() {
             hoveredIdx={hovIdx}
             onHoverChange={setHovIdx}
             blobShape={BLOB_SHAPES[i]}
+            bubbleFill={rgbStr(theme.bubbleFill)}
+            bubbleText={rgbStr(theme.bubbleText)}
             smoothMouseX={smoothMouseX}
             smoothMouseY={smoothMouseY}
             parallaxStrength={PARALLAX_STRENGTHS[i]}

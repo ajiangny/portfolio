@@ -16,7 +16,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import { SECTIONS } from '../../config/sections'
 import { createGradientRenderer } from './glRenderer'
 import { createFluidSim } from './fluidSim'
-import { SECTION_PALETTES, COBALT, CREAM, GRADIENT, SIM } from './gradientConfig'
+import { SECTION_PALETTES, COBALT, CREAM, GRADIENT, SIM, FLOW_ANGLES } from './gradientConfig'
 import { useGradientSignals } from '../../context/GradientContext'
 
 export default function FluidGradient() {
@@ -114,12 +114,35 @@ export default function FluidGradient() {
         uPalA0: cur[0], uPalA1: cur[1], uPalA2: cur[2],
         uPalB0: nxt[0], uPalB1: nxt[1], uPalB2: nxt[2],
         uPalMix: mix,
+        __idx: idx,   // active section index, for the hover gate (not a uniform)
       }
     }
 
     function sig(key) {
       const mv = signalsRef.current[key]
       return mv ? mv.get() : 0
+    }
+
+    const REST_HOVER = {
+      uHoverPal0: COBALT, uHoverPal1: COBALT, uHoverPal2: COBALT,
+      uHoverMix: 0, uFlowDir: [0, 0],
+    }
+
+    // Hover preview: while Hero (section 0) holds the viewport centre and a nav
+    // blob is hovered, crossfade toward that section's palette and lean the
+    // flow in its direction. Gated by activeIdx + strength so it can't bleed.
+    function hoverUniforms(activeIdx) {
+      const hov = sig('heroHover')            // SECTIONS index, or -1
+      const strength = sig('heroHoverStrength')
+      if (activeIdx !== 0 || hov < 0 || strength <= 0.001) return REST_HOVER
+      const section = SECTIONS[Math.round(hov)]
+      const stops = SECTION_PALETTES[section.id].stops
+      const ang = FLOW_ANGLES[section.id] ?? 0
+      return {
+        uHoverPal0: stops[0], uHoverPal1: stops[1], uHoverPal2: stops[2],
+        uHoverMix: strength,
+        uFlowDir: [Math.cos(ang) * strength * 1.5, Math.sin(ang) * strength * 1.5],
+      }
     }
 
     function draw(now) {
@@ -148,6 +171,9 @@ export default function FluidGradient() {
         simOn = 1
       }
 
+      const pal = paletteUniforms()
+      const hoverU = hoverUniforms(pal.__idx)
+
       renderer.setUniforms({
         uResolution: [canvas.width, canvas.height],
         uTime: ((now - start) / 1000) * GRADIENT.FLOW_SPEED,
@@ -163,7 +189,8 @@ export default function FluidGradient() {
         uSimEnabled: simOn,
         uDispScale: SIM.DISP_SCALE,
         uWakeBoost: SIM.WAKE_BOOST,
-        ...paletteUniforms(),
+        ...pal,
+        ...hoverU,
       })
       renderer.render()
     }
