@@ -195,6 +195,60 @@ Tuning cheat-sheet: resting colour → `SECTION_PALETTES`; flow speed →
 shapes → the `uSeam`/`uFlood`/`uPulse` blocks at the bottom of `shaders.js`
 and the signal mappings in each section.
 
+### Liquid sim layer (push + wake + hover preview)
+
+A low-res Jos-Stam "Stable Fluids" velocity sim runs **before** the display
+pass and feeds it. The cursor (mouse on desktop, touch on mobile) injects
+force; advection carries it into a trailing wake that dissipates and settles.
+The display shader samples that velocity field to **displace** the warp
+coordinate (the liquid push) and derives a cream **wake highlight** from
+`|velocity|`. It composites *into* the palette gradient above — section
+palettes and the seam/flood/pulse choreography are unchanged.
+
+```
+pointer ──force──▶ [advect → splat → divergence → jacobi×N → subtractGradient]
+                   (¼-res float/half-float ping-pong) ──uVelocity──▶ display shader
+                   p += clamp(vel·DISP_SCALE)  → palette → hover crossfade → flow lean
+```
+
+- `simShaders.js` — GLSL for the five sim passes (written from scratch; the
+  algorithm is Stam's, no third-party code).
+- `fluidSim.js` — `createFluidSim(gl, res)` owns the programs/FBOs/float
+  textures and `step(pointer)`. Shares the renderer's GL context. Detects
+  float/half-float render targets (`pickFloatType`); `supported=false` ⇒ caller
+  falls back to the plain warp gradient. `dispose` deletes its own GL objects;
+  like `glRenderer` it never `loseContext()`s.
+- Display `shaders.js` gained `uVelocity,uSimEnabled,uDispScale,uWakeBoost`
+  (push + wake) and `uFlowDir,uHoverPal0..2,uHoverMix` (hover preview). The
+  legacy Gaussian cursor warp now only runs when `uSimEnabled==0` (fallback).
+- `glRenderer.js` — `setUniforms` binds sampler textures (`{ tex, unit }`);
+  because the sim leaves its own program/FBO/viewport bound, `setUniforms`
+  re-selects the display program and `render()` restores the default
+  framebuffer + viewport + quad each frame.
+- `FluidGradient.jsx` steps the sim when `supported && !reduceMotion`: desktop
+  keeps it sampled (idles to a frozen near-zero field after a `SIM.SETTLE_MS`
+  window); mobile steps only while a touch is active + that window (passive
+  touch listeners, never `preventDefault`, velocity-clamped force), so it costs
+  nothing while scrolling/reading and falls back where float textures are
+  missing.
+- `SIM`, `FLOW_ANGLES`, `HOVER` tuning blocks live in `gradientConfig.js`
+  (force, dissipation, displacement, jacobi iterations per platform, per-section
+  flow lean, crossfade duration).
+
+Hover preview signals (registered by Hero, read by the gradient each frame):
+
+| key | rest value | effect while Hero holds the viewport centre |
+|---|---|---|
+| `heroHover` | `-1` | which SECTIONS index the hovered nav blob targets |
+| `heroHoverStrength` | `0` | 0→1 crossfade toward that section's palette + flow lean |
+
+These are GLOBAL like the others: `heroHoverStrength` must rest at 0 and
+`heroHover` at −1 once no blob is hovered, or the preview bleeds into other
+sections (the gradient also gates them to `activeIdx === 0`). Hero's element
+colours (wordmark/name via `--hero-*` vars, bubbles via Framer props) come from
+`hero/heroThemes.js` (`HERO_REST` + `HERO_HOVER`) and recolor in sync with the
+field over `HOVER.CROSSFADE_SEC`.
+
 ## 4. Navigation & transitions
 
 `config/sections.js` is the single source of truth (id, label, themeRgb,

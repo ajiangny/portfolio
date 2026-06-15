@@ -81,6 +81,14 @@ before retiming animations or touching the gradient.**
   (`seam`/`flood`/`pulse`) must rest at a value the shader treats as "off"
   once its section leaves the viewport, or it bleeds into the others. `seam`
   and `pulse` self-gate at 1; `flood` peaks at 1.5 so it must ramp back to 0.
+  The Hero hover-preview signals follow the same rule: `heroHoverStrength`
+  rests at 0 and `heroHover` at −1 when no nav blob is hovered (the gradient
+  also gates them to the Hero being centred).
+- The fluid sim (`fluidSim.js`) shares the renderer's GL context, so the
+  display pass restores its own program/FBO/viewport/quad each frame
+  (`glRenderer.setUniforms`/`render`). Needs float/half-float render targets;
+  missing → sim `supported=false` and the plain warp gradient renders. Mobile
+  runs the sim only on active touch + a short settle.
 - Canvas/RAF loops read motion values through refs each frame — never capture
   them in effect closures with `[]` deps.
 - StrictMode double-mounts effects; every listener/RAF must clean up. Do NOT
