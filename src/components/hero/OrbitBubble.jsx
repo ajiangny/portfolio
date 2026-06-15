@@ -25,6 +25,7 @@ const SHRINK_SCALES = [0.88, 0.44, 0.25]
 export default function OrbitBubble({
   label, href, angleOffset, onNavigate,
   myIdx, hoveredIdx, onHoverChange, blobShape,
+  bubbleFill, bubbleText,   // resolved rgb() colours; recolor on hover preview
   smoothMouseX, smoothMouseY, parallaxStrength,
   orbitPausedRef,
   scrollYProgress,   // MotionValue [0–1]: drives scroll-exit
@@ -112,7 +113,8 @@ export default function OrbitBubble({
           borderRadius: isHovered ? BLOB_ACTIVE : blobShape,
           scale:   isHovered ? 2.25 : shrunkScale,
           opacity: 1,
-          backgroundColor: 'var(--hero-bubble-fill)',
+          backgroundColor: bubbleFill,
+          color: bubbleText,
           boxShadow: isHovered
             ? '0 16px 44px rgba(12, 20, 50, 0.45)'
             : isShrunk
@@ -123,7 +125,6 @@ export default function OrbitBubble({
 
         className="flex items-center justify-center gap-1.5 font-sans font-bold uppercase tracking-[0.18em] whitespace-nowrap select-none cursor-pointer"
         style={{
-          color: 'var(--hero-bubble-text)',
           fontSize: 'var(--text-label)',
           padding: '0.625rem 1.25rem',
           borderRadius: blobShape,
