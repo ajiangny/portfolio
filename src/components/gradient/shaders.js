@@ -32,6 +32,10 @@ uniform float uSimEnabled;     // 1 = sim drives the field, 0 = fallback warp
 uniform float uDispScale;      // velocity → warp displacement
 uniform float uWakeBoost;      // wake highlight from |velocity|
 
+uniform vec2  uFlowDir;        // hover flow lean (screen-space), 0 at rest
+uniform vec3  uHoverPal0, uHoverPal1, uHoverPal2;
+uniform float uHoverMix;       // 0..1 crossfade toward the hovered palette
+
 uniform vec3  uCobalt;
 uniform vec3  uCream;
 
@@ -75,8 +79,8 @@ void main() {
 
   // domain warp
   vec2 q = vec2(fbm(p + t), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + q + vec2(1.7, 9.2) + 0.15 * t),
-                fbm(p + q + vec2(8.3, 2.8) - 0.12 * t));
+  vec2 r = vec2(fbm(p + q + vec2(1.7, 9.2) + 0.15 * t + uFlowDir),
+                fbm(p + q + vec2(8.3, 2.8) - 0.12 * t + uFlowDir.yx));
 
   // liquid displacement from the sim (desktop/touch), else legacy cursor warp.
   // clamp so an over-energetic field can never fully scramble the gradient.
@@ -96,6 +100,10 @@ void main() {
   vec3 colA = palette(uPalA0, uPalA1, uPalA2, n);
   vec3 colB = palette(uPalB0, uPalB1, uPalB2, n);
   vec3 col = mix(colA, colB, uPalMix);
+
+  // hover preview — crossfade toward the hovered section's palette
+  vec3 hov = palette(uHoverPal0, uHoverPal1, uHoverPal2, n);
+  col = mix(col, hov, uHoverMix);
 
   // wake highlight — advected velocity magnitude leaves a luminous trail
   float speed = length(vel) * uSimEnabled;
