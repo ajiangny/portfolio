@@ -79,6 +79,22 @@ export default function FluidGradient() {
     }
     const onLeave = () => { mouse.x = -9999; mouse.y = -9999; mouseStrength = 0; pointer.down = false }
 
+    // Touch drives the same sim on mobile (drag = push + wake). Passive
+    // listeners that never preventDefault — the ripple is purely the reacting
+    // background; the touch still scrolls / navigates as normal.
+    const onTouch = (e) => {
+      const t = e.touches && e.touches[0]
+      if (!t) return
+      const nx = t.clientX / w
+      const ny = (h - t.clientY) / h
+      pointer.dx = pointer.x < 0 ? 0 : nx - pointer.x
+      pointer.dy = pointer.y < 0 ? 0 : ny - pointer.y
+      pointer.x = nx; pointer.y = ny
+      pointer.down = true
+      pointer.lastMove = performance.now()
+    }
+    const onTouchEnd = () => { pointer.down = false }
+
     function resize() {
       const base = Math.min(window.devicePixelRatio || 1, 2)
       const dpr = isMobile ? base * GRADIENT.MOBILE_SCALE : base
@@ -159,16 +175,25 @@ export default function FluidGradient() {
       const sinceMove = now - pointer.lastMove
       if (sinceMove > 90) { pointer.dx = 0; pointer.dy = 0; pointer.down = false }
 
-      // Desktop: step while interacting or the wake is still settling, then
-      // idle (the frozen near-zero field displaces nothing). Mobile sim is
-      // wired in a later task.
+      // Step while interacting or the wake is still settling. Desktop keeps
+      // the sim sampled (frozen near-zero field displaces nothing once idle);
+      // mobile fully idles between touches to protect battery + scroll.
       let simOn = 0
-      if (simActive && !isMobile) {
-        if (sinceMove < SIM.SETTLE_MS) {
-          pointer.iters = SIM.JACOBI_DESKTOP
-          sim.step(pointer)
+      if (simActive) {
+        const settling = sinceMove < SIM.SETTLE_MS
+        if (isMobile) {
+          if (pointer.down || settling) {
+            pointer.iters = SIM.JACOBI_MOBILE
+            sim.step(pointer)
+            simOn = 1
+          }
+        } else {
+          if (settling) {
+            pointer.iters = SIM.JACOBI_DESKTOP
+            sim.step(pointer)
+          }
+          simOn = 1
         }
-        simOn = 1
       }
 
       const pal = paletteUniforms()
@@ -199,6 +224,9 @@ export default function FluidGradient() {
     window.addEventListener('resize', resize)
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseleave', onLeave)
+    window.addEventListener('touchstart', onTouch, { passive: true })
+    window.addEventListener('touchmove', onTouch, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
     if (reduceMotion) {
       draw(performance.now())     // single static frame
       if (rafId) cancelAnimationFrame(rafId) // draw() scheduled one; stop the loop
@@ -221,6 +249,9 @@ export default function FluidGradient() {
       window.removeEventListener('resize', resize)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseleave', onLeave)
+      window.removeEventListener('touchstart', onTouch)
+      window.removeEventListener('touchmove', onTouch)
+      window.removeEventListener('touchend', onTouchEnd)
       document.removeEventListener('visibilitychange', onVisibility)
       sim.dispose()
       if (placeholderTex) renderer.gl.deleteTexture(placeholderTex)

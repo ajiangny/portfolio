@@ -64,8 +64,10 @@ before retiming animations or touching the gradient.**
   surrounding code uses.
 - **Responsive**: single JS breakpoint `useMediaQuery('(max-width: 767px)')`;
   mobile swaps layouts (vertical carousel, skills marquee, top-centre
-  portrait), not just sizes. The gradient renders at half resolution and
-  disables cursor warp on mobile.
+  portrait), not just sizes. The gradient renders at half resolution; on mobile
+  the fluid sim is touch-driven (tap/drag) and runs only while a touch is active
+  plus a short settle, falling back to the static gradient where float textures
+  are unavailable.
 
 ## Gotchas
 
