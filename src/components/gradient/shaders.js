@@ -78,9 +78,10 @@ void main() {
   vec2 r = vec2(fbm(p + q + vec2(1.7, 9.2) + 0.15 * t),
                 fbm(p + q + vec2(8.3, 2.8) - 0.12 * t));
 
-  // liquid displacement from the sim (desktop/touch), else legacy cursor warp
+  // liquid displacement from the sim (desktop/touch), else legacy cursor warp.
+  // clamp so an over-energetic field can never fully scramble the gradient.
   vec2 vel = texture2D(uVelocity, uv).xy;
-  r += uSimEnabled * vel * uDispScale;
+  r += uSimEnabled * clamp(vel * uDispScale, -0.35, 0.35);
 
   // fallback Gaussian cursor warp only when the sim is off
   vec2 m = uMouse / uResolution.xy;

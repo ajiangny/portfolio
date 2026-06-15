@@ -43,11 +43,12 @@ export const SIM = {
   DT: 1.0,                // advection step (folded with FORCE/dissipation)
   VEL_DISSIPATION: 0.985, // velocity decay per frame → wake settles
   SPLAT_RADIUS: 0.0035,   // gaussian denominator (smaller = tighter)
-  FORCE: 0.9,             // pointer-velocity → injected force scale
+  FORCE: 0.6,             // pointer-velocity → injected force scale
   FORCE_CLAMP: 0.06,      // max |pointer delta| (uv/frame) contributing to force
-  DISP_SCALE: 0.16,       // velocity → display warp displacement
-  WAKE_BOOST: 0.5,        // wake highlight intensity from |velocity|
-  SETTLE_EPS: 0.0006,     // residual speed below which the sim idles
+  DISP_SCALE: 0.05,       // velocity → display warp displacement (shader clamps ±0.35)
+  WAKE_BOOST: 0.04,       // wake highlight intensity from |velocity| (shader clamps ≤0.5)
+  SETTLE_MS: 1600,        // keep stepping this long after motion stops (wake settles)
+  SETTLE_EPS: 0.0006,     // residual speed below which the sim idles (mobile)
 }
 
 // Per-section flow lean (radians, screen-space) applied on hover. Keyed by id.

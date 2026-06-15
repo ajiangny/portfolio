@@ -15,7 +15,8 @@ import { useEffect, useRef } from 'react'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import { SECTIONS } from '../../config/sections'
 import { createGradientRenderer } from './glRenderer'
-import { SECTION_PALETTES, COBALT, CREAM, GRADIENT } from './gradientConfig'
+import { createFluidSim } from './fluidSim'
+import { SECTION_PALETTES, COBALT, CREAM, GRADIENT, SIM } from './gradientConfig'
 import { useGradientSignals } from '../../context/GradientContext'
 
 export default function FluidGradient() {
@@ -31,6 +32,25 @@ export default function FluidGradient() {
 
     const signalsRef = ctx?.signalsRef ?? { current: {} }
 
+    // Fluid sim shares the renderer's GL context. Unsupported (no float render
+    // targets) → supported=false and we fall back to the plain warp gradient.
+    const simRes = isMobile ? SIM.RES_MOBILE : SIM.RES_DESKTOP
+    const sim = createFluidSim(renderer.gl, simRes)
+    const simActive = sim.supported && !reduceMotion
+
+    // 1×1 black stand-in so the display's uVelocity sampler always has a
+    // valid texture bound when the sim is unavailable (no null-bind warnings).
+    let placeholderTex = null
+    if (!sim.supported) {
+      const gl = renderer.gl
+      placeholderTex = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, placeholderTex)
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]))
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    }
+    const velocityTex = () => (sim.supported ? sim.velocityTexture : placeholderTex)
+
     let w = 0, h = 0
     let rafId = null
     let lastDraw = 0
@@ -40,13 +60,24 @@ export default function FluidGradient() {
     let mouseStrength = 0
     let lastMove = 0
 
+    // pointer in uv (origin bottom-left) with per-frame delta, for the sim
+    const pointer = { x: -1, y: -1, dx: 0, dy: 0, down: false, lastMove: -9999, iters: SIM.JACOBI_DESKTOP }
+
     const onMove = (e) => {
       // GL origin is bottom-left; flip y so uMouse matches gl_FragCoord
       mouse.x = e.clientX
       mouse.y = h - e.clientY
       lastMove = performance.now()
+      // feed the sim pointer (normalized, with delta)
+      const nx = e.clientX / w
+      const ny = (h - e.clientY) / h
+      pointer.dx = pointer.x < 0 ? 0 : nx - pointer.x
+      pointer.dy = pointer.y < 0 ? 0 : ny - pointer.y
+      pointer.x = nx; pointer.y = ny
+      pointer.down = true
+      pointer.lastMove = lastMove
     }
-    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; mouseStrength = 0 }
+    const onLeave = () => { mouse.x = -9999; mouse.y = -9999; mouseStrength = 0; pointer.down = false }
 
     function resize() {
       const base = Math.min(window.devicePixelRatio || 1, 2)
@@ -100,6 +131,23 @@ export default function FluidGradient() {
       else if (now - lastMove > 60) mouseStrength = Math.max(0, mouseStrength - GRADIENT.CURSOR_DECAY)
       else mouseStrength = Math.min(1, mouseStrength + GRADIENT.CURSOR_BUILD)
 
+      // Lift the pointer shortly after motion stops: no new force is injected,
+      // but the sim keeps advecting + dissipating until the wake settles.
+      const sinceMove = now - pointer.lastMove
+      if (sinceMove > 90) { pointer.dx = 0; pointer.dy = 0; pointer.down = false }
+
+      // Desktop: step while interacting or the wake is still settling, then
+      // idle (the frozen near-zero field displaces nothing). Mobile sim is
+      // wired in a later task.
+      let simOn = 0
+      if (simActive && !isMobile) {
+        if (sinceMove < SIM.SETTLE_MS) {
+          pointer.iters = SIM.JACOBI_DESKTOP
+          sim.step(pointer)
+        }
+        simOn = 1
+      }
+
       renderer.setUniforms({
         uResolution: [canvas.width, canvas.height],
         uTime: ((now - start) / 1000) * GRADIENT.FLOW_SPEED,
@@ -111,6 +159,10 @@ export default function FluidGradient() {
         uSeam: sig('seam'),
         uFlood: sig('flood'),
         uPulse: sig('pulse'),
+        uVelocity: { tex: velocityTex(), unit: 1 },
+        uSimEnabled: simOn,
+        uDispScale: SIM.DISP_SCALE,
+        uWakeBoost: SIM.WAKE_BOOST,
         ...paletteUniforms(),
       })
       renderer.render()
@@ -143,6 +195,8 @@ export default function FluidGradient() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseleave', onLeave)
       document.removeEventListener('visibilitychange', onVisibility)
+      sim.dispose()
+      if (placeholderTex) renderer.gl.deleteTexture(placeholderTex)
       renderer.dispose()
     }
   }, [ctx, reduceMotion, isMobile])
