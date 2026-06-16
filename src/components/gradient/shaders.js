@@ -28,9 +28,10 @@ uniform float uPulse;          // 0..1 ring
 uniform float uCursorR;        // cursor warp radius (normalized)
 
 uniform sampler2D uVelocity;   // sim velocity field (.xy)
+uniform sampler2D uDye;        // sim dye/ink field (.rgb) — the visible liquid
 uniform float uSimEnabled;     // 1 = sim drives the field, 0 = fallback warp
 uniform float uDispScale;      // velocity → warp displacement
-uniform float uWakeBoost;      // wake highlight from |velocity|
+uniform float uDyeIntensity;   // dye → display brightness (additive)
 
 uniform vec2  uFlowDir;        // hover flow lean (screen-space), 0 at rest
 uniform vec3  uHoverPal0, uHoverPal1, uHoverPal2;
@@ -105,9 +106,9 @@ void main() {
   vec3 hov = palette(uHoverPal0, uHoverPal1, uHoverPal2, n);
   col = mix(col, hov, uHoverMix);
 
-  // wake highlight — advected velocity magnitude leaves a luminous trail
-  float speed = length(vel) * uSimEnabled;
-  col = mix(col, uCream, clamp(speed * uWakeBoost, 0.0, 0.5));
+  // dye/ink — the advected colour field is the primary visible liquid
+  vec3 ink = texture2D(uDye, uv).rgb * uSimEnabled;
+  col += ink * uDyeIntensity;
 
   // seam — bright band sweeping top->bottom while 0<uSeam<1
   float seamActive = step(0.001, uSeam) * step(uSeam, 0.999);

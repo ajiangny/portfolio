@@ -34,22 +34,29 @@ export const GRADIENT = {
   SEAM_FADE: 0.85,     // section progress at which palette starts crossfading to the next
 }
 
-// Fluid sim (Stam velocity field). Numbers are starting points — tune live.
+// Fluid sim (velocity + advected dye, à la Dobryakov/tkabalin). Starting
+// points — tune live. The visible effect is the DYE (ink) trail; velocity
+// also warps the gradient slightly for organic motion.
 export const SIM = {
   RES_DESKTOP: 256,       // sim grid (square)
-  RES_MOBILE: 128,
+  RES_MOBILE: 160,
   JACOBI_DESKTOP: 20,     // pressure-solve iterations
-  JACOBI_MOBILE: 12,
+  JACOBI_MOBILE: 14,
   DT: 1.0,                // advection step (folded with FORCE/dissipation)
-  VEL_DISSIPATION: 0.985, // velocity decay per frame → wake settles
-  SPLAT_RADIUS: 0.006,    // gaussian denominator (smaller = tighter)
-  FORCE: 1.6,             // pointer-velocity → injected force scale
+  VEL_DISSIPATION: 0.985, // velocity decay per frame
+  DYE_DISSIPATION: 0.94,  // ink-trail fade per frame (lower = shorter trail)
+  CURL: 24.0,             // vorticity-confinement strength (swirliness)
+  SPLAT_RADIUS: 0.0035,   // gaussian denominator (smaller = tighter splat)
+  FORCE: 1.4,             // pointer-velocity → injected velocity
   FORCE_CLAMP: 0.06,      // max |pointer delta| (uv/frame) contributing to force
-  DISP_SCALE: 0.14,       // velocity → display warp displacement (shader clamps ±0.35)
-  WAKE_BOOST: 0.28,       // wake highlight intensity from |velocity| (shader clamps ≤0.5)
-  SETTLE_MS: 1600,        // keep stepping this long after motion stops (wake settles)
+  DISP_SCALE: 0.10,       // velocity → display warp displacement (shader clamps ±0.35)
+  DYE_INTENSITY: 0.6,     // dye → display brightness (additive over the field)
+  SETTLE_MS: 1600,        // keep stepping this long after motion stops (trail settles)
   SETTLE_EPS: 0.0006,     // residual speed below which the sim idles (mobile)
 }
+
+// Luminous ink injected at the cursor (light cool white reads on cobalt).
+export const DYE_COLOR = [0.55, 0.78, 1.0]
 
 // Per-section flow lean (radians, screen-space) applied on hover. Keyed by id.
 export const FLOW_ANGLES = {

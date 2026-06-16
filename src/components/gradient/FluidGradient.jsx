@@ -16,7 +16,7 @@ import useMediaQuery from '../../hooks/useMediaQuery'
 import { SECTIONS } from '../../config/sections'
 import { createGradientRenderer } from './glRenderer'
 import { createFluidSim } from './fluidSim'
-import { SECTION_PALETTES, COBALT, CREAM, GRADIENT, SIM, FLOW_ANGLES } from './gradientConfig'
+import { SECTION_PALETTES, COBALT, CREAM, GRADIENT, SIM, FLOW_ANGLES, DYE_COLOR } from './gradientConfig'
 import { useGradientSignals } from '../../context/GradientContext'
 
 export default function FluidGradient() {
@@ -50,6 +50,7 @@ export default function FluidGradient() {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
     }
     const velocityTex = () => (sim.supported ? sim.velocityTexture : placeholderTex)
+    const dyeTex = () => (sim.supported ? sim.dyeTexture : placeholderTex)
 
     let w = 0, h = 0
     let rafId = null
@@ -184,13 +185,13 @@ export default function FluidGradient() {
         if (isMobile) {
           if (pointer.down || settling) {
             pointer.iters = SIM.JACOBI_MOBILE
-            sim.step(pointer)
+            sim.step(pointer, DYE_COLOR)
             simOn = 1
           }
         } else {
           if (settling) {
             pointer.iters = SIM.JACOBI_DESKTOP
-            sim.step(pointer)
+            sim.step(pointer, DYE_COLOR)
           }
           simOn = 1
         }
@@ -211,9 +212,10 @@ export default function FluidGradient() {
         uFlood: sig('flood'),
         uPulse: sig('pulse'),
         uVelocity: { tex: velocityTex(), unit: 1 },
+        uDye: { tex: dyeTex(), unit: 2 },
         uSimEnabled: simOn,
         uDispScale: SIM.DISP_SCALE,
-        uWakeBoost: SIM.WAKE_BOOST,
+        uDyeIntensity: SIM.DYE_INTENSITY,
         ...pal,
         ...hoverU,
       })
