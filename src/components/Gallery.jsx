@@ -10,8 +10,6 @@
  *     scrolls past, transitioning into the Contact section
  *   • Lightbox — clicking any artwork opens a fullscreen viewer with
  *     keyboard navigation and a thumbnail carousel strip
- *   • Pulse — registers a 'pulse' signal so the site-wide fluid gradient
- *     expands a radial ring as the section scrolls into view
  *
  * Grid cells beyond the artwork count are filled with blank placeholders
  * to maintain the grid structure.
@@ -20,7 +18,6 @@ import { useRef, useEffect, useState } from 'react'
 import { motion, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
-import { useGradientSignal } from '../context/GradientContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import GalleryLightbox from './gallery/GalleryLightbox'
 import SectionNav from './SectionNav'
@@ -200,10 +197,6 @@ export default function Gallery() {
   }, [lenisRef, gapProgressRaw])
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
-  const pulseProgress = useTransform(gapProgress, [0.0, 0.70], [0, 1])
-
-  // Drive the gradient's scroll-in pulse ring.
-  useGradientSignal('pulse', pulseProgress)
 
   // ── Combined header opacity: entry × exit ───────────────────────
   const headerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
