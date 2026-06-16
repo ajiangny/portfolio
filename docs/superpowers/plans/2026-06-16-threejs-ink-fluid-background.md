@@ -53,7 +53,7 @@ docs/ARCHITECTURE.md    MODIFY — update gradient docs
 **Verification commands used throughout** (have the dev server running for the headless checks: `npm run dev` in a background terminal):
 - `npm run lint` → must report 0 problems.
 - `npm run build` → must succeed.
-- `node --test test/` → unit tests for pure modules.
+- `node --test "test/*.test.mjs"` → unit tests for pure modules. (Node 24 treats the bare `node --test test/` directory form as a module path and errors — use the quoted glob, which Node expands natively.)
 - `node scripts/console-check.mjs` → expect no `[error]`/`[uncaught]` lines and `root innerHTML length:` > 0.
 - `node scripts/screenshot.mjs <set>` → visual capture for diffing.
 
@@ -1264,7 +1264,7 @@ Re-run `node scripts/screenshot.mjs candidate` and re-check until all five secti
 
 - [ ] **Step 4: Re-run the pure tests** (the config still satisfies its contract)
 
-Run: `node --test test/`
+Run: `node --test "test/*.test.mjs"`
 Expected: PASS (all suites).
 
 - [ ] **Step 5: Commit**
@@ -1305,7 +1305,7 @@ git commit -m "docs: document the Three.js ink-fluid background pipeline"
 
 - [ ] **Step 1: Full test suite**
 
-Run: `node --test test/`
+Run: `node --test "test/*.test.mjs"`
 Expected: PASS — colors, gradientConfig, paletteSelect, ambient.
 
 - [ ] **Step 2: Lint**
