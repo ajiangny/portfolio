@@ -1,9 +1,11 @@
 /**
- * simShaders.js — GLSL for the low-res velocity fluid sim (WebGL1, GLSL ES 1.00).
+ * simShaders.js — GLSL for the velocity + dye fluid sim (WebGL1 / GLSL ES 1.00).
  *
- * Standard Jos Stam "Stable Fluids" passes. Velocity is stored in the .xy
- * channels of an RGBA float/half-float texture; pressure/divergence in .x.
- * Written from scratch (jwagner/fluidwebgl is reference only — not OSS).
+ * Stable-fluids velocity field with vorticity confinement, plus an advected
+ * dye/ink field that is what you actually see. Written from scratch; the math
+ * follows the standard GPU fluid approach (Stam + Dobryakov's WebGL-Fluid).
+ * Velocity lives in .xy, dye in .rgb, pressure/divergence/curl in .x — all in
+ * RGBA float/half-float textures.
  */
 export const SIM_VERT = `
 attribute vec2 aPos;
@@ -26,19 +28,57 @@ void main() {
 }
 `
 
+// Additive gaussian splat — injects uValue (force.xy / dye.rgb) at uPoint.
 export const SPLAT_FRAG = `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uTarget;
 uniform vec2 uPoint;
-uniform vec2 uValue;   // injected velocity
+uniform vec3 uValue;
 uniform float uRadius;
 uniform float uAspect;
 void main() {
   vec2 d = vUv - uPoint; d.x *= uAspect;
   float g = exp(-dot(d, d) / uRadius);
-  vec2 base = texture2D(uTarget, vUv).xy;
-  gl_FragColor = vec4(base + g * uValue, 0.0, 1.0);
+  vec3 base = texture2D(uTarget, vUv).xyz;
+  gl_FragColor = vec4(base + g * uValue, 1.0);
+}
+`
+
+export const CURL_FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uVelocity;
+uniform vec2 uTexel;
+void main() {
+  float L = texture2D(uVelocity, vUv - vec2(uTexel.x, 0.0)).y;
+  float R = texture2D(uVelocity, vUv + vec2(uTexel.x, 0.0)).y;
+  float B = texture2D(uVelocity, vUv - vec2(0.0, uTexel.y)).x;
+  float T = texture2D(uVelocity, vUv + vec2(0.0, uTexel.y)).x;
+  gl_FragColor = vec4(0.5 * ((R - L) - (T - B)), 0.0, 0.0, 1.0);
+}
+`
+
+export const VORTICITY_FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uVelocity;
+uniform sampler2D uCurl;
+uniform vec2 uTexel;
+uniform float uCurlStrength;
+uniform float uDt;
+void main() {
+  float L = texture2D(uCurl, vUv - vec2(uTexel.x, 0.0)).x;
+  float R = texture2D(uCurl, vUv + vec2(uTexel.x, 0.0)).x;
+  float B = texture2D(uCurl, vUv - vec2(0.0, uTexel.y)).x;
+  float T = texture2D(uCurl, vUv + vec2(0.0, uTexel.y)).x;
+  float C = texture2D(uCurl, vUv).x;
+  vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
+  force /= length(force) + 0.0001;
+  force *= uCurlStrength * C;
+  force.y *= -1.0;
+  vec2 vel = texture2D(uVelocity, vUv).xy;
+  gl_FragColor = vec4(vel + force * uDt, 0.0, 1.0);
 }
 `
 
@@ -52,8 +92,7 @@ void main() {
   float R = texture2D(uVelocity, vUv + vec2(uTexel.x, 0.0)).x;
   float B = texture2D(uVelocity, vUv - vec2(0.0, uTexel.y)).y;
   float T = texture2D(uVelocity, vUv + vec2(0.0, uTexel.y)).y;
-  float div = 0.5 * ((R - L) + (T - B));
-  gl_FragColor = vec4(div, 0.0, 0.0, 1.0);
+  gl_FragColor = vec4(0.5 * ((R - L) + (T - B)), 0.0, 0.0, 1.0);
 }
 `
 

@@ -1,14 +1,17 @@
 /**
- * fluidSim.js — Low-res Stam velocity fluid sim on a shared WebGL1 context.
+ * fluidSim.js — Velocity + dye fluid sim on a shared WebGL1 context.
  *
  * createFluidSim(gl, res) returns a null-safe API:
- *   { supported, step(pointer), velocityTexture, resize(res), dispose() }
+ *   { supported, linearFiltering, step(pointer, dyeColor),
+ *     velocityTexture, dyeTexture, resize(res), dispose() }
  * `pointer` = { x, y, dx, dy, down, iters } in 0..1 uv (origin bottom-left)
- * with per-frame deltas. When float/half-float render targets are unavailable,
- * supported=false and the caller falls back to the plain display gradient.
+ * with per-frame deltas; `dyeColor` is the [r,g,b] ink injected at the pointer.
+ * Unsupported (no renderable float textures) → supported=false and the caller
+ * falls back to the plain display gradient.
  */
 import {
-  SIM_VERT, ADVECT_FRAG, SPLAT_FRAG, DIVERGENCE_FRAG, JACOBI_FRAG, GRADIENT_SUBTRACT_FRAG,
+  SIM_VERT, ADVECT_FRAG, SPLAT_FRAG, CURL_FRAG, VORTICITY_FRAG,
+  DIVERGENCE_FRAG, JACOBI_FRAG, GRADIENT_SUBTRACT_FRAG,
 } from './simShaders'
 import { SIM } from './gradientConfig'
 
@@ -56,11 +59,10 @@ function makeDouble(gl, res, type, filter) {
   return { get read() { return a }, get write() { return b }, swap() { const t = a; a = b; b = t } }
 }
 
-// Pick a renderable float type. Returns { type, filter } or null. Crucially,
-// many GPUs support rendering to float textures but NOT linear filtering of
-// them (no *_texture_*_linear) — sampling such a texture with LINEAR makes it
-// incomplete and every read returns 0 (the sim silently produces nothing).
-// So choose NEAREST when linear filtering isn't supported for the chosen type.
+// Pick a renderable float type + a safe filter. Many GPUs can render to float
+// textures but not LINEAR-filter them (no *_texture_*_linear); sampling such a
+// texture with LINEAR makes it incomplete and every read returns 0. So fall
+// back to NEAREST when linear filtering isn't supported for the chosen type.
 function pickFloatType(gl) {
   const half = gl.getExtension('OES_texture_half_float')
   const halfLinear = gl.getExtension('OES_texture_half_float_linear')
@@ -82,7 +84,11 @@ function pickFloatType(gl) {
   return null
 }
 
-const NOOP = { supported: false, step() {}, get velocityTexture() { return null }, resize() {}, dispose() {} }
+const NOOP = {
+  supported: false, linearFiltering: false, step() {},
+  get velocityTexture() { return null }, get dyeTexture() { return null },
+  resize() {}, dispose() {},
+}
 
 export function createFluidSim(gl, res) {
   if (!gl) return NOOP
@@ -96,6 +102,8 @@ export function createFluidSim(gl, res) {
     progs = {
       advect: makeProgram(gl, ADVECT_FRAG),
       splat: makeProgram(gl, SPLAT_FRAG),
+      curl: makeProgram(gl, CURL_FRAG),
+      vorticity: makeProgram(gl, VORTICITY_FRAG),
       divergence: makeProgram(gl, DIVERGENCE_FRAG),
       jacobi: makeProgram(gl, JACOBI_FRAG),
       gradient: makeProgram(gl, GRADIENT_SUBTRACT_FRAG),
@@ -108,14 +116,19 @@ export function createFluidSim(gl, res) {
 
   let R = res
   let velocity = makeDouble(gl, R, type, filter)
-  let divergence = makeTarget(gl, R, type, filter)
+  let dye = makeDouble(gl, R, type, filter)
   let pressure = makeDouble(gl, R, type, filter)
+  let divergence = makeTarget(gl, R, type, filter)
+  let curlT = makeTarget(gl, R, type, filter)
   let texel = [1 / R, 1 / R]
 
-  // Float textures allocated with null data have undefined initial contents;
-  // clear every target to 0 so the field starts calm (no startup garbage).
+  // Float textures allocated with null data have undefined contents; clear to 0.
   function clearTargets() {
-    for (const f of [velocity.read.fbo, velocity.write.fbo, divergence.fbo, pressure.read.fbo, pressure.write.fbo]) {
+    const fbos = [
+      velocity.read.fbo, velocity.write.fbo, dye.read.fbo, dye.write.fbo,
+      pressure.read.fbo, pressure.write.fbo, divergence.fbo, curlT.fbo,
+    ]
+    for (const f of fbos) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.viewport(0, 0, R, R)
       gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT)
     }
@@ -141,6 +154,17 @@ export function createFluidSim(gl, res) {
   }
   function tex(unit, t) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t) }
 
+  // additive gaussian splat of `value` (vec3) into a double-buffered field
+  function splat(field, px, py, value) {
+    gl.useProgram(progs.splat); bindQuad(progs.splat)
+    tex(0, field.read.tex); gl.uniform1i(u(progs.splat, 'uTarget'), 0)
+    gl.uniform2f(u(progs.splat, 'uPoint'), px, py)
+    gl.uniform3f(u(progs.splat, 'uValue'), value[0], value[1], value[2])
+    gl.uniform1f(u(progs.splat, 'uRadius'), SIM.SPLAT_RADIUS)
+    gl.uniform1f(u(progs.splat, 'uAspect'), 1.0)
+    blit(field.write); field.swap()
+  }
+
   function advect(target, source, dissipation) {
     gl.useProgram(progs.advect); bindQuad(progs.advect)
     tex(0, velocity.read.tex); gl.uniform1i(u(progs.advect, 'uVelocity'), 0)
@@ -153,35 +177,44 @@ export function createFluidSim(gl, res) {
 
   return {
     supported: true,
-    linearFiltering,   // diagnostic: false → using NEAREST fallback
+    linearFiltering,
     get velocityTexture() { return velocity.read.tex },
+    get dyeTexture() { return dye.read.tex },
     resize(newRes) {
       if (newRes === R) return
       this.dispose(true)
       R = newRes
       velocity = makeDouble(gl, R, type, filter)
-      divergence = makeTarget(gl, R, type, filter)
+      dye = makeDouble(gl, R, type, filter)
       pressure = makeDouble(gl, R, type, filter)
+      divergence = makeTarget(gl, R, type, filter)
+      curlT = makeTarget(gl, R, type, filter)
       texel = [1 / R, 1 / R]
       clearTargets()
     },
-    step(pointer) {
-      // advect velocity
-      advect(velocity, velocity, SIM.VEL_DISSIPATION)
-
-      // inject force from pointer motion
+    step(pointer, dyeColor) {
+      // inject velocity + ink from pointer motion
       if (pointer && pointer.down) {
-        gl.useProgram(progs.splat); bindQuad(progs.splat)
-        tex(0, velocity.read.tex); gl.uniform1i(u(progs.splat, 'uTarget'), 0)
-        gl.uniform2f(u(progs.splat, 'uPoint'), pointer.x, pointer.y)
         const cap = SIM.FORCE_CLAMP
         const dx = Math.max(-cap, Math.min(cap, pointer.dx))
         const dy = Math.max(-cap, Math.min(cap, pointer.dy))
-        gl.uniform2f(u(progs.splat, 'uValue'), dx * SIM.FORCE * R, dy * SIM.FORCE * R)
-        gl.uniform1f(u(progs.splat, 'uRadius'), SIM.SPLAT_RADIUS)
-        gl.uniform1f(u(progs.splat, 'uAspect'), 1.0)
-        blit(velocity.write); velocity.swap()
+        splat(velocity, pointer.x, pointer.y, [dx * SIM.FORCE * R, dy * SIM.FORCE * R, 0])
+        splat(dye, pointer.x, pointer.y, dyeColor)
       }
+
+      // vorticity confinement (swirl)
+      gl.useProgram(progs.curl); bindQuad(progs.curl)
+      tex(0, velocity.read.tex); gl.uniform1i(u(progs.curl, 'uVelocity'), 0)
+      gl.uniform2f(u(progs.curl, 'uTexel'), texel[0], texel[1])
+      blit(curlT)
+
+      gl.useProgram(progs.vorticity); bindQuad(progs.vorticity)
+      tex(0, velocity.read.tex); gl.uniform1i(u(progs.vorticity, 'uVelocity'), 0)
+      tex(1, curlT.tex);         gl.uniform1i(u(progs.vorticity, 'uCurl'), 1)
+      gl.uniform2f(u(progs.vorticity, 'uTexel'), texel[0], texel[1])
+      gl.uniform1f(u(progs.vorticity, 'uCurlStrength'), SIM.CURL)
+      gl.uniform1f(u(progs.vorticity, 'uDt'), SIM.DT)
+      blit(velocity.write); velocity.swap()
 
       // divergence
       gl.useProgram(progs.divergence); bindQuad(progs.divergence)
@@ -189,7 +222,7 @@ export function createFluidSim(gl, res) {
       gl.uniform2f(u(progs.divergence, 'uTexel'), texel[0], texel[1])
       blit(divergence)
 
-      // clear pressure, then jacobi iterations
+      // pressure solve
       gl.bindFramebuffer(gl.FRAMEBUFFER, pressure.read.fbo)
       gl.viewport(0, 0, R, R); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT)
       gl.useProgram(progs.jacobi); bindQuad(progs.jacobi)
@@ -207,13 +240,18 @@ export function createFluidSim(gl, res) {
       tex(0, pressure.read.tex);  gl.uniform1i(u(progs.gradient, 'uPressure'), 0)
       tex(1, velocity.read.tex);  gl.uniform1i(u(progs.gradient, 'uVelocity'), 1)
       blit(velocity.write); velocity.swap()
+
+      // advect velocity, then the dye it carries
+      advect(velocity, velocity, SIM.VEL_DISSIPATION)
+      advect(dye, dye, SIM.DYE_DISSIPATION)
     },
     dispose(keepProgs) {
-      for (const d of [velocity, pressure]) {
+      for (const d of [velocity, dye, pressure]) {
         gl.deleteTexture(d.read.tex); gl.deleteFramebuffer(d.read.fbo)
         gl.deleteTexture(d.write.tex); gl.deleteFramebuffer(d.write.fbo)
       }
       gl.deleteTexture(divergence.tex); gl.deleteFramebuffer(divergence.fbo)
+      gl.deleteTexture(curlT.tex); gl.deleteFramebuffer(curlT.fbo)
       if (keepProgs) return
       gl.deleteBuffer(quad)
       for (const p of Object.values(progs)) gl.deleteProgram(p)
