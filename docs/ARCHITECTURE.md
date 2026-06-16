@@ -120,7 +120,6 @@ top; `progress` — 240vh sticky travel.
 | Clock | Window | Effect |
 |---|---|---|
 | gap | 0→0.05 | header layer fades in (visibility-gated) |
-| gap | 0→0.70 | gradient pulse ring expands (DOM overlay, `pulseProgress`) |
 | gap (reveal = gap 0.35→1 → 0→1) | per cell: in at `0.55 + (i/cells)·0.30`, +0.14 long | staggered cell reveal |
 | progress | per cell: out at `0.80 + (i/cells)·0.11`, +0.08 long | staggered exit |
 | progress | 0.82→1.0 | header fades toward Contact |
