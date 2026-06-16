@@ -82,11 +82,10 @@ breakpoints there (and the text windows in `AboutTextPanel.jsx` to follow).
 
 ### About→Projects seam
 
-The 100vh of native scroll where About unpins and Projects slides in. About
-registers a single `seam` gradient signal — its `transitionProgress`
-(`useScroll ['end end','end start']`, 0→1). The shader sweeps a bright
-luminance band across the field while the per-section palette crossfades
-cobalt→cream. Scroll-position-driven, so it holds if the user pauses mid-seam.
+The 100vh of native scroll where About unpins and Projects slides in. The
+per-section palette crossfades cobalt→cream as Projects' viewport share passes
+`SEAM_FADE` in `paletteSelect.js`. Scroll-position-driven, so it holds if the
+user pauses mid-seam.
 
 ### Projects (`Projects.jsx`)
 
@@ -102,10 +101,6 @@ cobalt→cream. Scroll-position-driven, so it holds if the user pauses mid-seam.
 | 0.63→0.65 | expanding overlay appears (synced to active card's rect; sync RAF runs 0.57–0.85) |
 | 0.65→0.92 | overlay scale 0.5→5 (→0.82) →150 (→0.92); radius 16→0 (→0.73); carousel pointer-events locked > 0.65 |
 
-Exit flood: Projects registers the `flood` gradient signal
-`useTransform(progress,[0.55,0.73,1.0],[0,1.5,0])` — a radial cobalt bloom
-floods the gradient as the card exits, then returns to 0 (so it doesn't bleed
-into Gallery; the 0.73→1.0 fade is hidden behind the expanding black overlay).
 Carousel: works ×3 runway; `useInfiniteCarousel` keeps the user in the middle
 set with silent jumps, handles click-to-centre (desktop spring on scrollLeft,
 mobile native smooth + scroll-snap), and re-centres when the 768px breakpoint
@@ -125,7 +120,7 @@ top; `progress` — 240vh sticky travel.
 | Clock | Window | Effect |
 |---|---|---|
 | gap | 0→0.05 | header layer fades in (visibility-gated) |
-| gap | 0→0.70 | gradient pulse ring expands (registers `pulse` signal = `pulseProgress`) |
+| gap | 0→0.70 | gradient pulse ring expands (DOM overlay, `pulseProgress`) |
 | gap (reveal = gap 0.35→1 → 0→1) | per cell: in at `0.55 + (i/cells)·0.30`, +0.14 long | staggered cell reveal |
 | progress | per cell: out at `0.80 + (i/cells)·0.11`, +0.08 long | staggered exit |
 | progress | 0.82→1.0 | header fades toward Contact |
@@ -145,109 +140,107 @@ canvas. Form submit = `mailto:` handoff (no backend); footer nav maps over
 
 ## 3. Fluid gradient background (`src/components/gradient/`)
 
-One fixed full-viewport WebGL canvas behind all content (`position:fixed`,
-z-index −1) renders a domain-warped fBm mesh gradient. It replaced the old
-per-section halftone canvases, so the gradient **is** the page background and
-every section is background-transparent (`body` keeps `--color-cream` as the
-no-WebGL fallback). Because it is one continuous surface, cross-section
-continuity is free — no lattice-alignment math.
+One fixed full-viewport canvas behind all content (`position:fixed`, z-index −1)
+renders a **Three.js ink-fluid simulation**. It is the page background and every
+section is background-transparent (`body` keeps `--color-cream` as the no-WebGL
+fallback). Because it is one continuous surface, cross-section continuity is
+free — no lattice-alignment math.
 
-Modules:
-- `gradientConfig.js` — single source of truth. `SECTION_PALETTES` (3 stops
-  per section, normalized 0–1; ordered to match `SECTIONS`), accent `COBALT`/
-  `CREAM`, and the `GRADIENT` tuning block (`FRAME_MS` ~30fps, `FLOW_SPEED`,
-  `CURSOR_RADIUS/BUILD/DECAY`, `MOBILE_SCALE` 0.5, `SEAM_FADE` 0.85).
-  Palettes mirror each section's former look so text contrast holds: Hero +
-  About **cobalt** (dark; cream text), Projects **cream** (light; dark text),
-  Gallery + Contact **near-black**.
-- `shaders.js` — `VERT_SRC`/`FRAG_SRC` (WebGL1 / GLSL ES 1.00). fBm + domain
-  warp drives a 3-stop palette mix; `uPalMix` crossfades current→next palette.
-  Uniforms: `uResolution,uTime,uMouse,uMouseStrength,uCursorR,uCobalt,uCream,
-  uPalA0..2,uPalB0..2,uPalMix,uSeam,uFlood,uPulse`.
-- `glRenderer.js` — `createGradientRenderer(canvas)`: compiles the program,
-  one fullscreen quad, cached uniform locations, null-safe `{ supported,
-  resize, setUniforms, render, dispose }`. `dispose` deliberately does NOT
-  `loseContext()` (StrictMode remount would inherit the dead context).
-- `FluidGradient.jsx` — lifecycle + per-frame orchestration: ~30fps throttle;
-  picks the palette from the section holding the viewport centre and
-  crossfades to the next past `SEAM_FADE`; reads `seam`/`flood`/`pulse`
-  signals and cursor strength through refs; reduced-motion → one static frame;
-  mobile → half-res + no cursor; pauses RAF on `visibilitychange`.
-- `src/context/GradientContext.js` (+ `GradientProvider.jsx`) — decoupled
-  signal registry. Sections call `useGradientSignal(key, motionValue)` so the
-  gradient never imports section internals.
-
-Transition signals (each a MotionValue the section already computes):
-
-| key | registered by | source | shader effect |
-|---|---|---|---|
-| `seam` | About | `transitionProgress` 0→1 | bright luminance band sweeps at the About→Projects seam |
-| `flood` | Projects | `[0.55,0.73,1.0]→[0,1.5,0]` | radial cobalt bloom on card exit (returns to 0 so it doesn't bleed) |
-| `pulse` | Gallery | `pulseProgress` 0→1 | expanding ring on scroll-in |
-
-Signals are GLOBAL uniforms: they must rest at an "off" value once the section
-leaves. `seam`/`pulse` self-gate at 1 (`step(uX,0.999)`); `flood` peaks at 1.5
-with no upper gate, so its MotionValue ramps back to 0 (hidden behind the
-Projects black overlay).
-
-Tuning cheat-sheet: resting colour → `SECTION_PALETTES`; flow speed →
-`GRADIENT.FLOW_SPEED`; cursor feel → `CURSOR_RADIUS/BUILD/DECAY`; transition
-shapes → the `uSeam`/`uFlood`/`uPulse` blocks at the bottom of `shaders.js`
-and the signal mappings in each section.
-
-### Liquid sim layer (push + wake + hover preview)
-
-A low-res Jos-Stam "Stable Fluids" velocity sim runs **before** the display
-pass and feeds it. The cursor (mouse on desktop, touch on mobile) injects
-force; advection carries it into a trailing wake that dissipates and settles.
-The display shader samples that velocity field to **displace** the warp
-coordinate (the liquid push) and derives a cream **wake highlight** from
-`|velocity|`. It composites *into* the palette gradient above — section
-palettes and the seam/flood/pulse choreography are unchanged.
+### Module layout
 
 ```
-pointer ──force──▶ [advect → splat → divergence → jacobi×N → subtractGradient]
-                   (¼-res float/half-float ping-pong) ──uVelocity──▶ display shader
-                   p += clamp(vel·DISP_SCALE)  → palette → hover crossfade → flow lean
+FluidGradient.jsx          ← React shell
+  └─ three/FluidScene.js   ← THREE.WebGLRenderer + Simulation + composite
+       ├─ three/Simulation.js   ← stable-fluids velocity + dye (half-float ping-pong)
+       ├─ three/ShaderPass.js   ← generic fullscreen-quad pass
+       └─ three/shaders.js      ← GLSL strings (VERT, SPLAT, ADVECT, DIVERGENCE,
+                                   JACOBI, GRADIENT_SUBTRACT, COMPOSITE)
+gradientConfig.js          ← per-section palettes + SIM tuning + GRADIENT shell tuning
+colors.js                  ← pure rgb() + lerp3()
+paletteSelect.js           ← pure selectPalette() (active section by viewport centre + crossfade)
+ambient.js                 ← pure ambientSplats(time) (slow Lissajous drift)
 ```
 
-- `simShaders.js` — GLSL for the five sim passes (written from scratch; the
-  algorithm is Stam's, no third-party code).
-- `fluidSim.js` — `createFluidSim(gl, res)` owns the programs/FBOs/float
-  textures and `step(pointer)`. Shares the renderer's GL context. Detects
-  float/half-float render targets (`pickFloatType`); `supported=false` ⇒ caller
-  falls back to the plain warp gradient. `dispose` deletes its own GL objects;
-  like `glRenderer` it never `loseContext()`s.
-- Display `shaders.js` gained `uVelocity,uSimEnabled,uDispScale,uWakeBoost`
-  (push + wake) and `uFlowDir,uHoverPal0..2,uHoverMix` (hover preview). The
-  legacy Gaussian cursor warp now only runs when `uSimEnabled==0` (fallback).
-- `glRenderer.js` — `setUniforms` binds sampler textures (`{ tex, unit }`);
-  because the sim leaves its own program/FBO/viewport bound, `setUniforms`
-  re-selects the display program and `render()` restores the default
-  framebuffer + viewport + quad each frame.
-- `FluidGradient.jsx` steps the sim when `supported && !reduceMotion`: desktop
-  keeps it sampled (idles to a frozen near-zero field after a `SIM.SETTLE_MS`
-  window); mobile steps only while a touch is active + that window (passive
-  touch listeners, never `preventDefault`, velocity-clamped force), so it costs
-  nothing while scrolling/reading and falls back where float textures are
-  missing.
-- `SIM`, `FLOW_ANGLES`, `HOVER` tuning blocks live in `gradientConfig.js`
-  (force, dissipation, displacement, jacobi iterations per platform, per-section
-  flow lean, crossfade duration).
+**`FluidGradient.jsx`** — React lifecycle shell. Mounts the `<canvas>` at
+z-index −1, owns the RAF loop (~30fps desktop, `FRAME_MS_MOBILE` on mobile),
+wires pointer/touch listeners, calls `paletteSelect.js` each frame to pick the
+active section palette by viewport centre, applies mobile/reduced-motion/
+visibility budget, and delegates to `FluidScene`.
 
-Hover preview signals (registered by Hero, read by the gradient each frame):
+**`three/FluidScene.js`** — owns the `THREE.WebGLRenderer`, a `Simulation`
+instance, and the COMPOSITE `ShaderPass`. Exposes `update(palette, pointer,
+time)`, `renderStatic(palette)`, `resize()`, `dispose()`, and `supported`.
+Reports `supported=false` when WebGL2 or float color buffers
+(`EXT_color_buffer_float` / `EXT_color_buffer_half_float`) are unavailable;
+`FluidGradient` then leaves the CSS cream fallback and skips the RAF loop.
 
-| key | rest value | effect while Hero holds the viewport centre |
-|---|---|---|
-| `heroHover` | `-1` | which SECTIONS index the hovered nav blob targets |
-| `heroHoverStrength` | `0` | 0→1 crossfade toward that section's palette + flow lean |
+**`three/Simulation.js`** — stable-fluids velocity + dye sim on **half-float**
+ping-pong render targets. The sim grid is a square-ish grid scaled by aspect
+(`SIM.RES` short side), independent of canvas resolution. Per step: inject
+force/dye (cursor + ambient splats) → divergence → Jacobi pressure solve →
+subtract pressure gradient (divergence-free) → advect velocity → advect dye.
 
-These are GLOBAL like the others: `heroHoverStrength` must rest at 0 and
-`heroHover` at −1 once no blob is hovered, or the preview bleeds into other
-sections (the gradient also gates them to `activeIdx === 0`). Hero's element
-colours (wordmark/name via `--hero-*` vars, bubbles via Framer props) come from
-`hero/heroThemes.js` (`HERO_REST` + `HERO_HOVER`) and recolor in sync with the
-field over `HOVER.CROSSFADE_SEC`.
+**`three/ShaderPass.js`** — generic fullscreen-quad pass (`RawShaderMaterial`,
+GLSL ES 1.00; vertex writes clip space directly). Reused for every sim step and
+the composite pass.
+
+**`three/shaders.js`** — GLSL strings: `VERT`, `SPLAT`, `ADVECT`, `DIVERGENCE`,
+`JACOBI`, `GRADIENT_SUBTRACT`, `COMPOSITE`. The COMPOSITE shader mixes a
+per-section vertical **base** gradient (base0 top → base1 bottom) toward an
+**ink** accent color by clamped dye density; velocity adds subtle refraction.
+
+**`gradientConfig.js`** — single source of truth for:
+- `PALETTES` — per-section `{ base: [top, bottom], ink }` colors. Palettes
+  mirror each section's tone: Hero + About **cobalt** (dark; cream text),
+  Projects **cream** (light; dark text), Gallery + Contact **near-black**.
+- `SIM` — sim tuning: `RES`, `RES_MOBILE`, `JACOBI_STEPS`, `JACOBI_STEPS_MOBILE`,
+  `DYE_MAX`, `DISSIPATION`, force and ambient parameters.
+- `GRADIENT` — shell tuning: `SEAM_FADE`, `MOBILE_SCALE`, `FRAME_MS_MOBILE`.
+
+**`paletteSelect.js`** — pure `selectPalette(sections, scrollY, winH, palettes,
+SEAM_FADE)`: finds the section whose centre is nearest the viewport centre;
+once the next section's share passes `SEAM_FADE`, begins crossfading into its
+palette. No MotionValues, no context — called directly from the RAF loop.
+
+**`ambient.js`** — pure `ambientSplats(time)`: returns a list of slow
+Lissajous-path splat points so the fluid is always alive (on load + on mobile
+where there is no cursor). Strength is low enough not to obscure text.
+
+### Palette crossfade
+
+Palette selection and crossfade are computed every frame in `paletteSelect.js`
+from `window.scrollY` alone — no MotionValues, no signal registry. The COMPOSITE
+shader receives `uPalA` (current base/ink) and `uPalB` (next base/ink) plus
+`uMix` (0→1 crossfade weight).
+
+### Cursor / touch model
+
+On desktop: pointer move events feed a position + velocity into `Simulation`
+as a force/dye splat. On mobile: touch events feed the same path. `DYE_MAX`
+globally clamps dye density to keep text readable. Ambient drift (`ambient.js`)
+runs regardless of input so the field is never frozen.
+
+### Mobile + reduced-motion budget
+
+| Setting | Value |
+|---|---|
+| Render buffer | `MOBILE_SCALE` × full resolution |
+| Sim grid | `SIM.RES_MOBILE` (shorter side) |
+| Jacobi iterations | `SIM.JACOBI_STEPS_MOBILE` |
+| RAF throttle | `FRAME_MS_MOBILE` (~30fps) |
+| Reduced-motion | `renderStatic()` — one static COMPOSITE frame, ambient off |
+| Visibility hidden | RAF paused via `visibilitychange` |
+
+### Tuning cheat-sheet
+
+| Goal | Where to edit |
+|---|---|
+| Section resting colors | `PALETTES[sectionId].base` / `.ink` in `gradientConfig.js` |
+| Fluid feel (force, dissipation) | `SIM.*` in `gradientConfig.js` |
+| Crossfade seam width | `GRADIENT.SEAM_FADE` in `gradientConfig.js` |
+| Mobile resolution/fps | `SIM.RES_MOBILE`, `GRADIENT.MOBILE_SCALE`, `GRADIENT.FRAME_MS_MOBILE` |
+| Composite look (ink blend) | `COMPOSITE` shader in `three/shaders.js` |
+| Ambient drift paths | `ambient.js` |
 
 ## 4. Navigation & transitions
 

@@ -28,7 +28,7 @@ before retiming animations or touching the gradient.**
 | What | Where |
 |---|---|
 | Section ids, labels, nav colors, blob shapes, landing offsets | [src/config/sections.js](src/config/sections.js) |
-| Gradient palettes (per-section) + tuning constants | [src/components/gradient/gradientConfig.js](src/components/gradient/gradientConfig.js) |
+| Per-section base/ink palettes + sim tuning (SIM) + shell tuning (GRADIENT) | [src/components/gradient/gradientConfig.js](src/components/gradient/gradientConfig.js) |
 | Project cards + tech-icon mapping | [src/data/projectsData.js](src/data/projectsData.js) |
 | Gallery artworks | [src/data/galleryData.js](src/data/galleryData.js) |
 | About filmstrip images + skills lists | [src/data/aboutData.js](src/data/aboutData.js) |
@@ -45,17 +45,26 @@ before retiming animations or touching the gradient.**
 - **Lenis listener pattern**: subscribe inside a `setTimeout(0)`, store the
   unsubscribe in an `unlisten` var, clean up both. Never return the cleanup
   from inside the timeout callback (it gets discarded).
-- **Fluid gradient background**: one fixed full-viewport WebGL canvas
+- **Fluid gradient background**: one fixed full-viewport canvas
   ([FluidGradient](src/components/gradient/FluidGradient.jsx), z-index −1)
-  renders a domain-warped mesh gradient behind everything — it *is* the page
+  renders a Three.js ink-fluid simulation behind everything — it *is* the page
   background, so every section is background-transparent (`body` keeps cream as
-  the no-WebGL fallback). Per-section palettes
-  ([gradientConfig.js](src/components/gradient/gradientConfig.js)) crossfade by
-  whichever section holds the viewport centre. Sections drive transitions by
-  registering MotionValues (`seam`/`flood`/`pulse`) via
-  [useGradientSignal](src/context/GradientContext.js); the cursor warps the
-  field locally. Renderer + shader: `gradient/glRenderer.js` (WebGL1) +
-  `gradient/shaders.js` (GLSL).
+  the no-WebGL fallback). Pipeline: `FluidGradient.jsx` (React shell; RAF loop;
+  pointer/touch listeners; palette selection via `paletteSelect.js`) →
+  `three/FluidScene.js` (owns `THREE.WebGLRenderer`, the `Simulation`, and the
+  composite pass; `supported=false` when WebGL2 or float color buffers are
+  unavailable) → `three/Simulation.js` (stable-fluids velocity + dye on
+  half-float ping-pong render targets; per step: inject force/dye → divergence
+  → Jacobi pressure solve → subtract gradient → advect velocity → advect dye)
+  → `three/ShaderPass.js` (generic fullscreen-quad pass) + `three/shaders.js`
+  (VERT, SPLAT, ADVECT, DIVERGENCE, JACOBI, GRADIENT_SUBTRACT, COMPOSITE
+  shaders). The COMPOSITE pass mixes a per-section vertical base gradient
+  (base0 top → base1 bottom) toward an ink accent by clamped dye density;
+  velocity adds subtle refraction. Palette crossfade is driven purely by which
+  section holds the viewport centre (past `SEAM_FADE`) via `paletteSelect.js`.
+  Ambient drift (`ambient.js`) keeps the field alive on load and on mobile with
+  no cursor; cursor/touch injects stronger swirls. The sim grid is
+  aspect-scaled (`SIM.RES` short side) and independent of canvas resolution.
 - **Navigation**: every nav UI calls `goToSection()` from config/sections.js,
   which runs the blob curtain (TransitionProvider: 600ms expand → instant
   Lenis jump → shrink).
@@ -64,10 +73,11 @@ before retiming animations or touching the gradient.**
   surrounding code uses.
 - **Responsive**: single JS breakpoint `useMediaQuery('(max-width: 767px)')`;
   mobile swaps layouts (vertical carousel, skills marquee, top-centre
-  portrait), not just sizes. The gradient renders at half resolution; on mobile
-  the fluid sim is touch-driven (tap/drag) and runs only while a touch is active
-  plus a short settle, falling back to the static gradient where float textures
-  are unavailable.
+  portrait), not just sizes. The gradient renders at a reduced buffer
+  (`MOBILE_SCALE`), uses a smaller sim grid (`SIM.RES_MOBILE`) and fewer
+  Jacobi iterations, and throttles to ~30fps (`FRAME_MS_MOBILE`). Ambient drift
+  still runs on mobile (no cursor); touch injects swirls. Falls back to the CSS
+  cream body color where WebGL2 or float color buffers are unavailable.
 
 ## Gotchas
 
@@ -77,23 +87,17 @@ before retiming animations or touching the gradient.**
 - z-index registry: PageTransition 9999 › SectionNav portal 120/130 ›
   Gallery fixed header 50 › Projects expanding overlay 40 › content (auto) ›
   FluidGradient canvas −1 (behind all). Stay inside these bands.
-- Gradient transition signals are GLOBAL uniforms: a registered MotionValue
-  (`seam`/`flood`/`pulse`) must rest at a value the shader treats as "off"
-  once its section leaves the viewport, or it bleeds into the others. `seam`
-  and `pulse` self-gate at 1; `flood` peaks at 1.5 so it must ramp back to 0.
-  The Hero hover-preview signals follow the same rule: `heroHoverStrength`
-  rests at 0 and `heroHover` at −1 when no nav blob is hovered (the gradient
-  also gates them to the Hero being centred).
-- The fluid sim (`fluidSim.js`) shares the renderer's GL context, so the
-  display pass restores its own program/FBO/viewport/quad each frame
-  (`glRenderer.setUniforms`/`render`). Needs float/half-float render targets;
-  missing → sim `supported=false` and the plain warp gradient renders. Mobile
-  runs the sim only on active touch + a short settle.
+- The fluid sim (`three/Simulation.js`) and the composite pass (`three/ShaderPass.js`)
+  are separate Three.js passes, each with their own render targets. `FluidScene`
+  reports `supported=false` when WebGL2 or float color buffers
+  (`EXT_color_buffer_float` / `EXT_color_buffer_half_float`) are unavailable;
+  `FluidGradient` then leaves the CSS body cream fallback in place and skips
+  the RAF loop.
 - Canvas/RAF loops read motion values through refs each frame — never capture
   them in effect closures with `[]` deps.
 - StrictMode double-mounts effects; every listener/RAF must clean up. Do NOT
   call `WEBGL_lose_context.loseContext()` on a canvas you remount — the
-  remount gets the same dead context (see `glRenderer.dispose`).
+  remount gets the same dead context (see `FluidScene.dispose`).
 - `prefers-reduced-motion` is honored globally (MotionConfig + CSS); the
   gradient renders a single static frame under it. Keep new animations inside
   those mechanisms.
