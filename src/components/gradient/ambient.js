@@ -2,10 +2,12 @@
 // Pure: a few slow points tracing Lissajous paths so the fluid is alive with
 // no cursor. Returns positions in 0..1 uv plus analytic velocity (dx,dy) used
 // to inject a gentle drift force. Radii keep every point well inside [0,1].
+// Low frequencies (ax/ay) keep the drift slow — each point's oscillation period
+// is ~2π/freq seconds, so these wander over a minute-plus, not race around.
 const POINTS = [
-  { r: 0.30, ax: 0.13, ay: 0.17, phx: 0.0, phy: 1.3 },
-  { r: 0.36, ax: 0.09, ay: 0.11, phx: 2.1, phy: 4.0 },
-  { r: 0.22, ax: 0.21, ay: 0.07, phx: 5.0, phy: 0.7 },
+  { r: 0.30, ax: 0.045, ay: 0.060, phx: 0.0, phy: 1.3 },
+  { r: 0.36, ax: 0.032, ay: 0.040, phx: 2.1, phy: 4.0 },
+  { r: 0.22, ax: 0.070, ay: 0.026, phx: 5.0, phy: 0.7 },
 ]
 
 /** @param {number} t seconds @returns {{x:number,y:number,dx:number,dy:number}[]} */

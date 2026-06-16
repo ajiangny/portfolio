@@ -111,9 +111,10 @@ uniform float uRefraction;
 varying vec2 vUv;
 void main() {
   vec2 vel = texture2D(uVelocity, vUv).xy;
-  vec2 uv = vUv + vel * uRefraction;
+  // Clamp so a strong swipe can't smear dye in from the edges (vel can be large).
+  vec2 uv = clamp(vUv + vel * uRefraction, 0.0, 1.0);
   float density = clamp(texture2D(uDye, uv).x * uDyeIntensity, 0.0, uDyeMax);
-  vec3 base = mix(uBase1, uBase0, clamp(uv.y, 0.0, 1.0));
+  vec3 base = mix(uBase1, uBase0, uv.y);
   vec3 color = mix(base, uInk, density);
   gl_FragColor = vec4(color, 1.0);
 }
