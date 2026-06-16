@@ -1,70 +1,45 @@
 /**
- * gradientConfig.js — Palettes + tuning for the site-wide fluid gradient.
+ * gradientConfig.js — Palettes + tuning for the Three.js ink-fluid background.
  *
- * Palettes are ordered to match SECTIONS in src/config/sections.js. Each
- * section gets three stops (dark→mid→light or themed) that the shader mixes
- * across the noise field; the at-rest palette reproduces that section's
- * former solid background so text contrast is preserved when the section
- * goes background-transparent.
+ * Each section provides a 2-stop `base` (the resting field gradient, top→bottom)
+ * kept at a luminance that preserves that section's text contrast, and an `ink`
+ * accent that the cursor + ambient drift inject as the visible liquid. The
+ * active section is chosen by viewport centre and crossfades toward the next
+ * (see paletteSelect.js); the composite mixes base→ink by dye density.
  */
+import { rgb } from './colors.js'
 
-// Normalize an 8-bit RGB triple to 0–1 for GLSL.
-const rgb = (r, g, b) => [r / 255, g / 255, b / 255]
-
-// stops: [stop0 (low noise), stop1 (mid), stop2 (high noise)]
 export const SECTION_PALETTES = {
-  hero:     { stops: [rgb(18, 42, 107), rgb(27, 58, 140), rgb(43, 82, 180)] }, // cobalt range (matches old hue-shift band)
-  about:    { stops: [rgb(18, 42, 107), rgb(27, 58, 140), rgb(43, 82, 180)] }, // cobalt — About is a dark/cobalt section; its cream text+content needs a dark field
-  projects: { stops: [rgb(234, 228, 217), rgb(245, 240, 232), rgb(250, 248, 244)] }, // cream (cobalt enters only via the exit flood; dark text needs a light field)
-  gallery:  { stops: [rgb(0, 0, 0), rgb(10, 10, 14), rgb(20, 30, 64)] }, // black + faint cobalt
-  contact:  { stops: [rgb(0, 0, 0), rgb(8, 8, 10), rgb(40, 40, 46)] }, // black + faint warm
+  hero:     { base: [rgb(43, 82, 180), rgb(18, 42, 107)], ink: rgb(190, 224, 255) },
+  about:    { base: [rgb(43, 82, 180), rgb(18, 42, 107)], ink: rgb(190, 224, 255) },
+  projects: { base: [rgb(250, 248, 244), rgb(234, 228, 217)], ink: rgb(43, 82, 180) },
+  gallery:  { base: [rgb(20, 30, 64), rgb(0, 0, 0)], ink: rgb(90, 130, 235) },
+  contact:  { base: [rgb(40, 40, 46), rgb(0, 0, 0)], ink: rgb(240, 228, 205) },
 }
 
-// Accent colors reused by the choreography effects.
-export const COBALT = rgb(27, 58, 140)
-export const CREAM = rgb(245, 240, 232)
+// Stable-fluids sim tuning. Starting points — tune live in Task 12.
+export const SIM = {
+  RES: 256,
+  RES_MOBILE: 128,
+  JACOBI: 18,
+  JACOBI_MOBILE: 12,
+  DT: 1.0,
+  VEL_DISSIPATION: 0.985,
+  DYE_DISSIPATION: 0.975,
+  SPLAT_RADIUS: 0.00045,
+  AMBIENT_RADIUS: 0.0022,
+  CURSOR_FORCE: 4200,
+  AMBIENT_FORCE: 700,
+  FORCE_CLAMP: 0.02,
+  CURSOR_DENSITY: 0.32,
+  AMBIENT_DENSITY: 0.05,
+  DYE_INTENSITY: 1.0,
+  DYE_MAX: 0.9,
+  REFRACTION: 0.06,
+}
 
 export const GRADIENT = {
-  FRAME_MS: 30,        // ~30fps, matches the old halftone budget
-  FLOW_SPEED: 0.04,    // base time multiplier for the warp field
-  CURSOR_RADIUS: 0.28, // warp falloff radius in normalized (aspect-corrected) units
-  CURSOR_BUILD: 0.15,  // mouse-strength build-up per active frame (port of halftone feel)
-  CURSOR_DECAY: 0.03,  // mouse-strength decay per resting frame
-  MOBILE_SCALE: 0.5,   // render-buffer downscale on mobile (upscaled by CSS)
-  SEAM_FADE: 0.85,     // section progress at which palette starts crossfading to the next
+  SEAM_FADE: 0.85,
+  MOBILE_SCALE: 0.5,
+  FRAME_MS_MOBILE: 33,
 }
-
-// Fluid sim (velocity + advected dye, à la Dobryakov/tkabalin). Starting
-// points — tune live. The visible effect is the DYE (ink) trail; velocity
-// also warps the gradient slightly for organic motion.
-export const SIM = {
-  RES_DESKTOP: 256,       // sim grid (square)
-  RES_MOBILE: 160,
-  JACOBI_DESKTOP: 20,     // pressure-solve iterations
-  JACOBI_MOBILE: 14,
-  DT: 1.0,                // advection step (folded with FORCE/dissipation)
-  VEL_DISSIPATION: 0.982, // velocity decay per frame (too close to 1 lets grid noise accumulate)
-  DYE_DISSIPATION: 0.985, // ink fade per frame (higher = ink accumulates into a continuous visible trail)
-  CURL: 12.0,             // vorticity-confinement strength; high values inject grid-scale speckle
-  SPLAT_RADIUS: 0.0035,   // gaussian denominator (smaller = tighter splat)
-  FORCE: 1.4,             // pointer-velocity → injected velocity
-  FORCE_CLAMP: 0.06,      // max |pointer delta| (uv/frame) contributing to force
-  DISP_SCALE: 0.03,       // velocity → display warp; low so velocity noise can't speckle the gradient
-  DYE_INTENSITY: 1.1,     // dye → display brightness (additive); advection spreads ink, so it needs punch
-  SETTLE_MS: 2600,        // keep stepping this long after motion stops (wake swirls out before freeze)
-  SETTLE_EPS: 0.0006,     // residual speed below which the sim idles (mobile)
-}
-
-// Luminous ink injected at the cursor (light cool white reads on cobalt).
-export const DYE_COLOR = [0.55, 0.78, 1.0]
-
-// Per-section flow lean (radians, screen-space) applied on hover. Keyed by id.
-export const FLOW_ANGLES = {
-  hero:     0.0,
-  about:    Math.PI * 0.30,  // up-right
-  projects: 0.0,             // right
-  gallery: -Math.PI * 0.5,   // down
-  contact:  Math.PI,         // left
-}
-
-export const HOVER = { CROSSFADE_SEC: 0.35 } // field + element recolor duration
