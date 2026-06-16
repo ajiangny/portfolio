@@ -15,6 +15,8 @@ import { SECTIONS } from '../../config/sections'
 import { FluidScene } from './three/FluidScene'
 import { SECTION_PALETTES, GRADIENT, SIM } from './gradientConfig'
 import { selectPalette } from './paletteSelect'
+import { lerp3 } from './colors'
+import { hoverSignal } from './hoverSignal'
 
 const ORDER = SECTIONS.map((s) => s.id)
 
@@ -35,6 +37,13 @@ export default function FluidGradient() {
     let lastDraw = 0
     const start = performance.now()
     const frameMs = isMobile ? GRADIENT.FRAME_MS_MOBILE : 0
+
+    // Hero nav-blob hover preview: eased crossfade toward the hovered section's
+    // palette while Hero holds the viewport centre. `hoverDestId` persists
+    // through the fade-out so leaving a blob eases back to Hero, not snaps.
+    let hoverStrength = 0
+    let hoverDestId = null
+    const HOVER_EASE = 0.08
 
     // pointer in uv (origin bottom-left) with per-frame delta
     const pointer = { x: -1, y: -1, dx: 0, dy: 0, down: false, lastMove: -9999 }
@@ -75,7 +84,25 @@ export default function FluidGradient() {
         const r = el.getBoundingClientRect()
         return { top: r.top, bottom: r.bottom, height: r.height }
       })
-      return selectPalette(rects, centerY, ORDER, SECTION_PALETTES, GRADIENT.SEAM_FADE)
+      const pal = selectPalette(rects, centerY, ORDER, SECTION_PALETTES, GRADIENT.SEAM_FADE)
+
+      // Hover preview only while Hero (section 0) holds the centre, so it can't
+      // bleed into other sections. hoverSignal.section is the destination
+      // SECTIONS index (1..4) or -1.
+      const heroRect = rects[0]
+      const heroActive = heroRect && heroRect.top <= centerY && centerY < heroRect.bottom
+      const hovIdx = heroActive ? hoverSignal.section : -1
+      const hovId = hovIdx > 0 ? ORDER[hovIdx] : null
+      if (hovId) hoverDestId = hovId
+      hoverStrength += ((hovId ? 1 : 0) - hoverStrength) * HOVER_EASE
+      if (!hoverDestId || hoverStrength < 0.002) return pal
+
+      const dest = SECTION_PALETTES[hoverDestId]
+      return {
+        base0: lerp3(pal.base0, dest.base[0], hoverStrength),
+        base1: lerp3(pal.base1, dest.base[1], hoverStrength),
+        ink: lerp3(pal.ink, dest.ink, hoverStrength),
+      }
     }
 
     function draw(now) {
