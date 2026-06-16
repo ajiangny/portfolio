@@ -27,7 +27,6 @@ import useInfiniteCarousel from '../hooks/useInfiniteCarousel'
 import ProjectCard from './projects/ProjectCard'
 import SectionNav from './SectionNav'
 import { works } from '../data/projectsData'
-import { useGradientSignal } from '../context/GradientContext'
 
 export default function Projects() {
   const containerRef = useRef(null)
@@ -74,16 +73,6 @@ export default function Projects() {
   // Bottom elements (dots + link) — enter last
   const bottomY = useTransform(progress, [0.13, 0.20], [100, 0]);
   const bottomOpacity = useTransform(progress, [0.13, 0.20, 0.55, 0.63], [0, 1, 1, 0]);
-
-  // Flood: a radial cobalt bloom that floods the gradient as the active card
-  // exits to black (drives the gradient's uFlood; 0 during browse). It must
-  // return to 0 by the time Projects is fully scrolled away (progress rests at
-  // 1.0) — otherwise the global uniform stays high and floods Gallery/Contact
-  // cobalt. The 0.73→1.0 fade happens behind the expanding black overlay.
-  const floodProgress = useTransform(progress, [0.55, 0.73, 1.0], [0, 1.5, 0])
-
-  // Drive the gradient's radial cobalt bloom as the cards exit.
-  useGradientSignal('flood', floodProgress)
 
   // Expanding Overlay logic
   // By mapping the scale non-linearly (slowly to 5, then rapidly to 150),

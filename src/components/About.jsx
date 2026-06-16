@@ -17,18 +17,16 @@
  *
  * Fade-out (progress 0.85→1.0):
  *   Content fades via a CSS mask gradient, revealing the site-wide fluid
- *   gradient as it crossfades cobalt→cream into the Projects section. About
- *   registers the 'seam' signal so the gradient sweeps a band at the handoff.
+ *   gradient as it crossfades cobalt→cream into the Projects section.
  */
 import { useRef, useEffect } from 'react'
-import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate, useScroll } from 'framer-motion'
+import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { LEFT_COL, CENTER_COL, CENTER_PROFILE_INDEX, RIGHT_COL } from '../data/aboutData'
 import ArtColumn from './about/ArtColumn'
 import AboutTextPanel from './about/AboutTextPanel'
 import SectionNav from './SectionNav'
-import { useGradientSignal } from '../context/GradientContext'
 
 // ─── SVG Gradient Map (duotone) ───────────────────────────────────────────────
 function DuotoneDefs() {
@@ -194,15 +192,6 @@ export default function About() {
   const fadeStop1 = useTransform(progress, [0.85, 1.0], [-100, 100])
   const fadeStop2 = useTransform(progress, [0.85, 1.0], [0, 200])
   const maskImage = useMotionTemplate`linear-gradient(to top, transparent ${fadeStop1}%, black ${fadeStop2}%)`
-
-  // Track the native scroll transition from About to Projects
-  const { scrollYProgress: transitionProgress } = useScroll({
-    target: containerRef,
-    offset: ['end end', 'end start'] // Tracks the 100vh native scroll as About unpins and scrolls away
-  })
-
-  // Drive the gradient's seam band across the About→Projects handoff.
-  useGradientSignal('seam', transitionProgress)
 
   // ── Drive the profile expansion from the card's actual DOM rect ──────────
   useMotionValueEvent(progress, 'change', (v) => {
