@@ -17,25 +17,25 @@ export const SECTION_PALETTES = {
   contact:  { base: [rgb(40, 40, 46), rgb(0, 0, 0)], ink: rgb(240, 228, 205) },
 }
 
-// Stable-fluids sim tuning. Starting points — tune live in Task 12.
+// Stable-fluids sim tuning.
 export const SIM = {
   RES: 256,
   RES_MOBILE: 128,
   JACOBI: 18,
   JACOBI_MOBILE: 12,
-  DT: 1.0,
+  DT: 0.6,                 // advection step — lower = slower, calmer overall flow
   VEL_DISSIPATION: 0.985,
   DYE_DISSIPATION: 0.975,
   SPLAT_RADIUS: 0.00045,
-  AMBIENT_RADIUS: 0.0022,
-  CURSOR_FORCE: 4200,
-  AMBIENT_FORCE: 700,
+  AMBIENT_RADIUS: 0.005,   // soft + broad so the drift points blend, not 3 blobs
+  CURSOR_FORCE: 3400,
+  AMBIENT_FORCE: 260,      // gentle stir, not energetic churn
   FORCE_CLAMP: 0.02,
-  CURSOR_DENSITY: 0.32,
-  AMBIENT_DENSITY: 0.05,
-  DYE_INTENSITY: 1.0,
-  DYE_MAX: 0.9,
-  REFRACTION: 0.06,
+  CURSOR_DENSITY: 0.24,
+  AMBIENT_DENSITY: 0.012,  // barely tints — ambient should stir, not emit visible ink
+  DYE_INTENSITY: 0.85,
+  DYE_MAX: 0.7,            // ink never fully covers the base (readability)
+  REFRACTION: 0.04,
 }
 
 export const GRADIENT = {
