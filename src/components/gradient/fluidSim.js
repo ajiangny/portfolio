@@ -30,11 +30,11 @@ function makeProgram(gl, frag) {
   return p
 }
 
-function makeTex(gl, res, type) {
+function makeTex(gl, res, type, filter) {
   const t = gl.createTexture()
   gl.bindTexture(gl.TEXTURE_2D, t)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter)
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, res, res, 0, gl.RGBA, type, null)
@@ -46,32 +46,38 @@ function makeFbo(gl, tex) {
   gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0)
   return fbo
 }
-function makeTarget(gl, res, type) {
-  const tex = makeTex(gl, res, type)
+function makeTarget(gl, res, type, filter) {
+  const tex = makeTex(gl, res, type, filter)
   const fbo = makeFbo(gl, tex)
   return { tex, fbo }
 }
-function makeDouble(gl, res, type) {
-  let a = makeTarget(gl, res, type), b = makeTarget(gl, res, type)
+function makeDouble(gl, res, type, filter) {
+  let a = makeTarget(gl, res, type, filter), b = makeTarget(gl, res, type, filter)
   return { get read() { return a }, get write() { return b }, swap() { const t = a; a = b; b = t } }
 }
 
+// Pick a renderable float type. Returns { type, filter } or null. Crucially,
+// many GPUs support rendering to float textures but NOT linear filtering of
+// them (no *_texture_*_linear) — sampling such a texture with LINEAR makes it
+// incomplete and every read returns 0 (the sim silently produces nothing).
+// So choose NEAREST when linear filtering isn't supported for the chosen type.
 function pickFloatType(gl) {
   const half = gl.getExtension('OES_texture_half_float')
-  gl.getExtension('OES_texture_half_float_linear')
+  const halfLinear = gl.getExtension('OES_texture_half_float_linear')
   gl.getExtension('EXT_color_buffer_half_float')
   const flt = gl.getExtension('OES_texture_float')
-  gl.getExtension('OES_texture_float_linear')
+  const floatLinear = gl.getExtension('OES_texture_float_linear')
   gl.getExtension('WEBGL_color_buffer_float')
   const candidates = []
-  if (half) candidates.push(half.HALF_FLOAT_OES)
-  if (flt) candidates.push(gl.FLOAT)
-  for (const type of candidates) {
-    const tex = makeTex(gl, 4, type)
+  if (half) candidates.push({ type: half.HALF_FLOAT_OES, linear: !!halfLinear })
+  if (flt) candidates.push({ type: gl.FLOAT, linear: !!floatLinear })
+  for (const c of candidates) {
+    const filter = c.linear ? gl.LINEAR : gl.NEAREST
+    const tex = makeTex(gl, 4, c.type, filter)
     const fbo = makeFbo(gl, tex)
     const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE
     gl.deleteFramebuffer(fbo); gl.deleteTexture(tex)
-    if (ok) return type
+    if (ok) return { type: c.type, filter }
   }
   return null
 }
@@ -80,8 +86,10 @@ const NOOP = { supported: false, step() {}, get velocityTexture() { return null 
 
 export function createFluidSim(gl, res) {
   if (!gl) return NOOP
-  const type = pickFloatType(gl)
-  if (!type) return NOOP
+  const picked = pickFloatType(gl)
+  if (!picked) return NOOP
+  const { type, filter } = picked
+  const linearFiltering = filter === gl.LINEAR
 
   let progs
   try {
@@ -99,9 +107,9 @@ export function createFluidSim(gl, res) {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
 
   let R = res
-  let velocity = makeDouble(gl, R, type)
-  let divergence = makeTarget(gl, R, type)
-  let pressure = makeDouble(gl, R, type)
+  let velocity = makeDouble(gl, R, type, filter)
+  let divergence = makeTarget(gl, R, type, filter)
+  let pressure = makeDouble(gl, R, type, filter)
   let texel = [1 / R, 1 / R]
 
   // Float textures allocated with null data have undefined initial contents;
@@ -145,14 +153,15 @@ export function createFluidSim(gl, res) {
 
   return {
     supported: true,
+    linearFiltering,   // diagnostic: false → using NEAREST fallback
     get velocityTexture() { return velocity.read.tex },
     resize(newRes) {
       if (newRes === R) return
       this.dispose(true)
       R = newRes
-      velocity = makeDouble(gl, R, type)
-      divergence = makeTarget(gl, R, type)
-      pressure = makeDouble(gl, R, type)
+      velocity = makeDouble(gl, R, type, filter)
+      divergence = makeTarget(gl, R, type, filter)
+      pressure = makeDouble(gl, R, type, filter)
       texel = [1 / R, 1 / R]
       clearTargets()
     },
