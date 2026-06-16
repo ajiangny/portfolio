@@ -268,10 +268,10 @@ export default function About() {
       : { left: vw * 0.63, top: (vh - finalH) / 2, w: finalW, h: finalH }
 
     let cur
-    if (v < 0.37)      cur = lerpRect(start, center, ease(Math.max(0, (v - 0.31) / 0.06)))
+    if (v < 0.37) cur = lerpRect(start, center, ease(Math.max(0, (v - 0.31) / 0.06)))
     else if (v < 0.45) cur = center
     else if (v < 0.52) cur = lerpRect(center, final, ease((v - 0.45) / 0.07))
-    else               cur = final
+    else cur = final
 
     aboutOpacity.set(1)
     aboutLeft.set(cur.left)
@@ -291,18 +291,6 @@ export default function About() {
       className="relative"
       style={{ height: '700vh', backgroundColor: 'transparent' }}
     >
-      {/* ── Top Boundary Gradient ───────────────────────────────────────── */}
-      {/* Fades out the film columns and dots so they don't hit the Hero   */}
-      {/* boundary abruptly. Since it's absolute (not sticky), it scrolls  */}
-      {/* naturally out of the viewport along with the Hero section.       */}
-      <div
-        className="absolute top-0 left-0 right-0 pointer-events-none"
-        style={{
-          height: '25vh',
-          background: 'linear-gradient(to bottom, var(--color-cobalt) 0%, transparent 100%)',
-          zIndex: 20,
-        }}
-      />
 
       <DuotoneDefs />
 

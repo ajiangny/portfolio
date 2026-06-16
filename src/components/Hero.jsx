@@ -197,16 +197,6 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* Gradient fade cream → cobalt at section boundary — no gap */}
-      <div
-        aria-hidden="true"
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{
-          height: '140px',
-          background: 'linear-gradient(to bottom, transparent 0%, var(--color-cobalt) 100%)',
-        }}
-      />
-
     </section>
   )
 }
