@@ -23,6 +23,7 @@ import ElasticHeading from './hero/ElasticHeading'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
 import { HERO_REST, HERO_HOVER, applyHeroTheme, clearHeroTheme } from './hero/heroThemes'
+import { setHoverSection } from './gradient/hoverSignal'
 
 const rgbStr = (triple) => `rgb(${triple})`
 
@@ -72,6 +73,12 @@ export default function Hero() {
   // the bubbles recolor via Framer props (see below).
   useEffect(() => { applyHeroTheme(theme) }, [theme])
   useEffect(() => clearHeroTheme, [])
+
+  // Preview the hovered nav blob's section palette in the background gradient.
+  // sectionIdx is the SECTIONS index (1..4) or -1; the gradient gates it to
+  // Hero being centred. Reset to -1 on unmount so it can't linger.
+  useEffect(() => { setHoverSection(sectionIdx) }, [sectionIdx])
+  useEffect(() => () => setHoverSection(-1), [])
 
   // Heading: scale up + rise + fade
   const headingScale = useTransform(scrollYProgress, [0, 0.55], [1, 1.18])
