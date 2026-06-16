@@ -110,6 +110,10 @@ void main() {
   vec3 ink = texture2D(uDye, uv).rgb * uSimEnabled;
   col += ink * uDyeIntensity;
 
+  // === TEMP DEBUG: visualize raw dye field (revert) ===
+  gl_FragColor = vec4(texture2D(uDye, uv).rgb * 4.0, 1.0); return;
+  // === END TEMP DEBUG ===
+
   // seam — bright band sweeping top->bottom while 0<uSeam<1
   float seamActive = step(0.001, uSeam) * step(uSeam, 0.999);
   float band = smoothstep(0.07, 0.0, abs(uv.y - (1.0 - uSeam)));

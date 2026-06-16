@@ -135,11 +135,17 @@ export function createFluidSim(gl, res) {
   }
   clearTargets()
 
-  const locs = new Map()
+  // Uniform-location cache keyed by program IDENTITY then name. (A plain
+  // `p + '|' + name` key stringifies every WebGLProgram to "[object
+  // WebGLProgram]", collapsing all programs onto one key — so each program but
+  // the first got another program's location and WebGL rejected the upload,
+  // silently leaving uTexel at 0 and killing advection/pressure/vorticity.)
+  const locs = new Map() // program -> (name -> WebGLUniformLocation)
   function u(p, name) {
-    const k = p + '|' + name
-    if (!locs.has(k)) locs.set(k, gl.getUniformLocation(p, name))
-    return locs.get(k)
+    let m = locs.get(p)
+    if (!m) { m = new Map(); locs.set(p, m) }
+    if (!m.has(name)) m.set(name, gl.getUniformLocation(p, name))
+    return m.get(name)
   }
   function bindQuad(p) {
     const a = gl.getAttribLocation(p, 'aPos')

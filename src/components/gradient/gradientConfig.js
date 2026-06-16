@@ -43,15 +43,15 @@ export const SIM = {
   JACOBI_DESKTOP: 20,     // pressure-solve iterations
   JACOBI_MOBILE: 14,
   DT: 1.0,                // advection step (folded with FORCE/dissipation)
-  VEL_DISSIPATION: 0.985, // velocity decay per frame
-  DYE_DISSIPATION: 0.94,  // ink-trail fade per frame (lower = shorter trail)
-  CURL: 24.0,             // vorticity-confinement strength (swirliness)
+  VEL_DISSIPATION: 0.982, // velocity decay per frame (too close to 1 lets grid noise accumulate)
+  DYE_DISSIPATION: 0.985, // ink fade per frame (higher = ink accumulates into a continuous visible trail)
+  CURL: 12.0,             // vorticity-confinement strength; high values inject grid-scale speckle
   SPLAT_RADIUS: 0.0035,   // gaussian denominator (smaller = tighter splat)
   FORCE: 1.4,             // pointer-velocity → injected velocity
   FORCE_CLAMP: 0.06,      // max |pointer delta| (uv/frame) contributing to force
-  DISP_SCALE: 0.10,       // velocity → display warp displacement (shader clamps ±0.35)
-  DYE_INTENSITY: 0.6,     // dye → display brightness (additive over the field)
-  SETTLE_MS: 1600,        // keep stepping this long after motion stops (trail settles)
+  DISP_SCALE: 0.03,       // velocity → display warp; low so velocity noise can't speckle the gradient
+  DYE_INTENSITY: 1.1,     // dye → display brightness (additive); advection spreads ink, so it needs punch
+  SETTLE_MS: 2600,        // keep stepping this long after motion stops (wake swirls out before freeze)
   SETTLE_EPS: 0.0006,     // residual speed below which the sim idles (mobile)
 }
 
