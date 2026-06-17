@@ -7,6 +7,9 @@
  *
  * Optional `waveEffect` adds a looping vertical wave animation where
  * letters bob up in sequence (used in the About heading).
+ *
+ * Optional `letterStyle` applies a per-glyph style object to every letter
+ * (used by the Hero wordmark's liquid-glass fill).
  */
 import { useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion'
@@ -66,6 +69,7 @@ function ElasticLetter({ char, index, mouseX, mouseY, waveEffect, letterStyle })
 
   const finalY = useTransform([y, waveY], ([yv, wv]) => yv + wv)
 
+  // letterStyle must not include x/y/display/whiteSpace — those are owned by ElasticLetter
   return (
     <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre', ...letterStyle }}>
       {char}
