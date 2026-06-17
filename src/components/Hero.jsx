@@ -46,8 +46,14 @@ const WORDMARK_GLASS = {
   WebkitBackgroundClip: 'text',
   backgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
-  // Fallback fill where background-clip:text is unsupported.
-  color: 'color-mix(in srgb, var(--hero-wordmark) 40%, transparent)',
+  // Fallback fill where background-clip:text is unsupported — full opacity for
+  // legibility, since it only shows when the gradient clip is unavailable.
+  color: 'var(--hero-wordmark)',
+  // Smooth the nav-hover recolour. Declared HERE, on the letter spans that
+  // actually consume --hero-wordmark (not just the wrapper), so the transition
+  // fires on the elements whose computed value changes. The @property
+  // registration in index.css makes this colour animate.
+  transition: '--hero-wordmark 0.35s ease',
 }
 
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
@@ -189,9 +195,6 @@ export default function Hero() {
                     'url(#hero-liquid-glass)' +
                     ' drop-shadow(0 1px 0 rgba(255,255,255,0.55))' +
                     ' drop-shadow(0 8px 18px rgba(8,12,40,0.5))',
-                  // Smooth the nav-hover recolour of the glass fill (the
-                  // --hero-wordmark @property in index.css makes this animate).
-                  transition: '--hero-wordmark 0.35s ease',
                 }}
               />
             </motion.div>

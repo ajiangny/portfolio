@@ -14,7 +14,7 @@
 // Subtle warp.
 const BASE_FREQ = '0.010 0.015'                          // fractal-noise frequency (x y)
 const DISPLACE = 7                                       // px of refraction displacement
-const DRIFT = '0.010 0.015;0.013 0.010;0.010 0.015'     // animated baseFrequency keyframes
+const DRIFT = '0.010 0.015;0.013 0.010;0.010 0.015'     // baseFrequency keyframes (palindrome: end == start so the loop wraps seamlessly)
 const DRIFT_DUR = '18s'
 const SEED = 7
 
