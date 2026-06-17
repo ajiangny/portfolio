@@ -25,3 +25,14 @@ dist-ssr
 
 # Audit screenshots
 scripts/shots/
+
+# Agent
+.claude/
+.agent/
+
+# Brainstorming visual-companion mockups
+.superpowers/
+
+# Documentation
+docs/superpowers/
+docs/ARCHITECTURE.md

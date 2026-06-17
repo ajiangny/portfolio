@@ -3,32 +3,22 @@
  *
  * The final section of the portfolio. Features:
  *   • "Let's Talk" heading with elastic letter repulsion
- *   • Contact form (name, email, message) with a simulated submit
- *   • Social links (GitHub, LinkedIn, X)
+ *   • Contact form (name, email, message) — no backend; submit opens the
+ *     visitor's email client via a prefilled mailto: link
+ *   • Social links (GitHub, LinkedIn)
  *   • Staggered entrance animations via Framer Motion variants
- *   • GalleryHalftone background (fixed position, shared grid with Gallery)
+ *   • Background-transparent — the site-wide fluid gradient (dark) shows through
  *   • SectionNav floating navigation bar
  */
 import { useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
+import { SECTIONS, goToSection } from '../config/sections'
 import ElasticHeading from './hero/ElasticHeading'
 import SectionNav from './SectionNav'
-import GalleryHalftone from './gallery/GalleryHalftone'
-
-// Footer navigation — mirrors SectionNav's targets and scroll offsets
-const FOOTER_LINKS = [
-  { id: 'hero',     label: 'Home' },
-  { id: 'about',    label: 'About' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'gallery',  label: 'Gallery' },
-  { id: 'contact',  label: 'Contact' },
-]
-
 
 const CONTACT_EMAIL = 'andrewjiang74@gmail.com'
 
-// TODO: replace LinkedIn/X hrefs with real profile URLs
 const socials = [
   {
     label: 'GitHub',
@@ -74,13 +64,8 @@ export default function Contact() {
 
   const sectionRef = useRef(null)
 
-  const footerNavigate = (id, e) => {
-    if (id === 'about')         transitionNavigate('#about', { offset: window.innerHeight * 3.6 }, e, 'rgb(27, 58, 140)')
-    else if (id === 'projects') transitionNavigate('#projects', { offset: window.innerHeight }, e, 'rgb(245, 240, 232)')
-    else if (id === 'contact')  transitionNavigate('#contact', {}, e, 'rgb(245, 240, 232)')
-    else if (id === 'gallery')  transitionNavigate('#gallery', {}, e, 'rgb(0, 0, 0)')
-    else                        transitionNavigate('#hero', {}, e, 'rgb(27, 58, 140)')
-  }
+  // Curtain colour + landing offset come from config/sections.js
+  const footerNavigate = (id, e) => goToSection(transitionNavigate, id, e)
 
   // Drive SectionNav entry — same pattern as Projects
   const { scrollYProgress } = useScroll({
@@ -89,15 +74,6 @@ export default function Contact() {
   })
   const labelY = useTransform(scrollYProgress, [0, 1], [60, 0])
   const labelOpacity = useTransform(scrollYProgress, [0, 1], [0, 1])
-
-  // Halftone: fixed layer, only visible when Contact is in the viewport
-  // Starts fading in as Contact's top enters the bottom of the viewport,
-  // and fades out as Contact's bottom leaves the top.
-  const { scrollYProgress: halftoneProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'end start'],
-  })
-  const halftoneOpacity = useTransform(halftoneProgress, [0, 0.04, 0.96, 1], [0, 1, 1, 0])
 
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -116,23 +92,8 @@ export default function Contact() {
     <div
       id="contact"
       ref={sectionRef}
-      className="relative overflow-hidden" style={{ backgroundColor: '#000' }}
+      className="relative overflow-hidden" style={{ backgroundColor: 'transparent' }}
     >
-      {/* Halftone: position:fixed so it shares the same coordinate space
-          as Gallery's fixed halftone — grid is perfectly continuous.
-          Opacity gates it to only when Contact is in the viewport. */}
-      <motion.div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 1,
-          pointerEvents: 'none',
-          opacity: halftoneOpacity,
-        }}
-      >
-        <GalleryHalftone />
-      </motion.div>
-
       {/* SectionNav — absolute, fully isolated, guaranteed on top */}
       <div
         className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-auto"
@@ -162,7 +123,7 @@ export default function Contact() {
             text="Let's Talk."
             as="h2"
             className="font-display text-cream leading-[0.9]"
-            style={{ fontSize: 'clamp(48px, 7vw, 96px)' }}
+            style={{ fontSize: 'var(--text-section)' }}
           />
         </motion.div>
 
@@ -176,7 +137,7 @@ export default function Contact() {
           {/* Tagline */}
           <motion.p
             variants={itemVariants}
-            className="font-mono text-cream/60 text-sm leading-[1.9] text-center mb-8 pointer-events-none"
+            className="font-mono text-cream/60 text-body text-center mb-8 pointer-events-none"
           >
             Have a project in mind, want to collaborate, or just say hi?<br />
             I'd love to hear from you.
@@ -186,6 +147,8 @@ export default function Contact() {
           <motion.div variants={itemVariants} className="pointer-events-auto">
             {status === 'sent' ? (
               <motion.div
+                role="status"
+                aria-live="polite"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-14 border border-white/10 bg-white/5 rounded-2xl shadow-sm"
@@ -195,7 +158,7 @@ export default function Contact() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="font-display text-2xl text-cream mb-2">Almost there!</p>
+                <p className="font-display text-title text-cream mb-2">Almost there!</p>
                 <p className="font-mono text-cream/70 text-xs mb-6 px-6">
                   Your email app should have opened with your message ready to send.<br />
                   If it didn't, email me directly at{' '}
@@ -212,13 +175,14 @@ export default function Contact() {
               <form onSubmit={submit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label htmlFor="contact-name" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
+                    <label htmlFor="contact-name" className="font-sans text-cream/70 text-label uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                       Name
                     </label>
                     <input
                       id="contact-name"
                       name="name"
                       type="text"
+                      autoComplete="name"
                       required
                       placeholder="Jane Doe"
                       value={form.name}
@@ -227,13 +191,15 @@ export default function Contact() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="contact-email" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
+                    <label htmlFor="contact-email" className="font-sans text-cream/70 text-label uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                       Email
                     </label>
                     <input
                       id="contact-email"
                       name="email"
                       type="email"
+                      autoComplete="email"
+                      inputMode="email"
                       required
                       placeholder="jane@example.com"
                       value={form.email}
@@ -244,7 +210,7 @@ export default function Contact() {
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="font-sans text-cream/70 text-[10px] uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
+                  <label htmlFor="contact-message" className="font-sans text-cream/70 text-label uppercase tracking-[0.2em] block mb-2 font-bold ml-1">
                     Message
                   </label>
                   <textarea
@@ -276,7 +242,7 @@ export default function Contact() {
           <motion.div variants={itemVariants} className="mt-10 pointer-events-none">
             <div className="flex items-center gap-6 justify-center mb-6">
               <div className="flex-1 h-px bg-cream/10" />
-              <span className="font-mono text-cream/40 text-[10px] tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
+              <span className="font-mono text-cream/40 text-meta tracking-[0.2em] uppercase whitespace-nowrap">or find me on</span>
               <div className="flex-1 h-px bg-cream/10" />
             </div>
             <div className="flex justify-center gap-5 pointer-events-auto">
@@ -287,7 +253,7 @@ export default function Contact() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="w-10 h-10 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-cream/70 hover:text-cobalt hover:bg-white/90 hover:border-white/90 transition-all duration-300 hover:-translate-y-1"
+                  className="w-11 h-11 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-cream/70 hover:text-cobalt hover:bg-white/90 hover:border-white/90 transition-all duration-300 hover:-translate-y-1"
                 >
                   {icon}
                 </a>
@@ -304,20 +270,20 @@ export default function Contact() {
         style={{ zIndex: 2 }}
       >
         <div className="max-w-3xl mx-auto flex flex-col items-center gap-7">
-          <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-7 gap-y-3">
-            {FOOTER_LINKS.map(({ id, label }) => (
+          <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-3 gap-y-1">
+            {SECTIONS.map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
                 onClick={(e) => footerNavigate(id, e)}
-                className="font-sans font-bold text-[11px] tracking-[0.22em] uppercase text-cream/45 hover:text-cream transition-colors duration-300 cursor-pointer"
+                className="font-sans font-bold text-label tracking-[0.22em] uppercase text-cream/45 hover:text-cream transition-colors duration-300 cursor-pointer inline-flex items-center min-h-[44px] px-2"
               >
                 {label}
               </button>
             ))}
           </nav>
 
-          <p className="text-center font-mono text-cream/25 text-[10px] tracking-[0.3em] uppercase">
+          <p className="text-center font-mono text-cream/25 text-meta tracking-[0.3em] uppercase">
             Andrew Jiang {new Date().getFullYear()} Portfolio
           </p>
         </div>

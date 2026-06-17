@@ -3,26 +3,29 @@
  *
  * Tracks how far the user has scrolled through a specific section,
  * returning a MotionValue that ranges from 0 (section top at viewport top)
- * to 1 (section fully scrolled past).
+ * to 1 (the section's sticky viewport unpins).
  *
  * Used by Projects and Gallery to drive scroll-linked animations
- * (card transforms, halftone waves, entry/exit sequences).
+ * (card transforms, gradient signals, entry/exit sequences).
  *
  * @param {React.RefObject} containerRef - Ref to the tall scrolling wrapper (e.g. 400vh div).
- * @param {number} activeHeight - Total scroll distance (px) over which progress goes 0→1.
+ * @param {number} [activeVh] - Scroll travel in viewport-heights over which progress
+ *   runs 0→1. For a sticky top-0 h-screen child this is (container height − 100vh),
+ *   e.g. 3 for a 400vh container. Re-read on every tick so orientation changes and
+ *   mobile URL-bar resizes stay accurate. Omit to derive from the container's height.
  * @returns {import('framer-motion').MotionValue<number>} progress — clamped to [0, 1].
  */
 import { useEffect } from 'react'
 import { useMotionValue } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 
-export default function useScrollTimeline(containerRef, activeHeight) {
+export default function useScrollTimeline(containerRef, activeVh) {
   const lenisRef = useLenisContext()
   const progress = useMotionValue(0)
 
   useEffect(() => {
     let unlisten = () => {}
-    
+
     // Slight timeout to ensure layout has settled before calculating offsets
     const t = setTimeout(() => {
       const lenis = lenisRef?.current
@@ -31,26 +34,32 @@ export default function useScrollTimeline(containerRef, activeHeight) {
       const calc = (scroll) => {
         const el = containerRef.current
         if (!el) return
-        
-        // Use the provided activeHeight, or fallback to element height minus one viewport
-        const height = activeHeight || Math.max(1, el.clientHeight - window.innerHeight)
-        
+
+        const height = activeVh
+          ? activeVh * window.innerHeight
+          : Math.max(1, el.clientHeight - window.innerHeight)
+
         const raw = (scroll - el.offsetTop) / height
         progress.set(Math.max(0, Math.min(1, raw)))
       }
 
       const onScroll = ({ scroll }) => calc(scroll)
+      const onResize = () => calc(lenis.scroll ?? window.scrollY)
       calc(lenis.scroll ?? window.scrollY)
-      
+
       lenis.on('scroll', onScroll)
-      unlisten = () => lenis.off('scroll', onScroll)
+      window.addEventListener('resize', onResize)
+      unlisten = () => {
+        lenis.off('scroll', onScroll)
+        window.removeEventListener('resize', onResize)
+      }
     }, 0)
 
-    return () => { 
+    return () => {
       clearTimeout(t)
-      unlisten() 
+      unlisten()
     }
-  }, [lenisRef, progress, activeHeight, containerRef])
+  }, [lenisRef, progress, activeVh, containerRef])
 
   return progress
 }
