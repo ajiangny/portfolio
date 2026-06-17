@@ -6,7 +6,7 @@ import { WebGLRenderer, LinearFilter, Vector3 } from 'three'
 import { Simulation } from './Simulation'
 import { ShaderPass } from './ShaderPass'
 import { VERT, COMPOSITE } from './shaders'
-import { SIM } from '../gradientConfig'
+import { SIM, GRADIENT } from '../gradientConfig'
 
 export class FluidScene {
   constructor(canvas) {
@@ -39,6 +39,8 @@ export class FluidScene {
         uDyeIntensity: { value: SIM.DYE_INTENSITY },
         uDyeMax: { value: SIM.DYE_MAX },
         uRefraction: { value: SIM.REFRACTION },
+        uTime: { value: 0 },
+        uGrain: { value: GRADIENT.GRAIN },
       },
     })
     this.supported = true
@@ -69,10 +71,12 @@ export class FluidScene {
     if (!this.supported) return
     this.sim.step({ pointer, ambient, time, iters })
     this._applyPalette(palette)
+    this.composite.uniforms.uTime.value = time // re-seeds the grain each frame
     this.composite.render(null)
   }
 
   // Reduced-motion: one static frame, no sim step (dye is empty → base only).
+  // uTime stays 0 → a single, non-shimmering grain pattern.
   renderStatic(palette) {
     if (!this.supported) return
     this._applyPalette(palette)

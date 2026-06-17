@@ -20,7 +20,7 @@
  *   gradient as it crossfades cobalt→cream into the Projects section.
  */
 import { useRef, useEffect } from 'react'
-import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring, useMotionTemplate } from 'framer-motion'
+import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { LEFT_COL, CENTER_COL, CENTER_PROFILE_INDEX, RIGHT_COL } from '../data/aboutData'
@@ -28,7 +28,9 @@ import ArtColumn from './about/ArtColumn'
 import AboutTextPanel from './about/AboutTextPanel'
 import SectionNav from './SectionNav'
 
-// ─── SVG Gradient Map (duotone) ───────────────────────────────────────────────
+// ─── SVG Gradient Map (neutral grayscale duotone) ─────────────────────────────
+// Endpoints are equal across R/G/B, so this is a neutral grayscale map (no
+// colour cast) with the shadows lifted and highlights held — a soft mono look.
 function DuotoneDefs() {
   return (
     <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }}>
@@ -36,9 +38,9 @@ function DuotoneDefs() {
         <filter id="duotone-art" colorInterpolationFilters="sRGB">
           <feColorMatrix type="saturate" values="0" result="gray" />
           <feComponentTransfer colorInterpolationFilters="sRGB">
-            <feFuncR type="table" tableValues="0.145 0.961" />
-            <feFuncG type="table" tableValues="0.310 0.941" />
-            <feFuncB type="table" tableValues="0.757 0.910" />
+            <feFuncR type="table" tableValues="0.15 0.96" />
+            <feFuncG type="table" tableValues="0.15 0.96" />
+            <feFuncB type="table" tableValues="0.15 0.96" />
           </feComponentTransfer>
         </filter>
       </defs>
@@ -178,7 +180,7 @@ export default function About() {
   const profileExit = useTransform(progress, [0.31, 0.37], [0, 1])
 
   const profileColorOpacity = useTransform(progress, [0.255, 0.3075], [0, 1])
-  const profileDotsOpacity = useTransform(progress, [0.255, 0.3075], [1, 0])
+  const profileGlassOpacity = useTransform(progress, [0.255, 0.3075], [1, 0])
   // The expanding overlay takes over at 0.31 — hide the filmstrip's own
   // profile card right then so the two never double up.
   const profileCardHide = useTransform(progress, [0.31, 0.318], [1, 0])
@@ -188,10 +190,19 @@ export default function About() {
   const labelY = useTransform(progress, [0.505, 0.545], ['-50px', '0px'])
   const labelO = useTransform(progress, [0.505, 0.525], [0, 1])
 
-  // Gradient fade out from bottom to top
-  const fadeStop1 = useTransform(progress, [0.85, 1.0], [-100, 100])
-  const fadeStop2 = useTransform(progress, [0.85, 1.0], [0, 200])
-  const maskImage = useMotionTemplate`linear-gradient(to top, transparent ${fadeStop1}%, black ${fadeStop2}%)`
+  // Gradient fade out from bottom to top. The fade only runs 0.85→1.0; below
+  // that the mask is fully opaque (a no-op). We return 'none' there instead of
+  // an opaque mask so the wrapper stops being a CSS "backdrop root" during the
+  // filmstrip — otherwise it walls the cards off from the fixed gradient canvas
+  // and their liquid-glass backdrop-filter has nothing to sample. The 0.8/0.85
+  // handoff is seamless: both states are fully visible (no fade) at that point.
+  const maskImage = useTransform(progress, (p) => {
+    if (p < 0.8) return 'none'
+    const t = Math.min(1, Math.max(0, (p - 0.85) / 0.15))
+    const stop1 = -100 + t * 200 // 0.85→1.0 : -100% → 100%
+    const stop2 = t * 200        // 0.85→1.0 :    0% → 200%
+    return `linear-gradient(to top, transparent ${stop1}%, black ${stop2}%)`
+  })
 
   // ── Drive the profile expansion from the card's actual DOM rect ──────────
   useMotionValueEvent(progress, 'change', (v) => {
@@ -337,7 +348,7 @@ export default function About() {
                 clearLast
                 scale={framesScale}
                 profileColorOpacity={profileColorOpacity}
-                profileDotsOpacity={profileDotsOpacity}
+                profileGlassOpacity={profileGlassOpacity}
                 profileCardRef={profileCardRef}
                 profileHideOpacity={profileCardHide}
                 profileIndex={CENTER_PROFILE_INDEX}

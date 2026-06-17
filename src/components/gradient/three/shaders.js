@@ -97,7 +97,8 @@ void main() {
 
 // Final picture: a vertical base gradient (base0 top -> base1 bottom) mixed
 // toward the ink accent by the (clamped) dye density. Velocity adds a subtle
-// refraction wobble. Dye density is carried in the red channel.
+// refraction wobble. Dye density is carried in the red channel. A monochrome
+// film-grain is added last, on top of everything.
 export const COMPOSITE = /* glsl */ `
 precision highp float;
 uniform sampler2D uDye;
@@ -108,7 +109,17 @@ uniform vec3 uInk;
 uniform float uDyeIntensity;
 uniform float uDyeMax;
 uniform float uRefraction;
+uniform float uTime;
+uniform float uGrain;
 varying vec2 vUv;
+
+// Cheap, well-distributed per-pixel hash (no sin-banding on weak GPUs).
+float hash21(vec2 p) {
+  p = fract(p * vec2(123.34, 345.45));
+  p += dot(p, p + 34.345);
+  return fract(p.x * p.y);
+}
+
 void main() {
   vec2 vel = texture2D(uVelocity, vUv).xy;
   // Clamp so a strong swipe can't smear dye in from the edges (vel can be large).
@@ -116,6 +127,14 @@ void main() {
   float density = clamp(texture2D(uDye, uv).x * uDyeIntensity, 0.0, uDyeMax);
   vec3 base = mix(uBase1, uBase0, uv.y);
   vec3 color = mix(base, uInk, density);
+
+  // Film grain: monochrome luminance noise re-seeded each frame so it shimmers
+  // like real grain. gl_FragCoord keeps it ~1px at the framebuffer's native res.
+  if (uGrain > 0.0) {
+    float g = hash21(gl_FragCoord.xy + fract(uTime) * 137.0) - 0.5;
+    color += g * uGrain;
+  }
+
   gl_FragColor = vec4(color, 1.0);
 }
 `

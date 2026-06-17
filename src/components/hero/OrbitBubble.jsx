@@ -115,11 +115,13 @@ export default function OrbitBubble({
           opacity: 1,
           backgroundColor: bubbleFill,
           color: bubbleText,
+          // Liquid glass: a bright inset rim (top-edge highlight) over the
+          // frosted fill, plus the lift drop shadow.
           boxShadow: isHovered
-            ? '0 16px 44px rgba(12, 20, 50, 0.45)'
+            ? 'inset 0 1px 1px rgba(255,255,255,0.65), inset 0 -2px 3px rgba(255,255,255,0.16), 0 16px 44px rgba(12, 20, 50, 0.45)'
             : isShrunk
-            ? '0 2px 10px rgba(12, 20, 50, 0.18)'
-            : '0 4px 18px rgba(12, 20, 50, 0.26)',
+            ? 'inset 0 1px 1px rgba(255,255,255,0.5), 0 2px 10px rgba(12, 20, 50, 0.18)'
+            : 'inset 0 1px 1px rgba(255,255,255,0.6), inset 0 -1px 2px rgba(255,255,255,0.14), 0 4px 18px rgba(12, 20, 50, 0.26)',
         }}
         transition={{ type: 'spring', stiffness: 500, damping: 28 }}
 
@@ -129,6 +131,9 @@ export default function OrbitBubble({
           padding: '0.625rem 1.25rem',
           borderRadius: blobShape,
           overflow: 'visible',
+          // Frost the fluid gradient showing through the translucent fill.
+          backdropFilter: 'blur(8px) saturate(1.6)',
+          WebkitBackdropFilter: 'blur(8px) saturate(1.6)',
         }}
       >
         <motion.span
