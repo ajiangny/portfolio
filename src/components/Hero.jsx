@@ -26,6 +26,10 @@ import { HERO_REST, HERO_HOVER, applyHeroTheme, clearHeroTheme } from './hero/he
 import { setHoverSection } from './gradient/hoverSignal'
 
 const rgbStr = (triple) => `rgb(${triple})`
+// Blobs are frosted glass: the themed fill becomes a low-alpha tint so the
+// backdrop-filter behind it (in OrbitBubble) frosts the gradient through.
+const BUBBLE_GLASS_ALPHA = 0.22
+const rgbaStr = (triple, a) => `rgba(${triple}, ${a})`
 
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
@@ -154,7 +158,16 @@ export default function Hero() {
                 style={{
                   fontSize: 'var(--text-hero)',
                   letterSpacing: '-0.01em',
-                  color: 'var(--hero-wordmark)',
+                  // Glass-look letters: translucent fill lets the gradient show
+                  // through each glyph; the bright top edge + dark drop shadow
+                  // give it a beveled-glass read. (No backdrop blur — CSS can't
+                  // frost per-glyph; this is the look, not a true frost.)
+                  color: 'rgba(var(--hero-wordmark-rgb), 0.58)',
+                  textShadow: [
+                    '0 1px 0 rgba(255,255,255,0.45)',   // bright top bevel
+                    '0 -1px 1px rgba(255,255,255,0.22)',
+                    '0 6px 18px rgba(10,15,40,0.38)',   // soft cast shadow
+                  ].join(', '),
                   transition: 'color 0.35s ease',
                 }}
               />
@@ -174,7 +187,7 @@ export default function Hero() {
             hoveredIdx={hovIdx}
             onHoverChange={setHovIdx}
             blobShape={BLOB_SHAPES[i]}
-            bubbleFill={rgbStr(theme.bubbleFill)}
+            bubbleFill={rgbaStr(theme.bubbleFill, BUBBLE_GLASS_ALPHA)}
             bubbleText={rgbStr(theme.bubbleText)}
             smoothMouseX={smoothMouseX}
             smoothMouseY={smoothMouseY}

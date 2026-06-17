@@ -10,8 +10,8 @@
 import { rgb } from './colors.js'
 
 export const SECTION_PALETTES = {
-  hero: { base: [rgb(43, 82, 180), rgb(18, 42, 107)], ink: rgb(190, 224, 255) },
-  about: { base: [rgb(99, 66, 196), rgb(38, 22, 86)], ink: rgb(222, 200, 255) }, // indigo-violet — distinct from Hero's cobalt, still dark for cream text
+  hero: { base: [rgb(20, 136, 204), rgb(43, 82, 180)], ink: rgb(190, 224, 255) },
+  about: { base: [rgb(70, 112, 178), rgb(70, 83, 89)], ink: rgb(188, 203, 220) },
   projects: { base: [rgb(250, 248, 244), rgb(234, 228, 217)], ink: rgb(43, 82, 180) },
   gallery: { base: [rgb(20, 30, 64), rgb(0, 0, 0)], ink: rgb(90, 130, 235) },
   contact: { base: [rgb(40, 40, 46), rgb(0, 0, 0)], ink: rgb(240, 228, 205) },
@@ -26,7 +26,7 @@ export const SIM = {
   DT: 0.6,                 // advection step — lower = slower, calmer overall flow
   VEL_DISSIPATION: 0.985,
   DYE_DISSIPATION: 0.975,
-  SPLAT_RADIUS: 0.00045,
+  SPLAT_RADIUS: 0.000075,
   AMBIENT_RADIUS: 0.005,   // soft + broad so the drift points blend, not 3 blobs
   CURSOR_FORCE: 3400,
   AMBIENT_FORCE: 2,      // gentle stir, not energetic churn
@@ -42,4 +42,5 @@ export const GRADIENT = {
   SEAM_FADE: 0.85,
   MOBILE_SCALE: 0.5,
   FRAME_MS_MOBILE: 10,
+  GRAIN: 0.06,   // film-grain intensity added in the composite (0 = off)
 }

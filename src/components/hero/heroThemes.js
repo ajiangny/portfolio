@@ -12,8 +12,11 @@
 const CREAM = '245, 240, 232'
 const COBALT = '27, 58, 140'
 const NEAR_BLACK = '10, 10, 14'
+const WHITE = '255, 255, 255'
 
-export const HERO_REST = { wordmark: CREAM, bubbleFill: CREAM, bubbleText: COBALT, name: CREAM }
+// At rest the blobs are frosted glass over the cobalt field, so the label is
+// white (was cobalt). Hover-preview states keep their per-section text colours.
+export const HERO_REST = { wordmark: CREAM, bubbleFill: CREAM, bubbleText: WHITE, name: CREAM }
 
 export const HERO_HOVER = {
   1: { wordmark: CREAM,  bubbleFill: CREAM,  bubbleText: COBALT,     name: CREAM },  // About — dark field
@@ -26,6 +29,9 @@ export const HERO_HOVER = {
 export function applyHeroTheme(theme) {
   const el = document.documentElement
   el.style.setProperty('--hero-wordmark', `rgb(${theme.wordmark})`)
+  // Triple form too, so the glass-look heading can compose a translucent fill
+  // (rgba(var(--hero-wordmark-rgb), a)) the way the name tag does.
+  el.style.setProperty('--hero-wordmark-rgb', theme.wordmark)
   el.style.setProperty('--hero-bubble-fill', `rgb(${theme.bubbleFill})`)
   el.style.setProperty('--hero-bubble-text', `rgb(${theme.bubbleText})`)
   el.style.setProperty('--hero-name-rgb', theme.name)
@@ -33,6 +39,6 @@ export function applyHeroTheme(theme) {
 
 export function clearHeroTheme() {
   const el = document.documentElement
-  for (const v of ['--hero-wordmark', '--hero-bubble-fill', '--hero-bubble-text', '--hero-name-rgb'])
+  for (const v of ['--hero-wordmark', '--hero-wordmark-rgb', '--hero-bubble-fill', '--hero-bubble-text', '--hero-name-rgb'])
     el.style.removeProperty(v)
 }
