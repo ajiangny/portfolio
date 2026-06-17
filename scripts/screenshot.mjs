@@ -1,14 +1,19 @@
 /**
  * screenshot.mjs — capture the portfolio at multiple scroll positions
- * and viewport sizes for a UI/UX audit. Run: node scripts/screenshot.mjs
+ * and viewport sizes for a UI/UX audit.
+ *
+ * Run (dev server must be up):  node scripts/screenshot.mjs [setName] [url]
+ * Shots land in scripts/shots/<setName>/ (default "current") so a
+ * "baseline" set can be captured before a change and diffed after.
  */
 import puppeteer from 'puppeteer'
 import fs from 'fs'
 
-const OUT = 'scripts/shots'
+const setName = process.argv[2] || 'current'
+const OUT = `scripts/shots/${setName}`
 fs.mkdirSync(OUT, { recursive: true })
 
-const URL = 'http://localhost:5173/'
+const URL = process.argv[3] || 'http://localhost:5173/'
 
 // scroll positions expressed in viewport-heights
 const STOPS = [
@@ -32,10 +37,16 @@ const STOPS = [
 
 const VIEWPORTS = [
   ['desktop', { width: 1440, height: 900 }],
+  ['tablet', { width: 768, height: 1024 }],
   ['mobile', { width: 390, height: 844, isMobile: true, hasTouch: true }],
 ]
 
-const browser = await puppeteer.launch()
+// Force software WebGL (ANGLE/SwiftShader) so the WebGL gradient background
+// renders in headless capture — default headless Chrome has no GPU/WebGL and
+// would show only the cream fallback.
+const browser = await puppeteer.launch({
+  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+})
 for (const [vpName, vp] of VIEWPORTS) {
   const page = await browser.newPage()
   await page.setViewport(vp)

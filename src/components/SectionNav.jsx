@@ -24,26 +24,11 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTransitionContext } from '../context/TransitionContext';
+import { SECTIONS, goToSection } from '../config/sections';
 import useMediaQuery from '../hooks/useMediaQuery';
 
-const SECTIONS = [
-  { id: 'hero',    label: 'Home',     shape: '68% 32% 55% 45% / 48% 56% 44% 52%' },
-  { id: 'about',   label: 'About',    shape: '44% 56% 65% 35% / 56% 44% 58% 42%' },
-  { id: 'projects',label: 'Projects', shape: '58% 42% 38% 62% / 42% 62% 54% 46%' },
-  { id: 'gallery', label: 'Gallery',  shape: '34% 66% 46% 54% / 62% 38% 52% 48%' },
-  { id: 'contact', label: 'Contact',  shape: '54% 46% 58% 42% / 50% 52% 48% 50%' },
-];
-
-const HOVER_COLORS = [
-  { id: 'hero',     rgb: [27,  58, 140] }, // default cobalt — matches Hero's resting palette
-  { id: 'about',    rgb: [37,  79, 193] },
-  { id: 'projects', rgb: [245,240, 232] },
-  { id: 'gallery',  rgb: [0,    0,   0] },
-  { id: 'contact',  rgb: [245,240, 232] },
-];
-
 const ITEM_GAP = 105;   // desktop horizontal spacing
-const ROW_GAP = 50;     // mobile vertical spacing
+const ROW_GAP = 56;     // mobile vertical spacing (≥8px between 46px blobs)
 
 export default function SectionNav({ currentSection, style = {}, defaultTextColor = 'rgba(28,28,28,0.4)' }) {
   const { navigate: transitionNavigate } = useTransitionContext();
@@ -110,18 +95,8 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
   const handleNavigate = (id, e) => {
     e.stopPropagation();
     closeNav();
-    const colorObj = HOVER_COLORS.find(c => c.id === id);
-    let colorStr = 'var(--color-cobalt, #1B3A8C)';
-    if (colorObj) colorStr = `rgb(${colorObj.rgb.join(', ')})`;
-
-    // Offsets land each section at its fully-revealed state:
-    //   about   +3.6×vh → progress 0.6, text panel settled
-    //   contact +0      → section top; content fits one viewport exactly
-    //            (an offset would clamp at max scroll and cut the heading)
-    if (id === 'hero')         transitionNavigate('#hero', {}, e, colorStr);
-    else if (id === 'about')   transitionNavigate(`#${id}`, { offset: window.innerHeight * 3.6 }, e, colorStr);
-    else if (id === 'projects')transitionNavigate(`#${id}`, { offset: window.innerHeight }, e, colorStr);
-    else                       transitionNavigate(`#${id}`, {}, e, colorStr);
+    // Curtain colour + landing offset come from config/sections.js
+    goToSection(transitionNavigate, id, e);
   };
 
   const currentIndex = SECTIONS.findIndex(s => s.label.toLowerCase() === currentSection.toLowerCase());
@@ -211,13 +186,13 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
                       key={section.id}
                       className="absolute flex items-center justify-center whitespace-nowrap font-sans font-bold uppercase tracking-[0.18em] cursor-pointer"
                       style={{
-                        width: 95,
-                        height: 42,
-                        left: -47.5,
-                        top: -21,
-                        fontSize: '0.65rem',
+                        width: 100,
+                        height: 46,
+                        left: -50,
+                        top: -23,
+                        fontSize: 'var(--text-label)',
                         color: blobTextColor,
-                        borderRadius: section.shape,
+                        borderRadius: section.blobShape,
                       }}
                       role="button"
                       tabIndex={0}
@@ -282,7 +257,7 @@ export default function SectionNav({ currentSection, style = {}, defaultTextColo
             scale: isOpen ? 0.8 : 1,
           }}
           transition={{ duration: 0.2 }}
-          className="absolute flex items-center justify-center font-sans font-bold text-[11px] sm:text-[13px] tracking-[0.22em] uppercase whitespace-nowrap"
+          className="absolute flex items-center justify-center font-sans font-bold text-label tracking-[0.22em] uppercase whitespace-nowrap"
         >
           {/* Periodic diagonal shine doubles as the "I'm interactive" cue */}
           <span className="shine-text" style={{ '--shine-base': defaultTextColor }}>
