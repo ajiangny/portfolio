@@ -12,7 +12,7 @@
 
 /* ── Custom Font ─────────────────────────────────── */
 @font-face {
-  font-family: 'EastBlue';
+  font-family: 'Nevera';
   src: url('/font/Nevera-Regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
@@ -21,7 +21,7 @@
 
 /* ── Design Tokens ───────────────────────────────── */
 @theme {
-  --font-display: 'EastBlue', 'Abril Fatface', serif;
+  --font-display: 'Nevera', 'Abril Fatface', serif;
   --font-mono: 'Space Mono', monospace;
   --font-sans: 'DM Sans', sans-serif;
 
