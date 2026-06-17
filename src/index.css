@@ -68,6 +68,16 @@
   --color-border: #1a1a1a;
 }
 
+/* Registered so the Hero wordmark's liquid-glass fill (a color-mix gradient
+   built from --hero-wordmark) can TRANSITION smoothly when the nav-hover
+   preview recolours it. applyHeroTheme() sets --hero-wordmark; clearHeroTheme()
+   removes it, reverting to the cream initial-value below (matches HERO_REST). */
+@property --hero-wordmark {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #F5F0E8;
+}
+
 /* NOTE: no custom `* { margin:0; padding:0 }` reset here — Tailwind v4
    preflight already provides it, and an unlayered reset would override
    every Tailwind padding/margin utility (unlayered CSS beats @layer). */
