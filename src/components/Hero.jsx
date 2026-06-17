@@ -20,6 +20,7 @@ import { useTransitionContext } from '../context/TransitionContext'
 import { NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
 import ElasticHeading from './hero/ElasticHeading'
+import LiquidGlassFilter from './hero/LiquidGlassFilter'
 import OrbitBubble from './hero/OrbitBubble'
 import { BLOB_SHAPES } from './hero/orbitConstants'
 import { HERO_REST, HERO_HOVER, applyHeroTheme, clearHeroTheme } from './hero/heroThemes'
@@ -31,11 +32,30 @@ const rgbStr = (triple) => `rgb(${triple})`
 const BUBBLE_GLASS_ALPHA = 0.22
 const rgbaStr = (triple, a) => `rgba(${triple}, ${a})`
 
+// Liquid-glass fill for the wordmark. Built from the themed --hero-wordmark
+// colour so the nav-hover recolour flows through (the @property registration in
+// index.css makes that colour transition smoothly). Applied PER-LETTER so it
+// survives each glyph's elastic-repulsion transform (a single parent
+// background-clip:text would not track the transformed children).
+const WORDMARK_GLASS = {
+  background:
+    'linear-gradient(180deg,' +
+    ' color-mix(in srgb, var(--hero-wordmark) 92%, transparent) 0%,' +
+    ' color-mix(in srgb, var(--hero-wordmark) 12%, transparent) 44%,' +
+    ' color-mix(in srgb, var(--hero-wordmark) 34%, transparent) 100%)',
+  WebkitBackgroundClip: 'text',
+  backgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  // Fallback fill where background-clip:text is unsupported.
+  color: 'color-mix(in srgb, var(--hero-wordmark) 40%, transparent)',
+}
+
 const PARALLAX_STRENGTHS = [0.055, 0.09, 0.038, 0.072]
 
 export default function Hero() {
   const { navigate: transitionNavigate } = useTransitionContext()
   const isMobile = useMediaQuery('(max-width: 767px)')
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [hovIdx, setHovIdx] = useState(null)
   const isOrbitPausedRef = useRef(false)
 
@@ -119,6 +139,8 @@ export default function Hero() {
       onMouseMove={trackMouse}
       onMouseLeave={resetMouse}
     >
+      <LiquidGlassFilter animated={!prefersReducedMotion} />
+
       {/* Name + year — pinned to top centre, flies up on scroll.
           shine-text adds the periodic diagonal sweep (faster on hover). */}
       <motion.p
@@ -155,20 +177,21 @@ export default function Hero() {
               <ElasticHeading
                 ariaLabel="Andrew Jiang — Portfolio. Developer and designer."
                 className="font-display leading-none select-none"
+                letterStyle={WORDMARK_GLASS}
                 style={{
                   fontSize: 'var(--text-hero)',
                   letterSpacing: '-0.01em',
-                  // Glass-look letters: translucent fill lets the gradient show
-                  // through each glyph; the bright top edge + dark drop shadow
-                  // give it a beveled-glass read. (No backdrop blur — CSS can't
-                  // frost per-glyph; this is the look, not a true frost.)
-                  color: 'rgba(var(--hero-wordmark-rgb), 0.58)',
-                  textShadow: [
-                    '0 1px 0 rgba(255,255,255,0.45)',   // bright top bevel
-                    '0 -1px 1px rgba(255,255,255,0.22)',
-                    '0 6px 18px rgba(10,15,40,0.38)',   // soft cast shadow
-                  ].join(', '),
-                  transition: 'color 0.35s ease',
+                  // Liquid-glass look: a refraction warp (SVG filter) plus a
+                  // bright top bevel and a soft cast shadow. drop-shadow (not
+                  // text-shadow) because the per-letter fill is transparent
+                  // text clipped from a gradient.
+                  filter:
+                    'url(#hero-liquid-glass)' +
+                    ' drop-shadow(0 1px 0 rgba(255,255,255,0.55))' +
+                    ' drop-shadow(0 8px 18px rgba(8,12,40,0.5))',
+                  // Smooth the nav-hover recolour of the glass fill (the
+                  // --hero-wordmark @property in index.css makes this animate).
+                  transition: '--hero-wordmark 0.35s ease',
                 }}
               />
             </motion.div>
