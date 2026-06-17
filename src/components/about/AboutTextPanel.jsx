@@ -74,7 +74,7 @@ export default function AboutTextPanel({ progress, isMobile }) {
           text="Hello! I'm Andrew."
           as="h2"
           style={{
-            fontFamily: "'EastBlue', 'Abril Fatface', serif",
+            fontFamily: "'Nevera', 'Abril Fatface', serif",
             fontSize: 'var(--text-section)',
             lineHeight: 0.95,
             color: 'var(--color-cream)'
