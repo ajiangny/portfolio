@@ -20,13 +20,14 @@ const SEED = 7
 
 export default function LiquidGlassFilter({ id = 'hero-liquid-glass', animated = true }) {
   return (
-    <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute' }}>
+    <svg width="0" height="0" aria-hidden="true" style={{ position: 'absolute', overflow: 'hidden' }}>
       <defs>
+        {/* region bleeds 25% each side — must stay larger than DISPLACE px or glyph edges clip */}
         <filter id={id} x="-25%" y="-25%" width="150%" height="150%">
           <feTurbulence
             type="fractalNoise"
             baseFrequency={BASE_FREQ}
-            numOctaves="2"
+            numOctaves={2}
             seed={SEED}
             result="noise"
           >
