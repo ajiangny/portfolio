@@ -49,10 +49,10 @@ const WORDMARK_GLASS = {
   // Fallback fill where background-clip:text is unsupported — full opacity for
   // legibility, since it only shows when the gradient clip is unavailable.
   color: 'var(--hero-wordmark)',
-  // Smooth the nav-hover recolour. Declared HERE, on the letter spans that
-  // actually consume --hero-wordmark (not just the wrapper), so the transition
-  // fires on the elements whose computed value changes. The @property
-  // registration in index.css makes this colour animate.
+  // Smooth the nav-hover recolour. The @property registration in index.css
+  // makes --hero-wordmark an interpolatable <color>; declared on the letter
+  // spans that consume it. Animates the recolour in Chromium; degrades to an
+  // instant swap where transitions on inherited custom properties aren't honored.
   transition: '--hero-wordmark 0.35s ease',
 }
 

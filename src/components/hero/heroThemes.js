@@ -28,10 +28,9 @@ export const HERO_HOVER = {
 /** Apply a theme's colours to documentElement as --hero-* custom properties. */
 export function applyHeroTheme(theme) {
   const el = document.documentElement
+  // Registered as a <color> @property in index.css so the wordmark's
+  // liquid-glass fill (color-mix from this var) recolours smoothly on hover.
   el.style.setProperty('--hero-wordmark', `rgb(${theme.wordmark})`)
-  // Triple form too, so the glass-look heading can compose a translucent fill
-  // (rgba(var(--hero-wordmark-rgb), a)) the way the name tag does.
-  el.style.setProperty('--hero-wordmark-rgb', theme.wordmark)
   el.style.setProperty('--hero-bubble-fill', `rgb(${theme.bubbleFill})`)
   el.style.setProperty('--hero-bubble-text', `rgb(${theme.bubbleText})`)
   el.style.setProperty('--hero-name-rgb', theme.name)
@@ -39,6 +38,6 @@ export function applyHeroTheme(theme) {
 
 export function clearHeroTheme() {
   const el = document.documentElement
-  for (const v of ['--hero-wordmark', '--hero-wordmark-rgb', '--hero-bubble-fill', '--hero-bubble-text', '--hero-name-rgb'])
+  for (const v of ['--hero-wordmark', '--hero-bubble-fill', '--hero-bubble-text', '--hero-name-rgb'])
     el.style.removeProperty(v)
 }
