@@ -14,7 +14,7 @@ import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } fr
 
 const OFF = -9999
 
-function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
+function ElasticLetter({ char, index, mouseX, mouseY, waveEffect, letterStyle }) {
   const ref = useRef(null)
 
   const rawX = useTransform([mouseX, mouseY], ([mx, my]) => {
@@ -67,7 +67,7 @@ function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
   const finalY = useTransform([y, waveY], ([yv, wv]) => yv + wv)
 
   return (
-    <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre' }}>
+    <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre', ...letterStyle }}>
       {char}
     </motion.span>
   )
@@ -80,6 +80,7 @@ export default function ElasticHeading({
   as: Tag = 'h1',
   waveEffect = false,
   ariaLabel,        // override the heading's accessible name (defaults to `text`)
+  letterStyle,      // optional per-glyph style (Hero passes the liquid-glass fill)
 }) {
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
@@ -106,7 +107,7 @@ export default function ElasticHeading({
             <span key={w}>
               <span style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
                 {word.split('').map((char, i) => (
-                  <ElasticLetter key={i} index={start + i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} />
+                  <ElasticLetter key={i} index={start + i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} letterStyle={letterStyle} />
                 ))}
               </span>
               {w < words.length - 1 && ' '}
