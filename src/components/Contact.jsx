@@ -11,11 +11,10 @@
  *   • SectionNav floating navigation bar
  */
 import { useRef, useState } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, goToSection } from '../config/sections'
 import ElasticHeading from './hero/ElasticHeading'
-import SectionNav from './SectionNav'
 
 const CONTACT_EMAIL = 'andrewjiang74@gmail.com'
 
@@ -67,14 +66,6 @@ export default function Contact() {
   // Curtain colour + landing offset come from config/sections.js
   const footerNavigate = (id, e) => goToSection(transitionNavigate, id, e)
 
-  // Drive SectionNav entry — same pattern as Projects
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'start 0.4'],
-  })
-  const labelY = useTransform(scrollYProgress, [0, 1], [60, 0])
-  const labelOpacity = useTransform(scrollYProgress, [0, 1], [0, 1])
-
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -94,18 +85,6 @@ export default function Contact() {
       ref={sectionRef}
       className="relative overflow-hidden" style={{ backgroundColor: 'transparent' }}
     >
-      {/* SectionNav — absolute, fully isolated, guaranteed on top */}
-      <div
-        className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-auto"
-        style={{ zIndex: 50 }}
-      >
-        <SectionNav
-          currentSection="Contact"
-          style={{ y: labelY, opacity: labelOpacity }}
-          defaultTextColor="rgba(245,240,232,0.4)"
-        />
-      </div>
-
       {/* ── Main content — pointer-events-none on wrapper, re-enabled on children ── */}
       <div
         className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-14 md:py-24 pointer-events-none"

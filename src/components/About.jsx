@@ -26,7 +26,6 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import { LEFT_COL, CENTER_COL, CENTER_PROFILE_INDEX, RIGHT_COL } from '../data/aboutData'
 import ArtColumn from './about/ArtColumn'
 import AboutTextPanel from './about/AboutTextPanel'
-import SectionNav from './SectionNav'
 
 // ─── SVG Gradient Map (neutral grayscale duotone) ─────────────────────────────
 // Endpoints are equal across R/G/B, so this is a neutral grayscale map (no
@@ -184,11 +183,6 @@ export default function About() {
   // The expanding overlay takes over at 0.31 — hide the filmstrip's own
   // profile card right then so the two never double up.
   const profileCardHide = useTransform(progress, [0.31, 0.318], [1, 0])
-
-  // SectionNav label — drops in alongside the text panel cascade.
-  // (The panel's own reveals live in about/AboutTextPanel.jsx.)
-  const labelY = useTransform(progress, [0.505, 0.545], ['-50px', '0px'])
-  const labelO = useTransform(progress, [0.505, 0.525], [0, 1])
 
   // Gradient fade out from bottom to top. The fade only runs 0.85→1.0; below
   // that the mask is fully opaque (a no-op). We return 'none' there instead of
@@ -413,18 +407,6 @@ export default function About() {
           <AboutTextPanel progress={progress} isMobile={isMobile} />
         </motion.div>
 
-        {/* ── Section Label — outside the masked wrapper (the mask creates a
-            stacking context) so its dropdown + blur overlay layer correctly ── */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30">
-          <SectionNav
-            currentSection="About"
-            style={{
-              y: labelY,
-              opacity: labelO,
-            }}
-            defaultTextColor="rgba(245,240,232,0.45)"
-          />
-        </div>
       </div>
     </motion.div>
   )

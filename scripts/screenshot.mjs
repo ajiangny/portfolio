@@ -61,7 +61,7 @@ for (const [vpName, vp] of VIEWPORTS) {
 
     // On mobile, also capture the SectionNav dropdown opened via tap
     if (vp.isMobile && name === 'projects-carousel') {
-      await page.tap('#projects [aria-label="Section navigation"]')
+      await page.tap('[aria-label="Section navigation"]')
       await new Promise(r => setTimeout(r, 800))
       await page.screenshot({ path: `${OUT}/${vpName}-${name}-nav-open.png` })
       console.log(`captured ${vpName}-${name}-nav-open`)

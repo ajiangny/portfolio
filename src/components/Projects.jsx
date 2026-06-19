@@ -25,7 +25,6 @@ import useScrollTimeline from '../hooks/useScrollTimeline'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useInfiniteCarousel from '../hooks/useInfiniteCarousel'
 import ProjectCard from './projects/ProjectCard'
-import SectionNav from './SectionNav'
 import { works } from '../data/projectsData'
 
 export default function Projects() {
@@ -62,10 +61,6 @@ export default function Projects() {
   };
 
   // ── Staggered Entry — each element fades + slides in with its own timing ──
-  // Section label — enters first with a gentle rise
-  const labelY = useTransform(progress, [0.00, 0.06], [60, 0]);
-  const labelOpacity = useTransform(progress, [0.00, 0.06, 0.55, 0.63], [0, 1, 1, 0]);
-
   // Carousel — enters second
   const carouselY = useTransform(progress, [0.08, 0.16], [150, 0]);
   const carouselOpacity = useTransform(progress, [0.08, 0.16], [0, 1]);
@@ -191,15 +186,6 @@ export default function Projects() {
         <h2 className="sr-only">Projects</h2>
 
 
-        {/* Section Label — outside the z-1 content wrapper so its dropdown
-            stacks above the project cards (z-30) on mobile */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-45">
-          <SectionNav
-            currentSection="Projects"
-            style={{ y: labelY, opacity: labelOpacity }}
-            defaultTextColor="#1B3A8C"
-          />
-        </div>
 
         {/* All content - relative + z-[1] ensures it stacks above the canvas */}
         <div className="relative flex flex-col justify-center h-full" style={{ zIndex: 1 }}>
