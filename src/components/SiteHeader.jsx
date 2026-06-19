@@ -19,8 +19,8 @@ import useActiveSection from '../hooks/useActiveSection'
 import { setHoverSection } from './gradient/hoverSignal'
 import { SECTION_PALETTES } from './gradient/gradientConfig'
 
-const GUTTER = 24      // px viewport inset at each side when expanded
-const MAX_W = 1180     // px expanded pill cap
+const GUTTER = 40      // px viewport inset at each side when expanded
+const MAX_W = 1700     // px expanded pill cap (near full-width on a laptop)
 const BAR_H = 56       // px pill height (collapsed width == height → circle)
 const LOGO = '/favicon/logo.svg'
 
@@ -157,16 +157,15 @@ export default function SiteHeader() {
             <motion.ul
               animate={{ opacity: expanded ? 1 : 0 }}
               transition={{ duration: 0.2 }}
-              className="font-sans font-bold uppercase"
+              className="font-sans font-bold lowercase"
               style={{
+                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                marginLeft: 'auto',
-                paddingRight: 10,
+                justifyContent: 'space-evenly',
                 listStyle: 'none',
                 whiteSpace: 'nowrap',
-                letterSpacing: '0.18em',
+                letterSpacing: '0.16em',
                 fontSize: 'var(--text-label)',
                 pointerEvents: expanded ? 'auto' : 'none',
               }}
@@ -215,7 +214,7 @@ export default function SiteHeader() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="font-sans font-bold uppercase"
+              className="font-sans font-bold lowercase"
               style={{
                 position: 'absolute',
                 top: BAR_H + 10,
