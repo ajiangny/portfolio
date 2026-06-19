@@ -65,7 +65,7 @@ export default function Hero() {
           scales with the wordmark) seats it slightly past the bottom edge. */}
       <motion.div
         className="absolute inset-x-0"
-        style={{ y: wordmarkY, opacity: wordmarkOpacity, bottom: '-1.4vw' }}
+        style={{ y: wordmarkY, opacity: wordmarkOpacity, bottom: '-0.2vw' }}
       >
         <motion.div
           initial={{ opacity: 0 }}
