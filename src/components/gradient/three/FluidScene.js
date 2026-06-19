@@ -69,9 +69,23 @@ export class FluidScene {
 
   update({ pointer, ambient, time, iters, palette }) {
     if (!this.supported) return
-    this.sim.step({ pointer, ambient, time, iters })
+    this.sim.step({ pointer, ambient, time, iters, energy: palette.energy ?? 1 })
     this._applyPalette(palette)
     this.composite.uniforms.uTime.value = time // re-seeds the grain each frame
+    this.composite.render(null)
+  }
+
+  // Run the sim forward (no compositing) so the first painted frame is already
+  // a developed liquid — without this the field starts empty and the first few
+  // seconds look like isolated blobs while the dye builds + folds. One composite
+  // at the end paints the warmed-up state.
+  prewarm({ steps, iters, palette }) {
+    if (!this.supported) return
+    const pointer = { x: -1, y: -1, dx: 0, dy: 0, down: false }
+    for (let i = 0; i < steps; i++) {
+      this.sim.step({ pointer, ambient: true, time: i / 30, iters, energy: palette.energy ?? 1 })
+    }
+    this._applyPalette(palette)
     this.composite.render(null)
   }
 

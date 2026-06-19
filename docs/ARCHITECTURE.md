@@ -163,10 +163,13 @@ visibility budget, and delegates to `FluidScene`.
 
 **`three/FluidScene.js`** — owns the `THREE.WebGLRenderer`, a `Simulation`
 instance, and the COMPOSITE `ShaderPass`. Exposes `update(palette, pointer,
-time)`, `renderStatic(palette)`, `resize()`, `dispose()`, and `supported`.
-Reports `supported=false` when WebGL2 or float color buffers
-(`EXT_color_buffer_float` / `EXT_color_buffer_half_float`) are unavailable;
-`FluidGradient` then leaves the CSS cream fallback and skips the RAF loop.
+time)`, `prewarm({steps,iters,palette})`, `renderStatic(palette)`, `resize()`,
+`dispose()`, and `supported`. `prewarm` runs the sim forward N steps (no
+compositing) before the first painted frame so the field loads as an already-
+developed liquid instead of isolated blobs that slowly build. Reports
+`supported=false` when WebGL2 or float color buffers (`EXT_color_buffer_float`
+/ `EXT_color_buffer_half_float`) are unavailable; `FluidGradient` then leaves
+the CSS cream fallback and skips the RAF loop.
 
 **`three/Simulation.js`** — stable-fluids velocity + dye sim on **half-float**
 ping-pong render targets. The sim grid is a square-ish grid scaled by aspect
@@ -179,16 +182,28 @@ GLSL ES 1.00; vertex writes clip space directly). Reused for every sim step and
 the composite pass.
 
 **`three/shaders.js`** — GLSL strings: `VERT`, `SPLAT`, `ADVECT`, `DIVERGENCE`,
-`JACOBI`, `GRADIENT_SUBTRACT`, `COMPOSITE`. The COMPOSITE shader mixes a
-per-section vertical **base** gradient (base0 top → base1 bottom) toward an
-**ink** accent color by clamped dye density; velocity adds subtle refraction.
+`JACOBI`, `GRADIENT_SUBTRACT`, `COMPOSITE`. The COMPOSITE shader builds the
+final picture from a per-section vertical **base** gradient (base0 top → base1
+bottom) plus the dye, in three layers: (1) a **coloured body** that blends the
+base toward the section **ink** by a curved, capped dye density — injected
+fluid reads as saturated colour (cyan pools on Hero), not a pale overlay; (2)
+**caustic veins** — a bright ridge wherever the dye field *folds* (steep
+gradient), so highlights are thin veins of light, not broad blobs; (3) a
+**cursor crest** where dye peaks. The bright colour is the section's own ink
+brightened toward white, so light sections keep their hue instead of flashing
+white. Velocity adds subtle refraction.
 
 **`gradientConfig.js`** — single source of truth for:
-- `PALETTES` — per-section `{ base: [top, bottom], ink }` colors. Palettes
-  mirror each section's tone: Hero + About **cobalt** (dark; cream text),
-  Projects **cream** (light; dark text), Gallery + Contact **near-black**.
-- `SIM` — sim tuning: `RES`, `RES_MOBILE`, `JACOBI_STEPS`, `JACOBI_STEPS_MOBILE`,
-  `DYE_MAX`, `DISSIPATION`, force and ambient parameters.
+- `PALETTES` — per-section `{ base: [top, bottom], ink, energy }`. Colours
+  mirror each section's tone: Hero **deep cobalt→cerulean** with a vivid cyan
+  ink (cream text), About **cobalt**, Projects **cream** (dark text), Gallery +
+  Contact **near-black**. `energy` (0..1) scales that section's ambient stir
+  (and, gently, its emitted dye): Hero churns hard so its dye folds into the
+  deep-water/caustic look; the others stay calm so content reads cleanly. It
+  crossfades across seams like the colours.
+- `SIM` — sim tuning: `RES`, `RES_MOBILE`, `JACOBI`, `JACOBI_MOBILE`,
+  `DYE_MAX`, dissipation, force and ambient parameters (`AMBIENT_FORCE` is the
+  Hero-level stir, scaled per-section by `energy`).
 - `GRADIENT` — shell tuning: `SEAM_FADE`, `MOBILE_SCALE`, `FRAME_MS_MOBILE`.
 
 **`paletteSelect.js`** — pure `selectPalette(sections, scrollY, winH, palettes,
@@ -196,9 +211,12 @@ SEAM_FADE)`: finds the section whose centre is nearest the viewport centre;
 once the next section's share passes `SEAM_FADE`, begins crossfading into its
 palette. No MotionValues, no context — called directly from the RAF loop.
 
-**`ambient.js`** — pure `ambientSplats(time)`: returns a list of slow
-Lissajous-path splat points so the fluid is always alive (on load + on mobile
-where there is no cursor). Strength is low enough not to obscure text.
+**`ambient.js`** — pure `ambientSplats(time)`: returns several slow
+Lissajous-path splat points (each orbiting its own centre, biased to the
+upper/middle of the field) so the fluid is always alive (on load + on mobile
+where there is no cursor) and their overlapping, advecting dye folds into a
+continuous liquid rather than a few discrete blobs. The per-section `energy`
+keeps the stir from obscuring text outside Hero.
 
 ### Palette crossfade
 
@@ -230,6 +248,7 @@ runs regardless of input so the field is never frozen.
 | Goal | Where to edit |
 |---|---|
 | Section resting colors | `PALETTES[sectionId].base` / `.ink` in `gradientConfig.js` |
+| How lively a section's fluid is | `PALETTES[sectionId].energy` in `gradientConfig.js` |
 | Fluid feel (force, dissipation) | `SIM.*` in `gradientConfig.js` |
 | Crossfade seam width | `GRADIENT.SEAM_FADE` in `gradientConfig.js` |
 | Mobile resolution/fps | `SIM.RES_MOBILE`, `GRADIENT.MOBILE_SCALE`, `GRADIENT.FRAME_MS_MOBILE` |
