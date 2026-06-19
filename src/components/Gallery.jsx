@@ -203,8 +203,8 @@ export default function Gallery() {
   const headerOpacity = useTransform([headerEntryO, headerExitO], ([inO, outO]) => inO * outO)
   // The header layer is position:fixed and always mounted, so when invisible
   // it must also be visibility:hidden — pointer-events:none alone is undone
-  // by interactive children (e.g. SectionNav re-enables pointer events,
-  // making the Gallery nav tappable from the Hero section).
+  // by interactive header children (e.g. links/buttons re-enable pointer
+  // events, making the Gallery header tappable from the Hero section).
   const headerVisibility = useTransform(headerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
 
   const gridPointerEvents = useTransform(

@@ -1,10 +1,9 @@
 /**
  * sections.js — Single Source of Truth for Section Navigation
  *
- * Every place that navigates between sections (Hero orbit bubbles,
- * SectionNav blob menu, Contact footer) reads from this table, so a
- * section's theme colour, nav blob shape, or landing offset only ever
- * needs to change here.
+ * Every place that navigates between sections (global SiteHeader,
+ * Contact footer) reads from this table, so a section's theme colour,
+ * nav blob shape, or landing offset only ever needs to change here.
  *
  * Fields:
  *   id             — DOM id of the section element (also the #hash target)
@@ -29,7 +28,7 @@ export const SECTIONS = [
   { id: 'contact',  label: 'Contact',  themeRgb: [245, 240, 232], blobShape: '54% 46% 58% 42% / 50% 52% 48% 50%', scrollOffsetVh: 0 },
 ]
 
-/** Sections shown as Hero orbit bubbles (everything except Home itself). */
+/** Sections shown in the global SiteHeader nav (everything except Home itself). */
 export const NAV_SECTIONS = SECTIONS.filter((s) => s.id !== 'hero')
 
 export const getSection = (id) => SECTIONS.find((s) => s.id === id)

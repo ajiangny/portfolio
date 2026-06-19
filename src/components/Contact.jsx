@@ -8,7 +8,7 @@
  *   • Social links (GitHub, LinkedIn)
  *   • Staggered entrance animations via Framer Motion variants
  *   • Background-transparent — the site-wide fluid gradient (dark) shows through
- *   • SectionNav floating navigation bar
+ *   • Navigation handled by the global SiteHeader
  */
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'

@@ -27,7 +27,7 @@ before retiming animations or touching the gradient.**
 
 | What | Where |
 |---|---|
-| Section ids, labels, nav colors, blob shapes, landing offsets | [src/config/sections.js](src/config/sections.js) |
+| Section ids, labels, nav colors, blob shapes, landing offsets | [src/config/sections.js](src/config/sections.js) — consumed by `SiteHeader` (global nav) and Contact footer |
 | Per-section base/ink palettes + sim tuning (SIM) + shell tuning (GRADIENT) | [src/components/gradient/gradientConfig.js](src/components/gradient/gradientConfig.js) |
 | Project cards + tech-icon mapping | [src/data/projectsData.js](src/data/projectsData.js) |
 | Gallery artworks | [src/data/galleryData.js](src/data/galleryData.js) |
@@ -65,9 +65,24 @@ before retiming animations or touching the gradient.**
   Ambient drift (`ambient.js`) keeps the field alive on load and on mobile with
   no cursor; cursor/touch injects stronger swirls. The sim grid is
   aspect-scaled (`SIM.RES` short side) and independent of canvas resolution.
-- **Navigation**: every nav UI calls `goToSection()` from config/sections.js,
-  which runs the blob curtain (TransitionProvider: 600ms expand → instant
-  Lenis jump → shrink).
+- **Navigation**: one global `SiteHeader` (`src/components/SiteHeader.jsx`),
+  rendered once in `App.jsx` at `position: fixed`, `z-index: 200`. It
+  **morphs** based on scroll: an expanded glass bar (AJ monogram left + four
+  links right — About / Projects / Gallery / Contact) while a section is
+  settled, collapsing to a monogram pill while crossing a seam, re-expanding
+  when the next section is centred. The collapse/expand is a Framer Motion
+  spring on the pill width. The morph is driven by
+  `src/hooks/useActiveSection.js`, which mirrors the viewport-centre math in
+  `FluidGradient/paletteSelect.js` (subscribes to Lenis, hysteresis via
+  BAND_ENTER/BAND_EXIT) — so the header collapses roughly in sync with the
+  gradient palette crossfade at seams. Glass + text colours adapt per section
+  (light backgrounds → dark text/glass; dark backgrounds → cream text/glass),
+  derived from each section's `themeRgb`. The active section's link is
+  highlighted. Hovering a link calls `setHoverSection()` to preview that
+  section's palette in the fluid gradient (FluidGradient self-gates this to
+  Hero only). All links call `goToSection()` (the blob page-transition).
+  On mobile (≤767px) the header stays a monogram pill that opens a frosted
+  dropdown of the four sections.
 - **Styling**: Tailwind utilities for static layout; inline `style` objects
   for anything driven by motion values or `isMobile`. Match whichever the
   surrounding code uses.
@@ -84,8 +99,8 @@ before retiming animations or touching the gradient.**
 - After renaming/deleting modules, restart the dev server — Vite's stale
   module graph can 404 and white-screen the app while HMR claims success.
   (This also silently desyncs the running gradient from edited config/shaders.)
-- z-index registry: PageTransition 9999 › SectionNav portal 120/130 ›
-  Gallery fixed header 50 › Projects expanding overlay 40 › content (auto) ›
+- z-index registry: PageTransition 9999 › SiteHeader 200 › Gallery fixed
+  header 50 › Projects expanding overlay 40 › content (auto) ›
   FluidGradient canvas −1 (behind all). Stay inside these bands.
 - The fluid sim (`three/Simulation.js`) and the composite pass (`three/ShaderPass.js`)
   are separate Three.js passes, each with their own render targets. `FluidScene`
