@@ -19,6 +19,7 @@ import Projects from './components/Projects'
 import Gallery from './components/Gallery'
 import Contact from './components/Contact'
 import FluidGradient from './components/gradient/FluidGradient'
+import SiteHeader from './components/SiteHeader'
 
 function App() {
   const lenisRef = useLenis()
@@ -31,6 +32,7 @@ function App() {
       <TransitionProvider>
         <div className="text-ink min-h-screen overflow-x-clip">
           <FluidGradient />
+          <SiteHeader />
           <PageTransition />
           <main>
             <Hero />
