@@ -20,7 +20,6 @@ import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import GalleryLightbox from './gallery/GalleryLightbox'
-import SectionNav from './SectionNav'
 import { artworks } from '../data/galleryData'
 
 
@@ -213,10 +212,6 @@ export default function Gallery() {
     ([r, p]) => (r > 0.6 && p < 0.85) ? 'auto' : 'none'
   )
 
-  // ── Small label: slides down from above ──────────────────────────
-  const labelY = useTransform(revealRaw, [0.00, 0.10], ['-60px', '0px'])
-  const labelO = useTransform(revealRaw, [0.00, 0.10], [0, 1])
-
   // ── Lightbox state ──────────────────────────────────────────────
   const [lightboxIndex, setLightboxIndex] = useState(null)
 
@@ -265,15 +260,6 @@ export default function Gallery() {
           visibility: headerVisibility,
         }}
       >
-        {/* Small label */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
-          <SectionNav
-            currentSection="Gallery"
-            style={{ y: labelY, opacity: labelO }}
-            defaultTextColor="rgba(245,240,232,0.4)"
-          />
-        </div>
-
         {/* 5×3 viewport-filling grid */}
         <motion.div
           className="gallery-grid-viewport"
