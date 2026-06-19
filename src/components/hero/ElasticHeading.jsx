@@ -7,6 +7,9 @@
  *
  * Optional `waveEffect` adds a looping vertical wave animation where
  * letters bob up in sequence (used in the About heading).
+ *
+ * Optional `letterStyle` applies a per-glyph style object to every letter
+ * (used by the Hero wordmark's liquid-glass fill).
  */
 import { useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } from 'framer-motion'
@@ -14,7 +17,7 @@ import { motion, useMotionValue, useSpring, useTransform, useAnimationFrame } fr
 
 const OFF = -9999
 
-function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
+function ElasticLetter({ char, index, mouseX, mouseY, waveEffect, letterStyle }) {
   const ref = useRef(null)
 
   const rawX = useTransform([mouseX, mouseY], ([mx, my]) => {
@@ -66,23 +69,35 @@ function ElasticLetter({ char, index, mouseX, mouseY, waveEffect }) {
 
   const finalY = useTransform([y, waveY], ([yv, wv]) => yv + wv)
 
+  // letterStyle must not include x/y/display/whiteSpace — those are owned by ElasticLetter
   return (
-    <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre' }}>
+    <motion.span ref={ref} style={{ x, y: finalY, display: 'inline-block', whiteSpace: 'pre', ...letterStyle }}>
       {char}
     </motion.span>
   )
 }
 
-export default function ElasticHeading({ 
-  text = "Portfolio", 
-  className = "font-display text-cobalt leading-none select-none", 
-  style = { fontSize: 'clamp(3rem, 13vw, 14rem)', letterSpacing: '-0.01em' },
+export default function ElasticHeading({
+  text = "Portfolio",
+  className = "font-display text-cobalt leading-none select-none",
+  style = { fontSize: 'var(--text-hero)', letterSpacing: '-0.01em' },
   as: Tag = 'h1',
-  waveEffect = false
+  waveEffect = false,
+  ariaLabel,        // override the heading's accessible name (defaults to `text`)
+  letterStyle,      // optional per-glyph style (Hero passes the liquid-glass fill)
 }) {
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
-  const letters = text.split('')
+
+  // Group letters into words so line-wrapping happens between words,
+  // not between arbitrary letters. Letter indices stay global so the
+  // wave animation sweeps continuously across the whole heading.
+  const words = []
+  let letterIndex = 0
+  for (const word of text.split(' ')) {
+    words.push({ word, start: letterIndex })
+    letterIndex += word.length + 1
+  }
 
   return (
     <div
@@ -90,10 +105,19 @@ export default function ElasticHeading({
       onMouseLeave={() => { mouseX.set(OFF); mouseY.set(OFF) }}
       style={{ display: 'inline-block', pointerEvents: 'auto' }}
     >
-      <Tag className={className} style={style}>
-        {letters.map((char, i) => (
-          <ElasticLetter key={i} index={i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} />
-        ))}
+      <Tag className={className} style={style} aria-label={ariaLabel ?? text}>
+        <span aria-hidden="true">
+          {words.map(({ word, start }, w) => (
+            <span key={w}>
+              <span style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+                {word.split('').map((char, i) => (
+                  <ElasticLetter key={i} index={start + i} char={char} mouseX={mouseX} mouseY={mouseY} waveEffect={waveEffect} letterStyle={letterStyle} />
+                ))}
+              </span>
+              {w < words.length - 1 && ' '}
+            </span>
+          ))}
+        </span>
       </Tag>
     </div>
   )

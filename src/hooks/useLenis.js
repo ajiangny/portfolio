@@ -17,25 +17,31 @@ export default function useLenis() {
   const lenisRef = useRef(null)
 
   useEffect(() => {
+    // Respect reduced-motion: keep Lenis (sections rely on its scroll events)
+    // but let the browser scroll natively instead of smoothing.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
       orientation: 'vertical',
       gestureOrientation: 'vertical',
-      smoothWheel: true,
+      smoothWheel: !prefersReducedMotion,
       touchMultiplier: 2,
     })
 
     lenisRef.current = lenis
 
     // Drive the Lenis scroll loop via requestAnimationFrame
+    let rafId
     function raf(time) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
-    requestAnimationFrame(raf)
+    rafId = requestAnimationFrame(raf)
 
     return () => {
+      cancelAnimationFrame(rafId)
       lenis.destroy()
       lenisRef.current = null
     }
