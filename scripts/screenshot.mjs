@@ -36,6 +36,7 @@ const STOPS = [
 ]
 
 const VIEWPORTS = [
+  ['wide', { width: 2560, height: 1440 }],
   ['desktop', { width: 1440, height: 900 }],
   ['tablet', { width: 768, height: 1024 }],
   ['mobile', { width: 390, height: 844, isMobile: true, hasTouch: true }],

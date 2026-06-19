@@ -20,7 +20,7 @@ import { setHoverSection } from './gradient/hoverSignal'
 import { SECTION_PALETTES } from './gradient/gradientConfig'
 
 const GUTTER = 40      // px viewport inset at each side when expanded
-const MAX_W = 1700     // px expanded pill cap (near full-width on a laptop)
+const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
 const BAR_H = 56       // px pill height (collapsed width == height → circle)
 const LOGO = '/favicon/logo.svg'
 
