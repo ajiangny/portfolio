@@ -93,7 +93,10 @@ export default function HeroWordmark({ className, style, title = 'Andrew Jiang' 
       preserveAspectRatio="xMidYMax meet"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={style}
+      // overflow:visible so letters springing UP past the tight viewBox top
+      // aren't clipped (the Hero section's own overflow-hidden still bounds them
+      // at the screen edges).
+      style={{ overflow: 'visible', ...style }}
       onPointerMove={reduce ? undefined : onMove}
       onPointerLeave={reduce ? undefined : onLeave}
     >
