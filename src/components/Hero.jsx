@@ -15,10 +15,7 @@
  */
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import ElasticHeading from './hero/ElasticHeading'
-
-// Flat white per-letter fill.
-const WORDMARK_LETTER = { color: '#ffffff' }
+import HeroWordmark from './hero/HeroWordmark'
 
 export default function Hero() {
   const heroRef = useRef(null)
@@ -59,15 +56,15 @@ export default function Hero() {
           }}
         >
           <span style={{ fontWeight: 200 }}>PORTFOLIO</span>
-          <span style={{ fontWeight: 700, fontStyle: 'italic', marginLeft: '0.55em' }}>2026</span>
+          <span style={{ fontWeight: 700, fontStyle: 'italic', marginLeft: '0.35em' }}>2026</span>
         </motion.p>
       </motion.div>
 
-      {/* Full-bleed wordmark flush to the bottom edge. The fixed font size is
-          intentionally wider than the viewport so "ANDREW JIANG" bleeds past
-          both edges (clipped by overflow-hidden / App's overflow-x-clip). */}
+      {/* Full-bleed vector wordmark, flush to the bottom edge. The SVG viewBox
+          is tight to the glyphs, so width:100% spans edge-to-edge and seats the
+          letters flush on the bottom — and it scales crisply at any width. */}
       <motion.div
-        className="absolute inset-x-0 bottom-0 flex justify-center"
+        className="absolute inset-x-0 bottom-0"
         style={{ y: wordmarkY, opacity: wordmarkOpacity }}
       >
         <motion.div
@@ -75,21 +72,10 @@ export default function Hero() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.9, delay: 0.15 }}
         >
-          <ElasticHeading
-            text="Andrew Jiang"
-            ariaLabel="Andrew Jiang — Portfolio. Developer and designer."
-            className="font-display leading-none select-none uppercase"
-            letterStyle={WORDMARK_LETTER}
+          <HeroWordmark
+            className="block w-full select-none"
             style={{
-              // Pure-vw size (no upper cap) so the whole "ANDREW JIANG" keeps
-              // the same near-full-width fit at every viewport — it scales up
-              // on wide/2560 screens and never clips the letters.
-              fontSize: 'max(2.75rem, 12vw)',
-              letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap',
-              // Seat the glyphs flush against the viewport bottom (drop the
-              // font's sub-baseline gap so there's no margin under the letters).
-              transform: 'translateY(0.12em)',
+              color: '#ffffff',
               filter: 'drop-shadow(0 8px 24px rgba(8,12,40,0.45))',
             }}
           />
