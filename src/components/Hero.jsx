@@ -58,7 +58,7 @@ export default function Hero() {
             textShadow: '0 2px 16px rgba(8,12,40,0.35)',
           }}
         >
-          <span style={{ fontWeight: 200, letterSpacing: '0.34em' }}>PORTFOLIO</span>
+          <span style={{ fontWeight: 200 }}>PORTFOLIO</span>
           <span style={{ fontWeight: 700, fontStyle: 'italic', marginLeft: '0.55em' }}>2026</span>
         </motion.p>
       </motion.div>
@@ -81,9 +81,10 @@ export default function Hero() {
             className="font-display leading-none select-none uppercase"
             letterStyle={WORDMARK_LETTER}
             style={{
-              // Sized so the whole "ANDREW JIANG" spans the width with only a
-              // slight bleed past each edge (matches the reference).
-              fontSize: 'clamp(3rem, 13vw, 13rem)',
+              // Pure-vw size (no upper cap) so the whole "ANDREW JIANG" keeps
+              // the same near-full-width fit at every viewport — it scales up
+              // on wide/2560 screens and never clips the letters.
+              fontSize: 'max(2.75rem, 12vw)',
               letterSpacing: '-0.01em',
               whiteSpace: 'nowrap',
               // Seat the glyphs flush against the viewport bottom (drop the
