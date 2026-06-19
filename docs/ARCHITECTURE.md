@@ -37,18 +37,14 @@ Progress = how far the Hero has scrolled out (`['start start','end start']`).
 |---|---|
 | 0→0.45 | heading opacity 1→0 |
 | 0→0.55 | heading scale 1→1.18, y 0→−70 |
-| 0→0.3 / 0→0.35 | name tag fades / flies up −110px |
-| 0→0.4 | orbit bubbles fade out; radius multiplier 1+scroll×3.5 (explode) |
 | 0→1 | cobalt shifts 27,58,140 → 37,79,193 (writes `--color-cobalt*` CSS vars) |
 
-Hover (scroll ≤ 0.05): hovering/tapping a bubble retints the whole hero to
-that section's `themeRgb` from `config/sections.js` (`updateColor`).
-Bubble geometry: `OrbitBubble.jsx` — desktop (≥768) is an elliptical orbit
-around the wordmark; mobile (<768) **flanks the wordmark** with the four
-blobs (About/Projects above, Gallery/Contact below, with a tiny drift) so
-they never cross the cobalt "Portfolio" letters. Both paths share the
-scroll-explode (`outward = 1+scroll×3.5`) and opacity fade. Orbit speed in
-`hero/orbitConstants.js` (ORBIT_DURATION).
+Hero renders a single flat-white "ANDREW JIANG" wordmark (`ElasticHeading`,
+per-letter mouse-repulsion retained) pinned to the bottom edge and sized to
+bleed full-width past both side margins. It rises slightly and fades on
+scroll-out. Background-transparent; the fluid gradient shows through.
+`hero/orbitConstants.js` is kept (trimmed to `BLOB_SHAPES` only) because
+`PageTransition.jsx` still uses it for the curtain silhouette.
 
 ### About (`About.jsx`) — the long one
 
@@ -69,7 +65,7 @@ Two clocks:
 | progress | 0.31→0.37 | photo stage A: glides to large centred portrait |
 | progress | 0.37→0.45 | photo holds centre-stage |
 | progress | 0.45→0.52 | photo stage B: glides to resting spot (desktop: right panel at 63vw; mobile: top-centre, 78vw wide at y=104px) |
-| progress | 0.504→0.5725 | text cascade (in `AboutTextPanel.jsx`): heading 0.514, bio 0.523, second bio 0.53, skills 0.537, resume 0.544; SectionNav label 0.505→0.545 |
+| progress | 0.504→0.5725 | text cascade (in `AboutTextPanel.jsx`): heading 0.514, bio 0.523, second bio 0.53, skills 0.537, resume 0.544 |
 | progress | 0.5725→0.85 | rest — fully revealed state (nav lands here: offset 3.6vh ≈ progress 0.6) |
 | progress | 0.85→1.0 | fade-out: content fades via a bottom-up CSS mask, revealing the gradient as it crossfades cobalt→cream into Projects |
 
@@ -131,11 +127,10 @@ View All at 14. Cell styles in `index.css` (`.gallery-*`). Lightbox in
 
 ### Contact (`Contact.jsx`)
 
-WhileInView staggered entrance; SectionNav label via `useScroll`
-`['start end','start 0.4']`. Background-transparent, so the site-wide gradient
-(dark `contact` palette) continues seamlessly from Gallery — no per-section
-canvas. Form submit = `mailto:` handoff (no backend); footer nav maps over
-`SECTIONS`.
+WhileInView staggered entrance. Background-transparent, so the site-wide
+gradient (dark `contact` palette) continues seamlessly from Gallery — no
+per-section canvas. Form submit = `mailto:` handoff (no backend); footer nav
+maps over `SECTIONS`.
 
 ## 3. Fluid gradient background (`src/components/gradient/`)
 
@@ -244,27 +239,39 @@ runs regardless of input so the field is never frozen.
 ## 4. Navigation & transitions
 
 `config/sections.js` is the single source of truth (id, label, themeRgb,
-blobShape, scrollOffsetVh) with `goToSection(navigate, id, e)` used by all
-three nav UIs (Hero bubbles, SectionNav blob menu, Contact footer).
+blobShape, scrollOffsetVh) with `goToSection(navigate, id, e)` used by the
+global `SiteHeader` and the Contact footer.
+
+**`SiteHeader.jsx`** — one global fixed header (`z-index: 200`, rendered once
+in `App.jsx`). It morphs based on scroll: an expanded glass bar (AJ monogram
+left + four links right) while a section is settled, collapsing to a monogram
+pill while crossing a seam, re-expanding when the next section is centred. The
+collapse/expand is a Framer Motion spring on the pill width. The morph is
+driven by `src/hooks/useActiveSection.js`, which subscribes to Lenis and uses
+viewport-centre math matching `paletteSelect.js` (BAND_ENTER/BAND_EXIT
+hysteresis) — so the header collapses roughly in sync with the gradient palette
+crossfade at seams. Glass + text colours adapt per section from each section's
+`themeRgb` (light backgrounds → dark text/glass; dark backgrounds → cream
+text/glass). The active link is highlighted; hovering a link previews that
+section's palette in the fluid gradient (FluidGradient self-gates to Hero).
+On mobile (≤767px) the header stays a monogram pill with a frosted dropdown.
+
+**z-index registry**: PageTransition 9999 › SiteHeader 200 › Gallery fixed
+header 50 › Projects expanding overlay 40 › content (auto) › FluidGradient
+canvas −1 (behind all).
 
 `TransitionProvider` phases: blob expands from the click point (600ms,
 covers screen) → instant Lenis jump → 50ms settle → blob shrinks (600ms)
 → unlock. The blob itself is `PageTransition.jsx` (z-9999, organic
 border-radius shapes from `hero/orbitConstants.js`).
 
-`SectionNav.jsx` renders its expanded state through a portal to `<body>`
-(sticky sections create stacking contexts it must escape). Desktop opens on
-hover (suppressed within 250ms of scrolling); mobile opens on tap as a
-vertical dropdown. Colours adapt to the section background (`isDarkBg` /
-`isBlackBg` lists in the component).
-
 ## 5. Responsive strategy
 
 - One JS breakpoint: `(max-width: 767px)` via `useMediaQuery`.
 - Mobile is a different layout, not a scaled-down one: vertical snap
   carousel (Projects), skills marquee instead of a wrapped grid, top-centre
-  portrait with text below (About), 3×5 gallery grid, hero nav blobs
-  flanking the wordmark.
+  portrait with text below (About), 3×5 gallery grid, monogram-pill header
+  with frosted dropdown (SiteHeader).
 - `useScrollTimeline` re-reads `window.innerHeight` per tick and on resize,
   so orientation changes / URL-bar collapses can't skew progress;
   `useInfiniteCarousel` re-centres on breakpoint flips; About re-measures
@@ -288,7 +295,7 @@ read the same source. Tiers:
 | `text-section` | `clamp(2.25rem,7.5vw,6rem)` | About + Contact display headings |
 | `text-title` | `clamp(1.125rem,2vw,1.5rem)` | card / modal titles |
 | `text-body` | `clamp(.75rem,2.6vw,.875rem)` | paragraphs (fluid 12→14px) |
-| `text-eyebrow` | 12px | prominent eyebrow (Hero name tag) |
+| `text-eyebrow` | 12px | prominent eyebrow labels |
 | `text-label` | 11px | nav / field / section labels |
 | `text-meta` | 10px | counters, footer fine print |
 

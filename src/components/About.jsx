@@ -257,7 +257,7 @@ export default function About() {
     const finalW = mobile ? vw * 0.78 : vw * 0.30
     const finalH = finalW * (mobile ? 1.05 : ratio)
     const final = mobile
-      // 104px clears the SectionNav label (top-8 + 60px tall) on any phone
+      // 104px clears the global header pill on any phone
       ? { left: (vw - finalW) / 2, top: 104, w: finalW, h: finalH }
       : { left: vw * 0.63, top: (vh - finalH) / 2, w: finalW, h: finalH }
 
