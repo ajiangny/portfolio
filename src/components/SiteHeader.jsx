@@ -17,16 +17,19 @@ import { SECTIONS, NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useActiveSection from '../hooks/useActiveSection'
 import { setHoverSection } from './gradient/hoverSignal'
+import { SECTION_PALETTES } from './gradient/gradientConfig'
 
 const GUTTER = 24      // px viewport inset at each side when expanded
 const MAX_W = 1180     // px expanded pill cap
 const BAR_H = 56       // px pill height (collapsed width == height → circle)
 const LOGO = '/favicon/logo.svg'
 
-// Perceived luminance → is this section background light? (cream/white vs cobalt/black)
-function isLightBg([r, g, b]) {
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150
-}
+// Perceived luminance of a normalised (0..1) rgb triple. The header sits at the
+// top of the viewport, so we read the gradient's TOP base colour (base[0]) for
+// the section behind it — that's the real background, which can differ from a
+// section's themeRgb (e.g. Contact: cream themeRgb but a near-black gradient).
+const lum = ([r, g, b]) => 0.299 * r + 0.587 * g + 0.114 * b
+const isLightSection = (id) => lum((SECTION_PALETTES[id] ?? SECTION_PALETTES.hero).base[0]) > 0.6
 
 export default function SiteHeader() {
   const { navigate } = useTransitionContext()
@@ -44,7 +47,7 @@ export default function SiteHeader() {
   }, [])
 
   const section = SECTIONS[index] ?? SECTIONS[0]
-  const light = isLightBg(section.themeRgb)
+  const light = isLightSection(section.id)
 
   // Colour system adapts to the section background; CSS transitions tween it
   // across the seam so there's no hard flip.
