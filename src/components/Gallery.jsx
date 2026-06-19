@@ -10,30 +10,40 @@
  *     scrolls past, transitioning into the Contact section
  *   • Lightbox — clicking any artwork opens a fullscreen viewer with
  *     keyboard navigation and a thumbnail carousel strip
- *   • GalleryHalftone — cream dot canvas with a radial pulse ring
- *     that expands as the section scrolls into view
  *
  * Grid cells beyond the artwork count are filled with blank placeholders
  * to maintain the grid structure.
  */
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
-import GalleryHalftone from './gallery/GalleryHalftone'
-import SectionNav from './SectionNav'
+import useMediaQuery from '../hooks/useMediaQuery'
+import GalleryLightbox from './gallery/GalleryLightbox'
 import { artworks } from '../data/galleryData'
 
 
-// 9 columns × 3 rows = 27 cells. Fill remaining with blanks.
-const TOTAL_CELLS = 27
+// Artworks are scattered bento-style among blank cells so the grid
+// reads as an intentional composition instead of one full row + blanks.
+// Desktop: 9 cols × 3 rows (27 cells), diagonal drift pattern.
+// Mobile:  3 cols × 5 rows (15 cells), symmetric checkerboard.
+const DESKTOP_CELLS = 27
+const MOBILE_CELLS = 15
+const DESKTOP_ART_POSITIONS = [1, 4, 7, 9, 12, 15, 18, 20, 23]
+const MOBILE_ART_POSITIONS = [0, 2, 4, 6, 7, 8, 10, 12, 13]
+// Bottom-right cell — "View All" teaser for the future gallery page
+const DESKTOP_VIEWALL_POSITION = 26
+const MOBILE_VIEWALL_POSITION = 14
 
-// ─── Single gallery card ──────────────────────────────────────────
-function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
-  const inStart = 0.55 + index * 0.025
+// ─── Shared cell choreography ─────────────────────────────────────
+// Every grid cell (art, blank, view-all) staggers in during the reveal
+// window and out during the exit window. Windows are normalized by cell
+// count so even the last cell finishes revealing before progress hits 1.
+function useCellReveal(index, totalCells, revealProgress, exitProgress) {
+  const inStart = 0.55 + (index / totalCells) * 0.30
   const inEnd = inStart + 0.14
 
-  const outStart = 0.80 + index * 0.012
+  const outStart = 0.80 + (index / totalCells) * 0.11
   const outEnd = outStart + 0.08
 
   const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
@@ -45,11 +55,22 @@ function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
   const opacity = useTransform([inOpacity, outOpacity], ([i, o]) => i * o)
   const scale = useTransform([inScale, outScale], ([i, o]) => i * o)
 
+  return { opacity, scale }
+}
+
+// ─── Single gallery card ──────────────────────────────────────────
+function ArtCard({ art, artIndex, index, totalCells, revealProgress, exitProgress, onSelect }) {
+  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
+
   return (
     <motion.div
       style={{ opacity, scale }}
       className="gallery-cell gallery-cell-art group"
-      onClick={() => onSelect(index)}
+      onClick={() => onSelect(artIndex)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(artIndex) } }}
+      role="button"
+      tabIndex={0}
+      aria-label={`View ${art.title || art.medium}`}
     >
       <img
         src={art.src}
@@ -59,7 +80,7 @@ function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
       />
       {/* Hover overlay */}
       <div className="gallery-cell-overlay">
-        <span className="font-mono text-cream/90 text-[9px] md:text-[11px] uppercase tracking-[0.2em]">
+        <span className="font-mono text-cream/90 text-label uppercase tracking-[0.2em]">
           {art.medium}
         </span>
       </div>
@@ -68,21 +89,8 @@ function ArtCard({ art, index, revealProgress, exitProgress, onSelect }) {
 }
 
 // ─── Blank placeholder cell ───────────────────────────────────────
-function BlankCard({ index, revealProgress, exitProgress }) {
-  const inStart = 0.55 + index * 0.025
-  const inEnd = inStart + 0.14
-
-  const outStart = 0.80 + index * 0.012
-  const outEnd = outStart + 0.08
-
-  const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
-  const inScale = useTransform(revealProgress, [inStart, inEnd], [0.85, 1])
-
-  const outOpacity = useTransform(exitProgress, [outStart, outEnd], [1, 0])
-  const outScale = useTransform(exitProgress, [outStart, outEnd], [1, 0.9])
-
-  const opacity = useTransform([inOpacity, outOpacity], ([i, o]) => i * o)
-  const scale = useTransform([inScale, outScale], ([i, o]) => i * o)
+function BlankCard({ index, totalCells, revealProgress, exitProgress }) {
+  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
 
   return (
     <motion.div
@@ -92,144 +100,52 @@ function BlankCard({ index, revealProgress, exitProgress }) {
   )
 }
 
-// ─── Lightbox with carousel ───────────────────────────────────────
-function GalleryLightbox({ artworks, initialIndex, onClose }) {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex)
-  const current = artworks[currentIndex]
-  const carouselRef = useRef(null)
+// ─── "View All" teaser cell ───────────────────────────────────────
+// Links to a dedicated gallery page (not built yet) — hover or tap
+// flips the label to "Coming Soon".
+function ViewAllCard({ index, totalCells, revealProgress, exitProgress }) {
+  const [showSoon, setShowSoon] = useState(false)
+  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'Escape') onClose()
-      if (e.key === 'ArrowLeft') setCurrentIndex((p) => (p - 1 + artworks.length) % artworks.length)
-      if (e.key === 'ArrowRight') setCurrentIndex((p) => (p + 1) % artworks.length)
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose, artworks.length])
-
-  // Scroll active thumbnail into view
-  useEffect(() => {
-    if (carouselRef.current) {
-      const thumb = carouselRef.current.children[currentIndex]
-      if (thumb) {
-        thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-      }
-    }
-  }, [currentIndex])
-
-  const goNext = useCallback(() => {
-    setCurrentIndex((p) => (p + 1) % artworks.length)
-  }, [artworks.length])
-
-  const goPrev = useCallback(() => {
-    setCurrentIndex((p) => (p - 1 + artworks.length) % artworks.length)
-  }, [artworks.length])
+  const reveal = () => setShowSoon(true)
+  const conceal = () => setShowSoon(false)
 
   return (
     <motion.div
-      className="gallery-lightbox-backdrop"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={current.title || current.medium}
+      style={{ opacity, scale }}
+      className="gallery-cell gallery-cell-viewall"
+      role="button"
+      tabIndex={0}
+      aria-label="View all artwork — coming soon"
+      onMouseEnter={reveal}
+      onMouseLeave={conceal}
+      onFocus={reveal}
+      onBlur={conceal}
+      onClick={() => {
+        // Touch has no hover — flash the label for a beat instead
+        setShowSoon(true)
+        setTimeout(() => setShowSoon(false), 1600)
+      }}
     >
-      <div
-        className="gallery-lightbox-container"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          className="gallery-lightbox-close"
-          onClick={onClose}
-          aria-label="Close lightbox"
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={showSoon ? 'soon' : 'all'}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="gallery-cell-viewall-label"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M18 6L6 18" />
-            <path d="M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* Main image area */}
-        <div className="gallery-lightbox-main">
-          {/* Left arrow */}
-          <button className="gallery-lightbox-arrow gallery-lightbox-arrow-left" onClick={goPrev} aria-label="Previous artwork">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-
-          {/* Image with AnimatePresence for crossfade */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              className="gallery-lightbox-image-wrapper"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-            >
-              <img
-                src={current.src}
-                alt={current.title || current.medium}
-                className="gallery-lightbox-image"
-              />
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Right arrow */}
-          <button className="gallery-lightbox-arrow gallery-lightbox-arrow-right" onClick={goNext} aria-label="Next artwork">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Info bar */}
-        <div className="gallery-lightbox-info">
-          <div>
-            {current.title && (
-              <p className="font-sans text-cream font-semibold text-sm md:text-base tracking-wide">
-                {current.title}
-              </p>
-            )}
-            <p className="font-mono text-cream/50 text-[10px] md:text-xs uppercase tracking-[0.15em]">
-              {current.medium}
-            </p>
-          </div>
-          <p className="font-mono text-cream/30 text-[10px] tracking-wider">
-            {currentIndex + 1} / {artworks.length}
-          </p>
-        </div>
-
-        {/* Thumbnail carousel */}
-        <div className="gallery-lightbox-carousel-wrapper">
-          <div
-            ref={carouselRef}
-            className="gallery-lightbox-carousel"
-          >
-            {artworks.map((art, idx) => (
-              <button
-                key={art.id}
-                className={`gallery-lightbox-thumb ${idx === currentIndex ? 'active' : ''}`}
-                onClick={() => setCurrentIndex(idx)}
-                aria-label={`View artwork ${idx + 1}`}
-              >
-                <img
-                  src={art.src}
-                  alt={art.title || art.medium}
-                  className="gallery-lightbox-thumb-img"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+          {showSoon ? 'Coming Soon' : (
+            <>
+              View All
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M2.5 9.5L9.5 2.5M4 2.5h5.5V8" />
+              </svg>
+            </>
+          )}
+        </motion.span>
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -239,12 +155,9 @@ export default function Gallery() {
   const containerRef = useRef(null)
   const lenisRef = useLenisContext()
 
-  const [activeHeight, setActiveHeight] = useState(0)
-  useEffect(() => {
-    setActiveHeight(window.innerHeight * 3)
-  }, [])
-
-  const rawProgress = useScrollTimeline(containerRef, activeHeight)
+  // Sticky travel = container (340vh) − viewport (100vh) = 240vh,
+  // trimmed from 300vh so the run-out into Contact doesn't drag.
+  const rawProgress = useScrollTimeline(containerRef, 2.4)
   const progress = useSpring(rawProgress, { stiffness: 240, damping: 30 })
 
   // ── Scroll gap progress ──────────────────────────────────────────
@@ -252,6 +165,7 @@ export default function Gallery() {
   const gapProgress = useSpring(gapProgressRaw, { stiffness: 300, damping: 40 })
 
   useEffect(() => {
+    let unlisten = () => {}
     const t = setTimeout(() => {
       const lenis = lenisRef?.current
       if (!lenis) return
@@ -276,42 +190,64 @@ export default function Gallery() {
       check({ scroll: lenis.scroll ?? window.scrollY })
 
       lenis.on('scroll', check)
-      return () => lenis.off('scroll', check)
+      unlisten = () => lenis.off('scroll', check)
     }, 0)
-    return () => clearTimeout(t)
+    return () => { clearTimeout(t); unlisten() }
   }, [lenisRef, gapProgressRaw])
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
-  const pulseProgress = useTransform(gapProgress, [0.0, 0.70], [0, 1])
 
   // ── Combined header opacity: entry × exit ───────────────────────
   const headerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
   const headerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
   const headerOpacity = useTransform([headerEntryO, headerExitO], ([inO, outO]) => inO * outO)
+  // The header layer is position:fixed and always mounted, so when invisible
+  // it must also be visibility:hidden — pointer-events:none alone is undone
+  // by interactive header children (e.g. links/buttons re-enable pointer
+  // events, making the Gallery header tappable from the Hero section).
+  const headerVisibility = useTransform(headerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
+
   const gridPointerEvents = useTransform(
     [revealRaw, progress],
     ([r, p]) => (r > 0.6 && p < 0.85) ? 'auto' : 'none'
   )
 
-  // ── Small label: slides down from above ──────────────────────────
-  const labelY = useTransform(revealRaw, [0.00, 0.10], ['-60px', '0px'])
-  const labelO = useTransform(revealRaw, [0.00, 0.10], [0, 1])
-
   // ── Lightbox state ──────────────────────────────────────────────
   const [lightboxIndex, setLightboxIndex] = useState(null)
 
-  // Build the 15-cell grid: 9 artworks + 6 blanks
+  // Pause Lenis while the lightbox is open so the page can't scroll under it
+  useEffect(() => {
+    const lenis = lenisRef?.current
+    if (!lenis) return
+    if (lightboxIndex !== null) lenis.stop()
+    else lenis.start()
+    return () => lenis.start()
+  }, [lightboxIndex, lenisRef])
+
+  // ── Build the grid with artworks scattered among blanks ─────────
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const totalCells = isMobile ? MOBILE_CELLS : DESKTOP_CELLS
+  const artPositions = isMobile ? MOBILE_ART_POSITIONS : DESKTOP_ART_POSITIONS
+  const viewAllPosition = isMobile ? MOBILE_VIEWALL_POSITION : DESKTOP_VIEWALL_POSITION
+
   const cells = []
-  for (let i = 0; i < TOTAL_CELLS; i++) {
-    if (i < artworks.length) {
-      cells.push({ type: 'art', art: artworks[i], index: i })
+  for (let i = 0; i < totalCells; i++) {
+    const artIndex = artPositions.indexOf(i)
+    if (artIndex !== -1 && artIndex < artworks.length) {
+      cells.push({ type: 'art', art: artworks[artIndex], artIndex, index: i })
+    } else if (i === viewAllPosition) {
+      cells.push({ type: 'viewall', index: i })
     } else {
       cells.push({ type: 'blank', index: i })
     }
   }
 
   return (
-    <div id="gallery" ref={containerRef} style={{ height: '400vh' }}>
+    <div id="gallery" ref={containerRef} style={{ height: '340vh' }}>
+
+      {/* Screen-reader landmark — kept outside the visibility-gated fixed
+          header so it stays in the document outline at all times. */}
+      <h2 className="sr-only">Gallery</h2>
 
       {/* ── Fixed header — z-50 puts it ABOVE the Projects overlay (z-40) ── */}
       <motion.div
@@ -321,20 +257,9 @@ export default function Gallery() {
           zIndex: 50,
           pointerEvents: 'none',
           opacity: headerOpacity,
+          visibility: headerVisibility,
         }}
       >
-        {/* Halftone pulse and background */}
-        <GalleryHalftone pulseProgress={pulseProgress} headerOpacity={headerOpacity} />
-
-        {/* Small label */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
-          <SectionNav
-            currentSection="Gallery"
-            style={{ y: labelY, opacity: labelO }}
-            defaultTextColor="rgba(245,240,232,0.4)"
-          />
-        </div>
-
         {/* 5×3 viewport-filling grid */}
         <motion.div
           className="gallery-grid-viewport"
@@ -346,15 +271,26 @@ export default function Gallery() {
                 <ArtCard
                   key={cell.art.id}
                   art={cell.art}
+                  artIndex={cell.artIndex}
                   index={cell.index}
+                  totalCells={totalCells}
                   revealProgress={revealRaw}
                   exitProgress={progress}
                   onSelect={setLightboxIndex}
+                />
+              ) : cell.type === 'viewall' ? (
+                <ViewAllCard
+                  key="viewall"
+                  index={cell.index}
+                  totalCells={totalCells}
+                  revealProgress={revealRaw}
+                  exitProgress={progress}
                 />
               ) : (
                 <BlankCard
                   key={`blank-${cell.index}`}
                   index={cell.index}
+                  totalCells={totalCells}
                   revealProgress={revealRaw}
                   exitProgress={progress}
                 />
@@ -377,7 +313,7 @@ export default function Gallery() {
       </AnimatePresence>
 
       {/* ── Sticky pin frame ─────────────────────────────────────────── */}
-      <div className="sticky top-0 h-screen overflow-hidden bg-black">
+      <div className="sticky top-0 h-screen overflow-hidden">
         {/* Empty black background scrolls up behind the fixed Grid and pins */}
       </div>
     </div>
