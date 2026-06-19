@@ -126,7 +126,34 @@ void main() {
   vec2 uv = clamp(vUv + vel * uRefraction, 0.0, 1.0);
   float density = clamp(texture2D(uDye, uv).x * uDyeIntensity, 0.0, uDyeMax);
   vec3 base = mix(uBase1, uBase0, uv.y);
-  vec3 color = mix(base, uInk, density);
+
+  // Coloured body: blend the base toward the section's ink across density.
+  // The pow(<1) lifts faint ambient so it reads as soft swells of coloured
+  // liquid (cyan pools on Hero) rather than vanishing. Capped below 1 so pools
+  // stay a saturated mid-cyan — the thin veins below carry the bright highlight,
+  // keeping the look deep-water rather than washed-out pale.
+  float body = pow(density, 0.85) * 0.82;
+  vec3 color = mix(base, uInk, body);
+
+  // The bright highlight colour is the section's OWN ink brightened toward
+  // white — so each section keeps its hue (light sections don't flash pure
+  // white) while the cyan Hero ink glows near-white at its crests.
+  vec3 crestColor = min(uInk * 1.5 + 0.06, vec3(1.0));
+
+  // Caustic veins: light refracting through water shows up as thin bright
+  // ridges where the dye field *folds* (its gradient is steep), not as filled
+  // blobs. Sample the dye gradient with a small fixed uv offset (a screen-space
+  // edge; exactness doesn't matter) and light the folds.
+  float e = 0.0016;
+  float gx = texture2D(uDye, uv + vec2(e, 0.0)).x - texture2D(uDye, uv - vec2(e, 0.0)).x;
+  float gy = texture2D(uDye, uv + vec2(0.0, e)).x - texture2D(uDye, uv - vec2(0.0, e)).x;
+  float fold = length(vec2(gx, gy)) * uDyeIntensity;
+  float veins = smoothstep(0.012, 0.10, fold);
+  color = mix(color, crestColor, veins * 0.6);
+
+  // Strong cursor cores still bloom to a bright crest on top of the veins.
+  float crest = smoothstep(0.7, 1.0, density);
+  color = mix(color, crestColor, crest * 0.8);
 
   // Film grain: monochrome luminance noise re-seeded each frame so it shimmers
   // like real grain. gl_FragCoord keeps it ~1px at the framebuffer's native res.

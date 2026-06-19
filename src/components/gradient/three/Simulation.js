@@ -115,7 +115,7 @@ export class Simulation {
     field.swap()
   }
 
-  step({ pointer, ambient, time, iters }) {
+  step({ pointer, ambient, time, iters, energy = 1 }) {
     // 1. external forces + dye
     if (pointer && pointer.down) {
       const fx = clamp(pointer.dx, SIM.FORCE_CLAMP) * SIM.CURSOR_FORCE
@@ -125,9 +125,12 @@ export class Simulation {
       this.splat(this.dye, pointer.x, pointer.y, [d, d, d], SIM.SPLAT_RADIUS)
     }
     if (ambient) {
-      const d = SIM.AMBIENT_DENSITY
+      // Per-section energy scales the stir (Hero churns, others stay calm) and,
+      // more gently, the emitted dye so calm sections read cleanly.
+      const force = SIM.AMBIENT_FORCE * energy
+      const d = SIM.AMBIENT_DENSITY * (0.35 + 0.65 * energy)
       for (const p of ambientSplats(time)) {
-        this.splat(this.velocity, p.x, p.y, [p.dx * SIM.AMBIENT_FORCE, p.dy * SIM.AMBIENT_FORCE, 0], SIM.AMBIENT_RADIUS)
+        this.splat(this.velocity, p.x, p.y, [p.dx * force, p.dy * force, 0], SIM.AMBIENT_RADIUS)
         this.splat(this.dye, p.x, p.y, [d, d, d], SIM.AMBIENT_RADIUS)
       }
     }

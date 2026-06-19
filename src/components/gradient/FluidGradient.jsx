@@ -102,6 +102,7 @@ export default function FluidGradient() {
         base0: lerp3(pal.base0, dest.base[0], hoverStrength),
         base1: lerp3(pal.base1, dest.base[1], hoverStrength),
         ink: lerp3(pal.ink, dest.ink, hoverStrength),
+        energy: pal.energy, // hover only fires on Hero, so keep Hero's stir
       }
     }
 
@@ -131,6 +132,13 @@ export default function FluidGradient() {
     if (reduceMotion) {
       scene.renderStatic(paletteNow()) // single static frame
     } else {
+      // Warm the field up front so the first frame is already a developed
+      // liquid (Hero holds the centre on load → its high-energy stir).
+      scene.prewarm({
+        steps: isMobile ? 90 : 150,
+        iters: isMobile ? SIM.JACOBI_MOBILE : SIM.JACOBI,
+        palette: paletteNow(),
+      })
       rafId = requestAnimationFrame(draw)
     }
 
