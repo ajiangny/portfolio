@@ -60,12 +60,12 @@ export default function Hero() {
         </motion.p>
       </motion.div>
 
-      {/* Full-bleed vector wordmark, flush to the bottom edge. The SVG viewBox
-          is tight to the glyphs, so width:100% spans edge-to-edge and seats the
-          letters flush on the bottom — and it scales crisply at any width. */}
+      {/* Full-bleed vector wordmark. The SVG viewBox is tight to the glyphs, so
+          width:100% spans edge-to-edge; a small negative bottom (in vw, so it
+          scales with the wordmark) seats it slightly past the bottom edge. */}
       <motion.div
-        className="absolute inset-x-0 bottom-0"
-        style={{ y: wordmarkY, opacity: wordmarkOpacity }}
+        className="absolute inset-x-0"
+        style={{ y: wordmarkY, opacity: wordmarkOpacity, bottom: '-1.4vw' }}
       >
         <motion.div
           initial={{ opacity: 0 }}
