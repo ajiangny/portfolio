@@ -1,81 +1,101 @@
 /**
  * About.jsx — About Section
  *
- * A 700vh scroll-driven section with three phases:
+ * A 700vh scroll-driven section. The Hero hands off to a white gallery panel:
  *
- * Phase 1 — Filmstrip (progress 0→0.28):
- *   Three columns of duotone artwork scroll upward at different speeds,
- *   then part outward to reveal the profile photo.
+ * Phase 1 — Gallery wall (progress 0→0.15):
+ *   A white panel fills the viewport with a grid of artwork (GridMontage),
+ *   the profile photo dead-centre.
  *
- * Phase 2 — Profile Expansion (progress 0.34→0.43):
- *   The profile card's exact DOM rect is read and used as the start
- *   position for a smooth expansion to a larger portrait on the right.
+ * Phase 2 — Inward dissolve (progress 0.15→0.32):
+ *   The outer images dissolve ring-by-ring toward the centre; the white panel
+ *   fades to reveal the fluid gradient, leaving only the profile photo.
  *
- * Phase 3 — Text Panel (progress 0.43→0.50):
- *   Heading, bio, skills, and resume button slide in from behind the
- *   profile photo in a staggered cascade.
+ * Phase 3 — Portrait journey (progress 0.30→0.52):
+ *   An overlay portrait takes over the centre cell, expands to a large centred
+ *   portrait (hold), then glides to its resting spot (desktop right panel /
+ *   mobile top-centre).
+ *
+ * Phase 4 — Text panel (progress 0.504→0.5725):
+ *   Heading, bio, skills, and resume slide in from behind the portrait.
  *
  * Fade-out (progress 0.85→1.0):
- *   Content fades via a CSS mask gradient, revealing the site-wide fluid
- *   gradient as it crossfades cobalt→cream into the Projects section.
+ *   Content fades via a CSS mask gradient, revealing the gradient as it
+ *   crossfades cobalt→cream into the Projects section.
  */
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
-import { LEFT_COL, CENTER_COL, CENTER_PROFILE_INDEX, RIGHT_COL } from '../data/aboutData'
-import ArtColumn from './about/ArtColumn'
+import {
+  GRID_IMAGES, GRID_COLS, GRID_PROFILE_INDEX,
+  GRID_IMAGES_MOBILE, GRID_COLS_MOBILE, GRID_PROFILE_INDEX_MOBILE,
+} from '../data/aboutData'
+import GridMontage from './about/GridMontage'
 import AboutTextPanel from './about/AboutTextPanel'
 
-// ─── SVG Gradient Map (neutral grayscale duotone) ─────────────────────────────
-// Endpoints are equal across R/G/B, so this is a neutral grayscale map (no
-// colour cast) with the shadows lifted and highlights held — a soft mono look.
-function DuotoneDefs() {
-  return (
-    <svg width="0" height="0" style={{ position: 'absolute', overflow: 'hidden' }}>
-      <defs>
-        <filter id="duotone-art" colorInterpolationFilters="sRGB">
-          <feColorMatrix type="saturate" values="0" result="gray" />
-          <feComponentTransfer colorInterpolationFilters="sRGB">
-            <feFuncR type="table" tableValues="0.15 0.96" />
-            <feFuncG type="table" tableValues="0.15 0.96" />
-            <feFuncB type="table" tableValues="0.15 0.96" />
-          </feComponentTransfer>
-        </filter>
-      </defs>
-    </svg>
-  )
-}
+// Portrait aspect (h / w) — matches the profile cell's 2:3 ratio so the
+// transform handoff starts from the cell with zero distortion. Used for every
+// keyframe (start/centre/final) so a single uniform scale reproduces the path.
+const RATIO = 1.5
+const RADIUS = 16 // fixed corner radius; scales naturally with the transform
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v))
+const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
+const lerpRect = (a, b, t) => ({
+  left: a.left + (b.left - a.left) * t,
+  top: a.top + (b.top - a.top) * t,
+  w: a.w + (b.w - a.w) * t,
+  h: a.h + (b.h - a.h) * t,
+})
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function About() {
   const containerRef = useRef(null)
   const lenisRef = useLenisContext()
   const progress = useMotionValue(0)
-  // Separate clock for the Hero→About handoff — runs while `progress` is
-  // still clamped at 0 (i.e. before the sticky viewport pins).
-  const introProgress = useMotionValue(0)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
-  // Ref on the filmstrip profile card — used to read its exact screen position.
-  const profileCardRef = useRef(null)
-  // Cached rect; refreshed on every scroll tick while the card is settled.
-  const cardRectRef = useRef(null)
+  // Ref on the grid's centre (profile) cell — used to read its exact rect so
+  // the overlay portrait can take over seamlessly.
+  const profileCellRef = useRef(null)
+  const cellRectRef = useRef(null)
 
-  // ── About-profile motion values (driven by useMotionValueEvent, not useTransform)
-  // These represent the profile element's ABSOLUTE position/size as it expands
-  // from the filmstrip card's last known rect to the right-panel target.
-  const aboutLeft = useMotionValue(0)
-  const aboutTop = useMotionValue(0)
-  const aboutW = useMotionValue(0)
-  const aboutH = useMotionValue(0)
+  // ── Overlay portrait motion values — the portrait keeps a FIXED layout box
+  // (its resting size) and reaches every keyframe via transform (translate +
+  // uniform scale) only. Animating transform/opacity instead of width/height/
+  // left/top means the image is painted ONCE and GPU-composited every frame —
+  // no per-frame relayout or image repaint over the live WebGL canvas.
+  const aboutX = useMotionValue(0)
+  const aboutY = useMotionValue(0)
+  const aboutScale = useMotionValue(1)
   const aboutOpacity = useMotionValue(0)
-  const aboutRadius = useMotionValue('12px 12px 12px 12px')
 
-  // Filmstrip opacity — quick fade (≈4 vh) when the about phase begins.
-  const filmstripOpacity = useMotionValue(1)
+  // Resting box of the portrait (viewport-derived; recomputed on resize). The
+  // element is sized to this in CSS; transforms map it onto each keyframe rect.
+  // A ref mirrors it for the per-frame scroll handler (no stale closure).
+  const [finalBox, setFinalBox] = useState(null)
+  const finalBoxRef = useRef(null)
+  useEffect(() => {
+    const compute = () => {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const mobile = vw < 768
+      const finalW = mobile ? vw * 0.68 : vw * 0.30
+      const finalH = finalW * RATIO
+      const box = mobile
+        // 104px clears the global header pill on any phone
+        ? { left: (vw - finalW) / 2, top: 104, w: finalW, h: finalH }
+        : { left: vw * 0.63, top: (vh - finalH) / 2, w: finalW, h: finalH }
+      finalBoxRef.current = box
+      setFinalBox(box)
+    }
+    compute()
+    window.addEventListener('resize', compute)
+    return () => window.removeEventListener('resize', compute)
+  }, [])
 
-  // ── Mouse parallax for profile ───────────────────────────────────────────
+  // ── Mouse parallax for the settled portrait ───────────────────────────────
   const profileMouseX = useMotionValue(0)
   const profileMouseY = useMotionValue(0)
   const smoothProfileX = useSpring(profileMouseX, { stiffness: 150, damping: 20 })
@@ -85,7 +105,7 @@ export default function About() {
   const profileRotateY = useTransform(smoothProfileX, [-1, 1], [-8, 8])
 
   const handleProfileMouseMove = (e) => {
-    if (progress.get() < 0.43) return;
+    if (progress.get() < 0.52) return;
     const rect = e.currentTarget.getBoundingClientRect()
     const x = (e.clientX - rect.left) / rect.width * 2 - 1
     const y = (e.clientY - rect.top) / rect.height * 2 - 1
@@ -108,18 +128,10 @@ export default function About() {
         const el = containerRef.current
         if (!el) return
         const vh = window.innerHeight
-        // Scale progress from 0 to 1 over the ENTIRE 600vh sticky scroll distance.
-        // Container is 700vh, sticky scroll is 600vh.
+        // Scale progress 0→1 over the 600vh sticky scroll distance.
         const activeHeight = vh * 6
         const raw = (scroll - el.offsetTop) / activeHeight
         progress.set(Math.max(0, Math.min(1, raw)))
-        // Hero→About handoff clock — starts at 20% into the Hero's exit
-        // (0.8vh BEFORE `progress` leaves 0) so the blank strips can fall
-        // while the blue section is still sliding up over the Hero.
-        // Spans 1.25vh of scroll: 1 lands at About progress 0.075, where
-        // the filmstrip entry used to finish.
-        const introRaw = (scroll - (el.offsetTop - vh * 0.8)) / (vh * 1.25)
-        introProgress.set(Math.max(0, Math.min(1, introRaw)))
       }
       const onScroll = ({ scroll }) => calc(scroll)
       calc(lenis.scroll ?? window.scrollY)
@@ -127,156 +139,86 @@ export default function About() {
       unlisten = () => lenis.off('scroll', onScroll)
     }, 0)
     return () => { clearTimeout(t); unlisten() }
-  }, [lenisRef, progress, introProgress])
+  }, [lenisRef, progress])
 
-  // ── Scroll-phase transforms ───────────────────────────────────────────────
-  // Re-mapped so everything finishes at progress = 0.5 (which is 300vh)
+  // ── Panel + grid dissolve windows ─────────────────────────────────────────
+  // The white panel + grid are fully present from progress 0 (and so already
+  // visible peeking up from below as Hero exits — nothing fades IN). The panel
+  // only fades OUT to reveal the fluid gradient once the dissolve has run.
+  const panelOpacity = useTransform(progress, [0.30, 0.42], [1, 0])
+  // Centre cell hides as the overlay portrait fades in (seamless — same image).
+  const profileCellHide = useTransform(progress, [0.30, 0.315], [1, 0])
 
-  // Intro choreography rides introProgress (see the Lenis listener):
-  //   0    → 20% into the Hero's exit; blank strips appear at the top
-  //   0.31 → the blanks' bottom row has dropped below the viewport, so
-  //          the art columns start rising to chase it (they break into
-  //          view at ≈0.42 while the upper blank rows are still falling)
-  //   0.72 → filmstrip fully risen; blanks have faded out by 0.70
-  const colsEntryY = useTransform(introProgress, [0.31, 0.72], ['100vh', '0vh'])
-  const framesScale = useTransform(introProgress, [0.31, 0.78], [0.60, 1])
-
-  // Distant blank strips — small, light placeholders that fall down
-  // through the cobalt opening before the real filmstrip rises in,
-  // selling the "falling from a distance" depth as the section opens.
-  const miniY = useTransform(introProgress, [0, 0.7], ['-90vh', '107vh'])
-  const miniO = useTransform(introProgress, [0, 0.06, 0.62, 0.7], [0, 1, 1, 0])
-
-  const leftY = useTransform(progress, [0.1125, 0.28125], ['0%', '-55%'])
-  const leftX = useTransform(progress, [0.2925, 0.35], ['0%', '-140%'])
-  const rightY = useTransform(progress, [0.1125, 0.28125], ['0%', '-62%'])
-  const rightX = useTransform(progress, [0.2925, 0.35], ['0%', '140%'])
-
-  // Centre column travel is measured, not a hard-coded %, so the strip
-  // stops scrolling exactly when the profile card reaches viewport centre.
-  // offsetTop is layout-based (ignores transforms), measured against the
-  // grid container which is pinned to the sticky viewport.
-  const centerColEndShift = useRef(0)
-  useEffect(() => {
-    const measure = () => {
-      const card = profileCardRef.current
-      if (!card) return
-      centerColEndShift.current =
-        window.innerHeight / 2 - (card.offsetTop + card.offsetHeight / 2)
-    }
-    measure()
-    const t = setTimeout(measure, 400) // re-measure once layout fully settles
-    window.addEventListener('resize', measure)
-    return () => { clearTimeout(t); window.removeEventListener('resize', measure) }
-  }, [isMobile])
-  const centerY = useTransform(progress, (v) => {
-    const t = Math.max(0, Math.min(1, (v - 0.1125) / (0.28125 - 0.1125)))
-    return t * centerColEndShift.current
-  })
-
-  // Once the overlay owns the profile (0.31), the centre column splits:
-  // cards above the profile fly up, cards below fly down (see ArtColumn)
-  const profileExit = useTransform(progress, [0.31, 0.37], [0, 1])
-
-  const profileColorOpacity = useTransform(progress, [0.255, 0.3075], [0, 1])
-  const profileGlassOpacity = useTransform(progress, [0.255, 0.3075], [1, 0])
-  // The expanding overlay takes over at 0.31 — hide the filmstrip's own
-  // profile card right then so the two never double up.
-  const profileCardHide = useTransform(progress, [0.31, 0.318], [1, 0])
-
-  // Gradient fade out from bottom to top. The fade only runs 0.85→1.0; below
-  // that the mask is fully opaque (a no-op). We return 'none' there instead of
-  // an opaque mask so the wrapper stops being a CSS "backdrop root" during the
-  // filmstrip — otherwise it walls the cards off from the fixed gradient canvas
-  // and their liquid-glass backdrop-filter has nothing to sample. The 0.8/0.85
-  // handoff is seamless: both states are fully visible (no fade) at that point.
+  // Gradient fade out from bottom to top, 0.85→1.0; 'none' below so the wrapper
+  // isn't a CSS backdrop root mid-section.
   const maskImage = useTransform(progress, (p) => {
     if (p < 0.8) return 'none'
     const t = Math.min(1, Math.max(0, (p - 0.85) / 0.15))
-    const stop1 = -100 + t * 200 // 0.85→1.0 : -100% → 100%
-    const stop2 = t * 200        // 0.85→1.0 :    0% → 200%
+    const stop1 = -100 + t * 200
+    const stop2 = t * 200
     return `linear-gradient(to top, transparent ${stop1}%, black ${stop2}%)`
   })
 
-  // ── Drive the profile expansion from the card's actual DOM rect ──────────
+  // ── Drive the overlay portrait from the centre cell's actual DOM rect ──────
+  //  A (0.30→0.40): centre cell → large CENTRED portrait
+  //  hold (0.40→0.45): rests centre-stage
+  //  B (0.45→0.52): glides to its resting spot
   useMotionValueEvent(progress, 'change', (v) => {
     const vw = window.innerWidth
     const vh = window.innerHeight
+    const mobile = vw < 768
 
-    // Keep the rect fresh while the profile card is settled on screen.
-    if (v >= 0.2815 && profileCardRef.current) {
-      if (v < 0.31 || !cardRectRef.current) {
-        cardRectRef.current = profileCardRef.current.getBoundingClientRect()
-      }
-    }
-
-    if (v < 0.31) {
-      aboutOpacity.set(0)
-      filmstripOpacity.set(1)
-      return
-    }
-
+    // Reset parallax until the portrait has settled at its resting spot.
     if (v < 0.52) {
       profileMouseX.set(0)
       profileMouseY.set(0)
     }
 
-    const rect = cardRectRef.current
+    // Keep the centre-cell rect fresh while the wall is settled; freeze it once
+    // the handoff begins so the expansion starts from a stable point.
+    if (v >= 0.27 && profileCellRef.current) {
+      if (v < 0.30 || !cellRectRef.current) {
+        cellRectRef.current = profileCellRef.current.getBoundingClientRect()
+      }
+    }
+
+    if (v < 0.30) {
+      aboutOpacity.set(0)
+      return
+    }
+
+    const rect = cellRectRef.current
     if (!rect) return
 
-    // Filmstrip fade — after the side columns have parted (0.35) and the
-    // centre cards have mostly rolled out (exit runs 0.31→0.37)
-    const fadeT = Math.max(0, Math.min(1, (v - 0.355) / 0.015))
-    filmstripOpacity.set(1 - fadeT)
+    // Fade the overlay in across the handoff window (0.30→0.315).
+    aboutOpacity.set(clamp01((v - 0.30) / 0.015))
 
-    // ── Three-stage profile journey ──────────────────────────────────
-    //  A    (0.31→0.37): card glides to a large CENTRED portrait while the
-    //       side columns part (0.2925→0.35) — the filmstrip phase ENDS
-    //       with the profile centre-stage
-    //  hold (0.37→0.45): rests centre-stage — the filmstrip's finale
-    //  B    (0.45→0.52): glides to its About resting spot
-    //       desktop → right panel, mobile → compact top-centre
-    const mobile = vw < 768
-    const ratio = rect.height / rect.width || 1.5
-    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
-    const lerpRect = (a, b, t) => ({
-      left: a.left + (b.left - a.left) * t,
-      top: a.top + (b.top - a.top) * t,
-      w: a.w + (b.w - a.w) * t,
-      h: a.h + (b.h - a.h) * t,
-    })
+    const final = finalBoxRef.current
+    if (!final) return
 
     const start = { left: rect.left, top: rect.top, w: rect.width, h: rect.height }
 
     const centerW = mobile ? vw * 0.56 : vw * 0.34
-    const centerH = centerW * ratio
+    const centerH = centerW * RATIO
     const center = { left: (vw - centerW) / 2, top: (vh - centerH) / 2, w: centerW, h: centerH }
 
-    // Mobile resting card mirrors a profile-page hero: large, slightly
-    // squarer than the filmstrip's 2:3 (the ratio morphs during stage B).
-    const finalW = mobile ? vw * 0.78 : vw * 0.30
-    const finalH = finalW * (mobile ? 1.05 : ratio)
-    const final = mobile
-      // 104px clears the global header pill on any phone
-      ? { left: (vw - finalW) / 2, top: 104, w: finalW, h: finalH }
-      : { left: vw * 0.63, top: (vh - finalH) / 2, w: finalW, h: finalH }
-
     let cur
-    if (v < 0.37) cur = lerpRect(start, center, ease(Math.max(0, (v - 0.31) / 0.06)))
+    if (v < 0.40) cur = lerpRect(start, center, easeInOut(clamp01((v - 0.30) / 0.10)))
     else if (v < 0.45) cur = center
-    else if (v < 0.52) cur = lerpRect(center, final, ease((v - 0.45) / 0.07))
+    else if (v < 0.52) cur = lerpRect(center, final, easeInOut(clamp01((v - 0.45) / 0.07)))
     else cur = final
 
-    aboutOpacity.set(1)
-    aboutLeft.set(cur.left)
-    aboutTop.set(cur.top)
-    aboutW.set(cur.w)
-    aboutH.set(cur.h)
-
-    // Border radius: card 12px → slightly larger card 16px (stays portrait-shaped)
-    const r = 12 + 4 * Math.min(1, (v - 0.31) / 0.21)
-    aboutRadius.set(`${r}px`)
+    // Map the cur rect onto the fixed `final` box via translate + uniform scale
+    // (transform-origin centre). Aspect is constant (RATIO), so one scale hits
+    // both width and height exactly — no distortion, no relayout.
+    aboutScale.set(cur.w / final.w)
+    aboutX.set((cur.left + cur.w / 2) - (final.left + final.w / 2))
+    aboutY.set((cur.top + cur.h / 2) - (final.top + final.h / 2))
   })
+
+  const grid = isMobile
+    ? { images: GRID_IMAGES_MOBILE, cols: GRID_COLS_MOBILE, profileIndex: GRID_PROFILE_INDEX_MOBILE }
+    : { images: GRID_IMAGES, cols: GRID_COLS, profileIndex: GRID_PROFILE_INDEX }
 
   return (
     <motion.div
@@ -286,94 +228,70 @@ export default function About() {
       style={{ height: '700vh', backgroundColor: 'transparent' }}
     >
 
-      <DuotoneDefs />
-
       <div className="sticky top-0 overflow-hidden" style={{ height: '100vh' }}>
         <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>
-          {/* ── Distant strips — depth cue ahead of the filmstrip ──────────── */}
+
+          {/* ── White gallery panel ─────────────────────────────────────────── */}
+          {/* Fills the viewport behind the grid, then fades to reveal the fluid */}
+          {/* gradient once the images have dissolved inward.                    */}
           <motion.div
-            className="absolute inset-0 grid grid-cols-3 gap-4 px-[16vw] md:gap-6 md:px-[30vw]"
-            style={{ y: miniY, opacity: miniO, zIndex: 1 }}
             aria-hidden="true"
-          >
-            {[0, 1, 2].map((col) => (
-              <div key={col} className="flex flex-col gap-3" style={{ marginTop: col * 48 }}>
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="shrink-0"
-                    style={{
-                      aspectRatio: '2 / 3',
-                      borderRadius: '8px',
-                      background: 'rgba(245,240,232,0.10)',
-                      border: '1px solid rgba(245,240,232,0.14)',
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
-          </motion.div>
-
-          {/* ── Filmstrip grid ──────────────────────────────────────────────── */}
-          {/* Quick-fades out (opacity) when the about phase begins so the      */}
-          {/* expanding about-photo can take over without a visible double-up.  */}
-          <motion.div
-            className="absolute inset-0 grid grid-cols-3 gap-4 px-[8vw]"
             style={{
-              paddingTop: '5vh',
-              paddingBottom: '5vh',
-              overflow: 'hidden',
-              y: colsEntryY,
-              opacity: filmstripOpacity,
-              zIndex: 1,
-              // Mobile: the grid is wider than the viewport so columns are
-              // tall enough to actually scroll — at natural size every image
-              // fit on screen and the filmstrip effect was invisible.
-              ...(isMobile ? { width: '176vw', left: '-38vw', right: 'auto' } : {}),
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: '#ffffff',
+              opacity: panelOpacity,
+              zIndex: 0,
+              pointerEvents: 'none',
             }}
+          />
+
+          {/* ── Gallery-wall grid ───────────────────────────────────────────── */}
+          {/* Static montage; outer cells dissolve inward on scroll, profile     */}
+          {/* (centre) survives and is handed off to the overlay portrait.       */}
+          {/* paddingTop clears the navbar: SiteHeader sits at top:18, height:46
+               → 64px bottom edge + 16px breathing = 80px. paddingBottom adds
+               16px at the bottom. navClearancePx (80+16=96) mirrors this so
+               GridMontage derives the exact width that keeps portrait cells
+               inside the available 100vh − 96px space. */}
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ paddingTop: 80, paddingBottom: 16, zIndex: 1 }}
           >
-            <motion.div style={{ y: leftY, x: leftX, willChange: 'transform' }}>
-              <ArtColumn images={LEFT_COL} scale={framesScale} lite={isMobile} />
-            </motion.div>
+            <GridMontage
+              images={grid.images}
+              cols={grid.cols}
+              profileIndex={grid.profileIndex}
+              progress={progress}
+              profileCellRef={profileCellRef}
+              profileHideOpacity={profileCellHide}
+              fitVw={isMobile ? 88 : 88}
+              navClearancePx={96}
+            />
+          </div>
 
-            <motion.div style={{ y: centerY, willChange: 'transform' }}>
-              <ArtColumn
-                images={CENTER_COL}
-                clearLast
-                scale={framesScale}
-                profileColorOpacity={profileColorOpacity}
-                profileGlassOpacity={profileGlassOpacity}
-                profileCardRef={profileCardRef}
-                profileHideOpacity={profileCardHide}
-                profileIndex={CENTER_PROFILE_INDEX}
-                exitProgress={profileExit}
-                lite={isMobile}
-              />
-            </motion.div>
-
-            <motion.div style={{ y: rightY, x: rightX, willChange: 'transform' }}>
-              <ArtColumn images={RIGHT_COL} scale={framesScale} lite={isMobile} />
-            </motion.div>
-          </motion.div>
-
-          {/* ── About — profile photo ───────────────────────────────────────── */}
-          {/* Starts at the filmstrip card's exact getBoundingClientRect        */}
-          {/* position/size, then expands scroll-driven to fill the right half. */}
-          {/* NO opacity transition on this element — it's a pure positional    */}
-          {/* animation with a single-frame appear at progress 0.680.           */}
+          {/* ── About — overlay portrait ────────────────────────────────────── */}
+          {/* Starts at the grid centre cell's exact rect, then expands to the   */}
+          {/* centred portrait and glides to its resting spot.                   */}
           <motion.div
             style={{
               position: 'absolute',
-              left: aboutLeft,
-              top: aboutTop,
-              width: aboutW,
-              height: aboutH,
+              left: finalBox?.left ?? 0,
+              top: finalBox?.top ?? 0,
+              width: finalBox?.w ?? 0,
+              height: finalBox?.h ?? 0,
+              x: aboutX,
+              y: aboutY,
+              scale: aboutScale,
               opacity: aboutOpacity,
-              borderRadius: aboutRadius,
+              borderRadius: RADIUS,
               zIndex: 3,
               rotateX: profileRotateX,
               rotateY: profileRotateY,
               transformPerspective: 1200,
+              transformOrigin: 'center',
+              backfaceVisibility: 'hidden',
+              willChange: 'transform',
             }}
             onMouseMove={handleProfileMouseMove}
             onMouseLeave={handleProfileMouseLeave}
@@ -382,14 +300,14 @@ export default function About() {
             {/* Pulse Glow */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ animation: 'pulse-glow 2s ease-out infinite', borderRadius: aboutRadius }}
+              style={{ animation: 'pulse-glow 2s ease-out infinite', borderRadius: RADIUS }}
             />
             {/* Pulse Ring */}
             <motion.div
               className="absolute inset-0 border border-[#f5f0e8] pointer-events-none"
-              style={{ animation: 'pulse-ring 2s ease-out infinite', backfaceVisibility: 'hidden', borderRadius: aboutRadius }}
+              style={{ animation: 'pulse-ring 2s ease-out infinite', backfaceVisibility: 'hidden', borderRadius: RADIUS }}
             />
-            <motion.div style={{ borderRadius: aboutRadius, overflow: 'hidden', width: '100%', height: '100%', position: 'relative' }}>
+            <motion.div style={{ borderRadius: RADIUS, overflow: 'hidden', width: '100%', height: '100%', position: 'relative' }}>
               <img
                 src="/art/profile.webp"
                 alt="Andrew Jiang"
@@ -399,11 +317,7 @@ export default function About() {
             </motion.div>
           </motion.div>
 
-
-
           {/* ── About — text panel ──────────────────────────────────────────── */}
-          {/* Heading/bio/skills/resume cascade — slides out from behind the    */}
-          {/* profile photo. Lives in about/AboutTextPanel.jsx.                 */}
           <AboutTextPanel progress={progress} isMobile={isMobile} />
         </motion.div>
 

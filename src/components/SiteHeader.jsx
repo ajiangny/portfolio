@@ -11,7 +11,7 @@
  * pill that opens a dropdown.
  */
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion, useAnimation } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -21,7 +21,7 @@ import { SECTION_PALETTES } from './gradient/gradientConfig'
 
 const GUTTER = 40      // px viewport inset at each side when expanded
 const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
-const BAR_H = 56       // px pill height (collapsed width == height → circle)
+const BAR_H = 46       // px pill height (collapsed width == height → circle)
 const LOGO = '/favicon/logo.svg'
 
 // Perceived luminance of a normalised (0..1) rgb triple. The header sits at the
@@ -60,6 +60,13 @@ export default function SiteHeader() {
 
   // Mobile is always the collapsed pill; reduced-motion is always expanded.
   const expanded = reduce ? true : isMobile ? false : settled
+
+  const logoAnim = useAnimation()
+  const onLogoHover = async () => {
+    if (reduce) return
+    await logoAnim.start({ rotate: 360, transition: { duration: 0.5, ease: 'easeInOut' } })
+    logoAnim.set({ rotate: 0 })
+  }
 
   const [hoveredId, setHoveredId] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -149,7 +156,11 @@ export default function SiteHeader() {
               cursor: 'pointer',
             }}
           >
-            <img src={LOGO} alt="" width={30} height={30} draggable={false} />
+            <motion.img
+              src={LOGO} alt="" width={24} height={24} draggable={false}
+              animate={logoAnim}
+              onHoverStart={onLogoHover}
+            />
           </button>
 
           {/* Links — fade in when expanded, clipped by the pill while collapsed */}
