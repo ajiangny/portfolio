@@ -5,13 +5,12 @@
  * shows through — Hero is background-transparent. Content:
  *   • A centred "PORTFOLIO 2026" eyebrow (DM Sans — PORTFOLIO extra-light,
  *     2026 bold italic).
- *   • A single flat-white "ANDREW JIANG" wordmark (ElasticHeading, per-letter
- *     mouse-repulsion) sitting flush against the bottom edge and bleeding
- *     full-width past both sides. No parallax — it stays pinned to the bottom.
+ *   • A single "ANDREW JIANG" wordmark (HeroWordmark, per-letter mouse-repulsion)
+ *     sitting flush against the bottom edge, full-width. Stays white throughout;
+ *     per-glyph hover shadows live inside HeroWordmark itself.
+ *   • As the Hero exits, the About section's white entry panel peeks into the
+ *     bottom of the viewport from below — no animated panel in Hero.
  * Global navigation lives in SiteHeader (App.jsx), not here.
- *
- * Scroll behaviour: the eyebrow and wordmark fade (the wordmark rises a touch)
- * as Hero exits; the cobalt gradient persists beneath into About.
  */
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
@@ -24,25 +23,24 @@ export default function Hero() {
     offset: ['start start', 'end start'],
   })
 
-  // Wordmark exit: rise slightly + fade.
-  const wordmarkY = useTransform(scrollYProgress, [0, 0.6], [0, -60])
-  const wordmarkOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
-
-  // Centred eyebrow exit: drift up + fade (a touch faster than the wordmark).
+  // Eyebrow exits: drift up + fade.
   const eyebrowY = useTransform(scrollYProgress, [0, 0.5], [0, -40])
   const eyebrowOpacity = useTransform(scrollYProgress, [0, 0.35], [1, 0])
+
+  // Wordmark fades out late — stays white throughout, no colour transition.
+  const wordmarkOpacity = useTransform(scrollYProgress, [0.84, 0.95], [1, 0])
 
   return (
     <section
       ref={heroRef}
       id="hero"
-      className="relative min-h-screen overflow-hidden"
-      style={{ backgroundColor: 'transparent' }}
+      className="relative overflow-hidden"
+      style={{ minHeight: 'calc(100vh + 2px)', backgroundColor: 'transparent' }}
     >
       {/* Centred PORTFOLIO 2026 eyebrow */}
       <motion.div
         className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
-        style={{ opacity: eyebrowOpacity, y: eyebrowY }}
+        style={{ opacity: eyebrowOpacity, y: eyebrowY, zIndex: 2 }}
       >
         <motion.p
           initial={{ opacity: 0, y: 8 }}
@@ -60,25 +58,19 @@ export default function Hero() {
         </motion.p>
       </motion.div>
 
-      {/* Full-bleed vector wordmark. The SVG viewBox is tight to the glyphs, so
-          width:100% spans edge-to-edge; a small negative bottom (in vw, so it
-          scales with the wordmark) seats it slightly past the bottom edge. */}
+      {/* Full-bleed wordmark — white, no scroll-driven colour or shadow.
+          Per-glyph hover shadows are handled inside HeroWordmark. */}
       <motion.div
         className="absolute inset-x-0"
-        style={{ y: wordmarkY, opacity: wordmarkOpacity, bottom: '-0.2vw' }}
+        style={{ bottom: '-0.5vw', opacity: wordmarkOpacity, zIndex: 2 }}
       >
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.9, delay: 0.15 }}
+          style={{ color: '#ffffff' }}
         >
-          <HeroWordmark
-            className="block w-full select-none"
-            style={{
-              color: '#ffffff',
-              filter: 'drop-shadow(0 8px 24px rgba(8,12,40,0.45))',
-            }}
-          />
+          <HeroWordmark className="block w-full select-none" />
         </motion.div>
       </motion.div>
     </section>

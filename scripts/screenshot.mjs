@@ -18,10 +18,10 @@ const URL = process.argv[3] || 'http://localhost:5173/'
 // scroll positions expressed in viewport-heights
 const STOPS = [
   ['hero', 0],
-  ['about-entry', 1.25],
-  ['about-filmstrip', 2.5],
-  ['about-strip-end', 2.75],
-  ['about-split', 3.1],
+  ['about-wall', 1.0],
+  ['about-dissolve', 2.3],
+  ['about-handoff', 2.8],
+  ['about-centred', 3.4],
   ['about-profile', 3.6],
   ['about-text', 4.6],
   ['about-pause', 6.0],

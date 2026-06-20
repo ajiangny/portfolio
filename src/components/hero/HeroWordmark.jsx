@@ -20,6 +20,7 @@
 import { useRef, useLayoutEffect } from 'react'
 import {
   motion, useMotionValue, useTransform, useSpring, useReducedMotion, useAnimationFrame,
+  useMotionTemplate,
 } from 'framer-motion'
 
 const VB_W = 1440
@@ -79,7 +80,16 @@ function ElasticLetter({ d, mouseX, mouseY }) {
   const x = useSpring(rawX, SPRING)
   const y = useSpring(rawY, SPRING)
 
-  return <motion.path ref={ref} d={d} style={{ x, y }} />
+  // Shadow alpha: 0 when cursor is absent or outside radius, peaks at ~0.55 on direct hover.
+  const shadowAlpha = useTransform([mouseX, mouseY], ([mx, my]) => {
+    if (mx === OFF) return 0
+    const dist = Math.hypot(mx - cx.current, my - cy.current)
+    if (dist >= RADIUS) return 0
+    return Math.pow(1 - dist / RADIUS, 1.8) * 0.55
+  })
+  const letterFilter = useMotionTemplate`drop-shadow(0 6px 22px rgba(8,12,40,${shadowAlpha}))`
+
+  return <motion.path ref={ref} d={d} style={{ x, y, filter: letterFilter }} />
 }
 
 export default function HeroWordmark({ className, style, title = 'Andrew Jiang' }) {
