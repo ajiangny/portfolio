@@ -199,7 +199,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
               </a>
             </div>
 
-            <DogPet size={isMobile ? 48 : 300} jumpScale={isMobile ? 1 : 1.6} />
+            {isMobile ? <DogPet size={48} /> : <DogPet jumpScale={2.25} />}
           </div>
         </Assemble>
 

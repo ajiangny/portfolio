@@ -99,9 +99,9 @@ export const TECH_HOBBIES = [
 // Auto-rotates through these lines (crossfade; pauses under reduced-motion).
 export const STATUS_ITEMS = [
   { label: 'Current Status', value: 'Seeking Internships' },
-  { label: 'Currently Playing', value: 'Teamfight Tactics' },        // placeholder
-  { label: 'Studying', value: 'Leetcode & Data Structures' },        // placeholder
-  { label: 'Now Watching', value: 'Fullmetal Alchemist' },        // placeholder
+  { label: 'Current Status', value: 'Playing Teamfight Tactics' },
+  { label: 'Current Status', value: 'Studying for Leetcode & Data Structures' },
+  { label: 'Current Status', value: 'Sketching in my Notebook' },
 ];
 
 // ── Spotify tile ─────────────────────────────────────────────────────────────
