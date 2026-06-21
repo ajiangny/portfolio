@@ -12,15 +12,36 @@
  * all cards via the `cardTransforms` bundle computed once in Projects.
  */
 import { motion, useTransform, useSpring, useMotionValue, useMotionTemplate } from 'framer-motion'
-import StackIcon from '../LazyStackIcon'
-import { TECH_ICON_MAP } from '../../data/projectsData'
-import { GitHubIcon, ExternalIcon, WrenchIcon } from '../icons'
+
+function WrenchIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  )
+}
+
+function GitHubIcon() {
+  return (
+    <img src="/icons/default/github.svg" className="h-5 w-5 opacity-40 transition-opacity duration-300 group-hover/gh:opacity-100" alt="" aria-hidden="true" draggable="false" />
+  )
+}
+
+function ExternalIcon() {
+  return (
+    <svg className="h-5 w-5 text-ink/50 transition-colors duration-300 group-hover/ext:text-cobalt" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  )
+}
 
 export default function ProjectCard({ work, isActive, isActiveIndex, widthClass, translateX, scale, zIndexClass, washOpacity, cardShadow, onClick, distForStyle, clampedRel, globalSpringX, globalSpringY, cardTransforms, isMobile }) {
   const isPrimary = distForStyle === 0;
 
   // Destructure shared transforms passed from parent to avoid redefining them 20 times
-  const { blueOpacity, borderStyle, iconOpacity, contentOpacity: globalContentOpacity, grayscale, brightness, flattenFactor, scrollFade } = cardTransforms;
+  const { blueOpacity, borderStyle, contentOpacity: globalContentOpacity, grayscale, brightness, flattenFactor, scrollFade } = cardTransforms;
 
   // For the active card, keep thumbnail fully visible. For inactive cards, fade out.
   const contentOpacity = useTransform([globalContentOpacity], ([co]) => isActive ? 1 : co);
@@ -159,36 +180,6 @@ export default function ProjectCard({ work, isActive, isActiveIndex, widthClass,
           {/* Inner Shadow - kept from the previous article class */}
           <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(255,255,255,0.5)] pointer-events-none z-10" />
 
-          <motion.div
-            style={{ opacity: iconOpacity }}
-            className={`absolute top-3 right-3 flex gap-2 transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          >
-            {work.tech.map((t, index) => {
-              const mapped = TECH_ICON_MAP[t] || { custom: t.substring(0, 2).toUpperCase(), color: '#1B3A8C' };
-              return (
-                <div
-                  key={index}
-                  className={`group/icon w-8 h-8 rounded-full border border-white/20 flex items-center justify-center transition-colors ${isActive ? 'bg-white/80' : 'bg-white/50 hover:bg-white/80'}`}
-                  title={t}
-                >
-                  {mapped.icon ? (
-                    <div className={`relative w-4 h-4 transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`}>
-                      <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-0' : 'opacity-100 group-hover/icon:opacity-0'}`}>
-                        <StackIcon name={mapped.icon} variant="grayscale" />
-                      </div>
-                      <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover/icon:opacity-100'}`}>
-                        <StackIcon name={mapped.icon} />
-                      </div>
-                    </div>
-                  ) : (
-                    <span className={`font-bold text-label transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-70 group-hover/icon:opacity-100'}`} style={{ color: mapped.color }}>
-                      {mapped.custom}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
-          </motion.div>
         </motion.article>
       </motion.div>
 
@@ -220,12 +211,12 @@ export default function ProjectCard({ work, isActive, isActiveIndex, widthClass,
 
           <div className="flex gap-3 shrink-0 mt-0.5">
             {work.github && !work.isGithubCard && (
-              <a href={work.github} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} on GitHub`}>
+              <a href={work.github} target="_blank" rel="noopener noreferrer" className="group/gh" aria-label={`${work.title} on GitHub`}>
                 <GitHubIcon />
               </a>
             )}
             {work.live && (
-              <a href={work.live} target="_blank" rel="noopener noreferrer" className="text-ink/50 hover:text-cobalt transition-colors" aria-label={`${work.title} live demo`}>
+              <a href={work.live} target="_blank" rel="noopener noreferrer" className="group/ext" aria-label={`${work.title} live demo`}>
                 <ExternalIcon />
               </a>
             )}
