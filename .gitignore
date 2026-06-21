@@ -24,12 +24,12 @@ dist-ssr
 *.sw?
 
 # Audit screenshots
+scripts/
 scripts/shots/
 
 # Agent
 .claude/
 .agent/
-.claude
 
 # Brainstorming visual-companion mockups
 .superpowers/
@@ -37,3 +37,6 @@ scripts/shots/
 # Documentation
 docs/superpowers/
 docs/ARCHITECTURE.md
+
+# Test
+test

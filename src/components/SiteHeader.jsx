@@ -168,7 +168,7 @@ export default function SiteHeader() {
             <motion.ul
               animate={{ opacity: expanded ? 1 : 0 }}
               transition={{ duration: 0.2 }}
-              className="font-sans font-bold lowercase"
+              className="font-sans font-bold uppercase"
               style={{
                 flex: 1,
                 display: 'flex',
@@ -225,7 +225,7 @@ export default function SiteHeader() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="font-sans font-bold lowercase"
+              className="font-sans font-bold uppercase"
               style={{
                 position: 'absolute',
                 top: BAR_H + 10,
