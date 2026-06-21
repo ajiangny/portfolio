@@ -31,7 +31,7 @@ before retiming animations or touching the gradient.**
 | Per-section base/ink palettes + sim tuning (SIM) + shell tuning (GRADIENT) | [src/components/gradient/gradientConfig.js](src/components/gradient/gradientConfig.js) |
 | Project cards + tech-icon mapping | [src/data/projectsData.js](src/data/projectsData.js) |
 | Gallery artworks | [src/data/galleryData.js](src/data/galleryData.js) |
-| About filmstrip images + skills lists | [src/data/aboutData.js](src/data/aboutData.js) |
+| About gallery-wall images + bento content (tagline, bio, tech/hobbies, status, spotify, socials) | [src/data/aboutData.js](src/data/aboutData.js) |
 | Design tokens (colors, fonts, **type scale** `--text-*`) | `@theme` in [src/index.css](src/index.css) |
 | Contact email + social links | [src/components/Contact.jsx](src/components/Contact.jsx) |
 
@@ -87,8 +87,8 @@ before retiming animations or touching the gradient.**
   for anything driven by motion values or `isMobile`. Match whichever the
   surrounding code uses.
 - **Responsive**: single JS breakpoint `useMediaQuery('(max-width: 767px)')`;
-  mobile swaps layouts (vertical carousel, skills marquee, top-centre
-  portrait), not just sizes. The gradient renders at a reduced buffer
+  mobile swaps layouts (vertical carousel, a tall scroll-panned About bento,
+  3×3 gallery wall), not just sizes. The gradient renders at a reduced buffer
   (`MOBILE_SCALE`), uses a smaller sim grid (`SIM.RES_MOBILE`) and fewer
   Jacobi iterations, and throttles to ~30fps (`FRAME_MS_MOBILE`). Ambient drift
   still runs on mobile (no cursor); touch injects swirls. Falls back to the CSS

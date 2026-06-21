@@ -50,3 +50,73 @@ export const OTHER_SKILLS = [
   { name: 'GitHub', icon: 'github' },
   { name: 'Framer Motion', icon: 'framer' },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Bento layout content — consumed by AboutBento.jsx (the 7-tile settled state)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Tagline tile ────────────────────────────────────────────────────────────
+// Rendered word-by-word so weight/style varies per segment: "Engineering"
+// reads bold, "Artistic" reads light + italic (matches the reference). The
+// segments wrap naturally; `break` forces a line break after it.
+export const TAGLINE_SEGMENTS = [
+  { t: 'Engineering', weight: 800 },
+  { t: 'with', weight: 400 },
+  { t: 'an', weight: 400, break: true },
+  { t: 'Artistic', weight: 300, italic: true },
+  { t: 'eye.', weight: 400 },
+];
+
+// ── About description tile ───────────────────────────────────────────────────
+export const BIO_PARAGRAPHS = [
+  `I'm an aspiring software engineer based in New York, currently pursuing my BS in Computer Science at Queens College. Coming from an artistic background, I believe design can solve problems and improve how people interact with technology. My goal is to create digital experiences that are both functional and enjoyable.`,
+  `When I'm not building, you'll find me on a scenic hike, sketching in my notebook, or experimenting in the kitchen.`,
+];
+
+// ── Resume button (tagline tile) ─────────────────────────────────────────────
+export const RESUME_URL = '/docs/resume.pdf';
+
+// ── Tech Stack & Hobbies tile ────────────────────────────────────────────────
+// `kind: 'tech'` items render a tech-stack-icons glyph (by `icon`, grayscale →
+// colour on hover). `kind: 'hobby'` items render an inline SVG keyed by `icon`
+// (HOBBY_ICONS map in AboutBento.jsx). 3-col grid, ordered tech → hobbies.
+export const TECH_HOBBIES = [
+  { kind: 'tech', icon: 'react', label: 'React' },
+  { kind: 'tech', icon: 'typescript', label: 'TypeScript' },
+  { kind: 'tech', icon: 'tailwindcss', label: 'Tailwind' },
+  { kind: 'tech', icon: 'js', label: 'JavaScript' },
+  { kind: 'tech', icon: 'python', label: 'Python' },
+  { kind: 'tech', icon: 'nodejs', label: 'Node.js' },
+  { kind: 'hobby', icon: 'hiking', label: 'Hiking' },
+  { kind: 'hobby', icon: 'gaming', label: 'Gaming' },
+  { kind: 'hobby', icon: 'sketch', label: 'Sketching' },
+  { kind: 'hobby', icon: 'cooking', label: 'Cooking' },
+  { kind: 'hobby', icon: 'film', label: 'Film' },
+  { kind: 'hobby', icon: 'reading', label: 'Reading' },
+];
+
+// ── Status tile ──────────────────────────────────────────────────────────────
+// Auto-rotates through these lines (crossfade; pauses under reduced-motion).
+export const STATUS_ITEMS = [
+  { label: 'Current Status', value: 'Seeking Internships' },
+  { label: 'Currently Playing', value: 'Teamfight Tactics' },        // placeholder
+  { label: 'Studying', value: 'Leetcode & Data Structures' },        // placeholder
+  { label: 'Now Watching', value: 'Fullmetal Alchemist' },        // placeholder
+];
+
+// ── Spotify tile ─────────────────────────────────────────────────────────────
+// Custom faux-player UI; the whole card links out to the playlist.
+export const SPOTIFY = {
+  url: 'https://open.spotify.com/playlist/13dthduoXicGhZ7rRTUz4D?si=1e9fb7a9c380461a&pt=d7d5f2e01d2d3d37ca62a792c4633f22',   // placeholder — your playlist URL
+  track: 'My Playlist',               // placeholder
+  author: 'Andrew Jiang',                   // placeholder
+  cover: '',                          // optional cover image path; '' → disc placeholder
+};
+
+// ── Socials tile ─────────────────────────────────────────────────────────────
+// GitHub + LinkedIn mirror Contact.jsx; Instagram is a placeholder.
+export const SOCIALS = [
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/in/ajiangnyc/', icon: 'linkedin' },
+  { label: 'GitHub', href: 'https://github.com/ajiangny', icon: 'github' },
+  { label: 'Instagram', href: 'https://instagram.com/ajiang.art/', icon: 'instagram' }, // TODO: real handle
+];

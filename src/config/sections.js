@@ -14,7 +14,8 @@
  *   scrollOffsetVh — extra scroll offset (in viewport-heights) past the
  *                    section top, so navigation lands on the section's
  *                    "settled" state:
- *                      about    +3.6vh → progress 0.6, text panel revealed
+ *                      about    +4.5vh → progress 0.75, bento assembled
+ *                                        (mobile: ~half-way through the pan)
  *                      projects +1vh   → progress ~0.33, carousel on screen
  *                      contact  +0     → content fits one viewport exactly
  *                                        (an offset would clamp at max
@@ -22,7 +23,7 @@
  */
 export const SECTIONS = [
   { id: 'hero',     label: 'Home',     themeRgb: [27, 58, 140],   blobShape: '68% 32% 55% 45% / 48% 56% 44% 52%', scrollOffsetVh: 0 },
-  { id: 'about',    label: 'About',    themeRgb: [37, 79, 193],   blobShape: '44% 56% 65% 35% / 56% 44% 58% 42%', scrollOffsetVh: 3.6 },
+  { id: 'about',    label: 'About',    themeRgb: [37, 79, 193],   blobShape: '44% 56% 65% 35% / 56% 44% 58% 42%', scrollOffsetVh: 4.5 },
   { id: 'projects', label: 'Projects', themeRgb: [245, 240, 232], blobShape: '58% 42% 38% 62% / 42% 62% 54% 46%', scrollOffsetVh: 1 },
   { id: 'gallery',  label: 'Gallery',  themeRgb: [0, 0, 0],       blobShape: '34% 66% 46% 54% / 62% 38% 52% 48%', scrollOffsetVh: 0 },
   { id: 'contact',  label: 'Contact',  themeRgb: [245, 240, 232], blobShape: '54% 46% 58% 42% / 50% 52% 48% 50%', scrollOffsetVh: 0 },

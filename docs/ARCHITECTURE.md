@@ -48,33 +48,34 @@ scroll-out. Background-transparent; the fluid gradient shows through.
 
 ### About (`About.jsx`) — the long one
 
-Two clocks:
-- `introProgress` — Hero→About handoff; starts 0.8vh **before** the section
-  pins, spans 1.25vh of scroll.
-- `progress` — main clock over the 600vh sticky travel.
+One clock: `progress`, over the 600vh sticky travel (bespoke Lenis listener).
+The journey (gallery wall → portrait fly-in) **resolves into a bento grid**
+(`about/AboutBento.jsx`) — the travelling portrait lands as the bento's profile
+tile and the other six tiles assemble around it.
 
-| Clock | Window | Effect |
-|---|---|---|
-| intro | 0→0.7 | distant blank strips fall through (fade 0→0.06, out 0.62→0.7) |
-| intro | 0.31→0.72 | filmstrip columns rise from below |
-| intro | 0.31→0.78 | frames scale 0.6→1 |
-| progress | 0.1125→0.28125 | columns scroll (left −55%, right −62%, centre stops with profile card dead-centre — measured, not hard-coded) |
-| progress | 0.255→0.3075 | profile card crossfades duotone→full colour |
-| progress | 0.2925→0.35 | side columns part (x ±140%) |
-| progress | 0.31 | expanding overlay takes over the photo (filmstrip card hides 0.31→0.318; centre column splits up/down 0.31→0.37) |
-| progress | 0.31→0.37 | photo stage A: glides to large centred portrait |
-| progress | 0.37→0.45 | photo holds centre-stage |
-| progress | 0.45→0.52 | photo stage B: glides to resting spot (desktop: right panel at 63vw; mobile: top-centre, 78vw wide at y=104px) |
-| progress | 0.504→0.5725 | text cascade (in `AboutTextPanel.jsx`): heading 0.514, bio 0.523, second bio 0.53, skills 0.537, resume 0.544 |
-| progress | 0.5725→0.85 | rest — fully revealed state (nav lands here: offset 3.6vh ≈ progress 0.6) |
-| progress | 0.85→1.0 | fade-out: content fades via a bottom-up CSS mask, revealing the gradient as it crossfades cobalt→cream into Projects |
+| Window | Effect |
+|---|---|
+| 0→0.30 | gallery wall settled (`about/GridMontage.jsx`; white panel opaque; profile photo dead-centre) |
+| 0.15→0.32 | outer cells dissolve ring-by-ring toward the centre (GridMontage) |
+| 0.30→0.42 | white panel fades out → fluid gradient shows through |
+| 0.30→0.315 | centre cell hides; the overlay portrait (flight vehicle) takes over (same image) |
+| 0.30→0.48 | overlay moves DIRECTLY to the **measured bento profile-tile rect** (`finalBox`) — single eased move, no centre expand/hold |
+| (desktop) | the overlay simply settles as the profile card and stays (no crossfade — it carries the same glass material as the tiles) |
+| 0.48→0.51 | (mobile only) overlay fades out as the in-grid profile photo fades in, so the photo pans with the bento |
+| 0.50→0.66 | six tiles assemble, staggered ~0.02 apart (tagline .50, tech .52, about .54, status .56, spotify .58, social .60; each ~0.06 long; opacity + rise + scale) — `AboutBento.jsx` |
+| 0.52→0.88 | **mobile only**: the tall bento pans vertically (`panY`) so every tile is reachable; overflow measured from the grid |
+| 0.66→0.85 | settled bento (nav lands here: offset 4.5vh ≈ progress 0.75) |
+| 0.85→1.0 | fade-out: content fades via a bottom-up CSS mask, revealing the gradient as it crossfades cobalt→cream into Projects |
 
 About is a **cobalt** section (background-transparent; the gradient's cobalt
-`about` palette shows through), so its cream text/filmstrip stay legible. The
-photo expansion is rect-driven: it reads the filmstrip
-card's `getBoundingClientRect` and lerps between start/centre/final rects in
-a `useMotionValueEvent` — retime by editing the 0.31 / 0.37 / 0.45 / 0.52
-breakpoints there (and the text windows in `AboutTextPanel.jsx` to follow).
+`about` palette shows through), so its cream text/photo stay legible. The bento
+grid is as wide as the expanded navbar and uses the **same glass material as
+`SiteHeader`**. The photo handoff is rect-driven: `About.jsx` reads the
+GridMontage centre cell's `getBoundingClientRect` (start) and the AboutBento
+profile tile's rect (final, in sticky-relative = pinned-viewport coords) and
+lerps start→final in a `useMotionValueEvent`. Retime by editing the 0.30 / 0.48
+move window in `About.jsx` and the per-tile `start` values + the
+`profileOpacity` / `panY` windows in `AboutBento.jsx`.
 
 ### About→Projects seam
 
@@ -288,15 +289,13 @@ border-radius shapes from `hero/orbitConstants.js`).
 
 - One JS breakpoint: `(max-width: 767px)` via `useMediaQuery`.
 - Mobile is a different layout, not a scaled-down one: vertical snap
-  carousel (Projects), skills marquee instead of a wrapped grid, top-centre
-  portrait with text below (About), 3×5 gallery grid, monogram-pill header
-  with frosted dropdown (SiteHeader).
+  carousel (Projects), a tall scroll-panned About bento (single-column stack
+  vs. the desktop 3-column grid), 3×3 gallery wall on the About entry, 3×5
+  gallery grid, monogram-pill header with frosted dropdown (SiteHeader).
 - `useScrollTimeline` re-reads `window.innerHeight` per tick and on resize,
   so orientation changes / URL-bar collapses can't skew progress;
-  `useInfiniteCarousel` re-centres on breakpoint flips; About re-measures
-  the filmstrip centre on resize.
-- About's filmstrip uses `lite` mode on mobile (grayscale + colour blend)
-  because the SVG duotone filter re-rasterises every frame and janks.
+  `useInfiniteCarousel` re-centres on breakpoint flips; About re-measures the
+  bento profile-tile rect (and the mobile bento overflow) on resize.
 - Known tradeoff: ~768px portrait crops the Gallery mosaic's outer columns
   (incl. View All). Revisit if tablet traffic matters.
 
@@ -338,8 +337,10 @@ move to tokens. Interactive button text and a few specialised chips
 - **Make a section longer/shorter**: change the container height (vh) and
   the matching travel — `useScrollTimeline(ref, vh)` arg (Projects/Gallery)
   or `vh * 6` in About's listener. Keep travel = container − 100vh.
-- **Edit bio/skills/filmstrip**: `aboutData.js` (data),
-  `AboutTextPanel.jsx` (copy/layout).
+- **Edit bio / tagline / tech+hobbies / status / spotify / socials**:
+  `aboutData.js` (data); `about/AboutBento.jsx` (tile layout/assembly),
+  `about/StatusTicker.jsx`, `about/SpotifyCard.jsx`. Gallery-wall images are
+  also in `aboutData.js` (`GRID_*`), rendered by `about/GridMontage.jsx`.
 - **Change contact email/socials**: constants at the top of `Contact.jsx`.
 - **Verify visually**: `npm run dev`, then
   `node scripts/screenshot.mjs baseline` before and

@@ -172,6 +172,137 @@ body {
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   About Bento — 7-tile settled grid (AboutBento.jsx)
+   ═══════════════════════════════════════════════════ */
+
+/* Desktop: tagline + about span the left; profile / status / spotify the
+   centre; tech is the tall right column with socials beneath it. The grid is
+   as wide as the expanded navbar (100vw − 2×40px gutter, capped 2200) and
+   fills the height below it. Rows are intentionally uneven — tagline/profile/
+   tech are tall, status + spotify are short wide cards. The profile cell
+   (.ab-profile) is the slot the journey portrait lands in — About.jsx measures
+   its rect for the photo handoff. */
+.about-bento {
+  display: grid;
+  width: min(calc(100vw - 80px), 2200px);
+  height: calc(100vh - 136px);
+  gap: 16px;
+  /* 4 columns so the bottom row can break the top row's column lines:
+     tagline = col1+2 (wide) while about = col1 only (narrow); status/spotify =
+     col2+3 (wide, shifted left under the tagline) while profile = col3 only.
+     Row 2 is a 0-height spacer so tech (rows 1-2) lands ~one gap taller than
+     the profile (row 1) — "slightly longer", per the reference. */
+  grid-template-columns: 2.85fr 1fr 2.05fr 2.55fr;
+  grid-template-rows: 0.6fr 0.205fr 0.105fr 0.11fr 0.11fr;
+  grid-template-areas:
+    "tagline tagline profile tech"
+    "tagline tagline profile tech"
+    "tagline tagline status  tech"
+    "about   spotify spotify tech"
+    "about   spotify spotify social";
+}
+
+.ab-tagline { grid-area: tagline; }
+.ab-profile { grid-area: profile; }
+.ab-tech    { grid-area: tech; }
+.ab-about   { grid-area: about; }
+.ab-status  { grid-area: status; }
+.ab-spotify { grid-area: spotify; }
+.ab-social  { grid-area: social; }
+
+/* Glass tile shell — same material as the navbar (SiteHeader) so the bento
+   reads as one system with the global nav. */
+.ab-tile {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(18, 22, 46, 0.40);
+  border-radius: 22px;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(8, 12, 40, 0.18);
+  transition: border-color 0.35s ease, background 0.35s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Interactive tiles lift slightly on hover (desktop pointer only). */
+@media (hover: hover) {
+  .ab-tile-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.30);
+    background: rgba(18, 22, 46, 0.52);
+  }
+}
+
+/* Mobile: a tall single-column stack (profile beside the tech grid). It is
+   taller than the viewport on purpose — AboutBento pans it vertically with the
+   leftover section scroll so every tile is reachable. Rows are in vh so the
+   overflow is deterministic. */
+@media (max-width: 767px) {
+  .about-bento {
+    width: calc(100vw - 28px);
+    height: auto;
+    gap: 10px;
+    grid-template-columns: 0.82fr 1fr;
+    grid-template-rows: 30vh 17vh 19vh 10vh 13vh 11vh;
+    grid-template-areas:
+      "profile tech"
+      "tagline tagline"
+      "about   about"
+      "status  status"
+      "spotify spotify"
+      "social  social";
+  }
+}
+
+/* ── Spotify faux-player — scrubber + equalizer ────── */
+.ab-spotify-bar {
+  position: relative;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(245, 240, 232, 0.18);
+  overflow: hidden;
+}
+
+.ab-spotify-fill {
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  border-radius: 3px;
+  background: rgba(245, 240, 232, 0.85);
+  transform-origin: left center;
+  animation: ab-scrub 9s linear infinite;
+}
+
+@keyframes ab-scrub {
+  0%   { width: 6%; }
+  100% { width: 92%; }
+}
+
+/* Tiny equalizer next to the now-playing label */
+.ab-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
+.ab-eq span {
+  width: 2px;
+  background: #1ed760;
+  border-radius: 1px;
+  animation: ab-eq-bounce 0.9s ease-in-out infinite;
+}
+.ab-eq span:nth-child(1) { height: 40%; animation-delay: -0.2s; }
+.ab-eq span:nth-child(2) { height: 90%; animation-delay: -0.5s; }
+.ab-eq span:nth-child(3) { height: 60%; animation-delay: -0.1s; }
+.ab-eq span:nth-child(4) { height: 100%; animation-delay: -0.7s; }
+
+@keyframes ab-eq-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50%      { transform: scaleY(1); }
+}
+
+/* Reduced motion: freeze the scrubber/equalizer at a static state. */
+@media (prefers-reduced-motion: reduce) {
+  .ab-spotify-fill { animation: none; width: 32%; }
+  .ab-eq span { animation: none; }
+}
+
 /* ── Keyboard focus ──────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-cobalt);
