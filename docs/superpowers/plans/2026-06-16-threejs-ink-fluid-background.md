@@ -428,7 +428,7 @@ const POINTS = [
   { r: 0.22, ax: 0.21, ay: 0.07, phx: 5.0, phy: 0.7 },
 ]
 
-/** @param {number} t seconds @returns {{x:number,y:number,dx:number,dy:number}[]} */
+/** @param {number} t seconds @returns {Array<{x:number,y:number,dx:number,dy:number}>} */
 export function ambientSplats(t) {
   return POINTS.map((p) => ({
     x: 0.5 + p.r * Math.sin(p.ax * t + p.phx),
