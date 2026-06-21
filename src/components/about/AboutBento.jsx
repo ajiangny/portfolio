@@ -19,6 +19,7 @@ import { motion, useTransform, useMotionValueEvent } from 'framer-motion'
 import StackIcon from '../LazyStackIcon'
 import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
+import DogPet from './DogPet'
 import {
   TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_HOBBIES, SOCIALS,
 } from '../../data/aboutData'
@@ -159,7 +160,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
               className="text-cream"
               style={{
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 'clamp(1.4rem, 3.4vw, 7rem)',
+                fontSize: 'clamp(2rem, 3.4vw, 7rem)',
                 lineHeight: 1.04,
                 letterSpacing: '-0.01em',
               }}
@@ -197,6 +198,8 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                 </span>
               </a>
             </div>
+
+            <DogPet size={isMobile ? 48 : 300} jumpScale={isMobile ? 1 : 1.6} />
           </div>
         </Assemble>
 

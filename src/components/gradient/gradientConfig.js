@@ -26,7 +26,7 @@ export const SECTION_PALETTES = {
 export const SIM = {
   RES: 256,
   RES_MOBILE: 128,
-  JACOBI: 18, //Higher = more swirling/turbulent.
+  JACOBI: 18,
   JACOBI_MOBILE: 12,
   DT: 0.2,                 // advection step — lower = slower, calmer overall flow
   VEL_DISSIPATION: 0.985,
