@@ -43,8 +43,8 @@ export default function Hero() {
         style={{ opacity: eyebrowOpacity, y: eyebrowY, zIndex: 2 }}
       >
         <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ clipPath: 'inset(100% 0 0 0)' }}
+          animate={{ clipPath: 'inset(0% 0 0 0)' }}
           transition={{ duration: 0.8, delay: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
           className="font-sans whitespace-nowrap"
           style={{
@@ -65,9 +65,9 @@ export default function Hero() {
         style={{ bottom: '-0.5vw', opacity: wordmarkOpacity, zIndex: 2 }}
       >
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.9, delay: 0.15 }}
+          initial={{ y: 300 }} // Hiding initially
+          animate={{ y: 0 }}
+          transition={{ duration: 0.9, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
           style={{ color: '#ffffff' }}
         >
           <HeroWordmark className="block w-full select-none" />
