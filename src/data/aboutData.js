@@ -76,23 +76,31 @@ export const BIO_PARAGRAPHS = [
 // ── Resume button (tagline tile) ─────────────────────────────────────────────
 export const RESUME_URL = '/docs/resume.pdf';
 
-// ── Tech Stack & Hobbies tile ────────────────────────────────────────────────
-// `kind: 'tech'` items render a tech-stack-icons glyph (by `icon`, grayscale →
-// colour on hover). `kind: 'hobby'` items render an inline SVG keyed by `icon`
-// (HOBBY_ICONS map in AboutBento.jsx). 3-col grid, ordered tech → hobbies.
-export const TECH_HOBBIES = [
-  { kind: 'tech', icon: 'react', label: 'React' },
-  { kind: 'tech', icon: 'typescript', label: 'TypeScript' },
-  { kind: 'tech', icon: 'tailwindcss', label: 'Tailwind' },
-  { kind: 'tech', icon: 'js', label: 'JavaScript' },
-  { kind: 'tech', icon: 'python', label: 'Python' },
-  { kind: 'tech', icon: 'nodejs', label: 'Node.js' },
-  { kind: 'hobby', icon: 'hiking', label: 'Hiking' },
-  { kind: 'hobby', icon: 'gaming', label: 'Gaming' },
-  { kind: 'hobby', icon: 'sketch', label: 'Sketching' },
-  { kind: 'hobby', icon: 'cooking', label: 'Cooking' },
-  { kind: 'hobby', icon: 'film', label: 'Film' },
-  { kind: 'hobby', icon: 'reading', label: 'Reading' },
+// ── Tech Stack tile — mini-bento mosaic ──────────────────────────────────────
+// Rendered by AboutBento's <TechMosaic> as a tightly-packed grid of rounded
+// cells at two sizes: four 2×2 anchors (`big: true`) + the rest 1×1. Each cell
+// shows its icon from /public/icons (white/<id>.svg at rest → default/<id>.svg
+// colour on hover). Clicking a small cell promotes it to a 2×2 anchor and
+// demotes the longest-held — always exactly four large at a time. `id` doubles
+// as the icon filename; `noWhite` flags an icon that has no white/ variant yet
+// (rendered white via a CSS filter on the colour svg as a fallback).
+//
+// ORDER MATTERS: this sequence (anchors at positions 1, 4, 6, 9) tiles the
+// 4-col × 6-row grid hole-free at rest (grid-auto-flow: dense). Reorder with
+// care, then re-screenshot.
+export const TECH_STACK = [
+  { id: 'react', label: 'React', big: true },
+  { id: 'typescript', label: 'TypeScript' },
+  { id: 'nodejs', label: 'Node.js' },
+  { id: 'javascript', label: 'JavaScript', big: true },
+  { id: 'expressjs', label: 'Express' },
+  { id: 'python', label: 'Python', big: true },
+  { id: 'vercel', label: 'Vercel' },
+  { id: 'supabase', label: 'Supabase' },
+  { id: 'tailwindcss', label: 'Tailwind', big: true },
+  { id: 'postgresql', label: 'PostgreSQL' },
+  { id: 'threejs', label: 'Three.js' },
+  { id: 'claude-code', label: 'Claude Code' },
 ];
 
 // ── Status tile ──────────────────────────────────────────────────────────────
@@ -100,7 +108,7 @@ export const TECH_HOBBIES = [
 export const STATUS_ITEMS = [
   { label: 'Current Status', value: 'Seeking Internships' },
   { label: 'Current Status', value: 'Playing Teamfight Tactics' },
-  { label: 'Current Status', value: 'Studying for Leetcode & Data Structures' },
+  { label: 'Current Status', value: 'Studying Leetcode & Data Structures' },
   { label: 'Current Status', value: 'Sketching in my Notebook' },
 ];
 

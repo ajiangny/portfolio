@@ -3,8 +3,7 @@
  *
  * Cycles through STATUS_ITEMS (label + value) with a vertical crossfade.
  * Auto-advance pauses on hover and is disabled entirely under
- * prefers-reduced-motion (the first item is shown statically). Dots indicate
- * position and let the visitor jump between lines.
+ * prefers-reduced-motion (the first item is shown statically).
  */
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -48,7 +47,7 @@ export default function StatusTicker() {
       </div>
 
       {/* Body — centred in the remaining height */}
-      <div className="flex flex-1 flex-col justify-center gap-2">
+      <div className="flex flex-1 flex-col justify-center">
         <div className="relative min-h-[1.6em] overflow-hidden" aria-live="polite">
           <AnimatePresence mode="wait">
             <motion.p
@@ -65,24 +64,6 @@ export default function StatusTicker() {
             </motion.p>
           </AnimatePresence>
         </div>
-
-        {STATUS_ITEMS.length > 1 && (
-          <div className="flex items-center gap-1.5">
-            {STATUS_ITEMS.map((s, idx) => (
-              <button
-                key={s.label}
-                type="button"
-                aria-label={`Show: ${s.label}`}
-                onClick={() => setI(idx)}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: idx === i ? 16 : 6,
-                  background: idx === i ? 'rgba(245,240,232,0.8)' : 'rgba(245,240,232,0.28)',
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )

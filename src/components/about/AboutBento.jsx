@@ -15,47 +15,81 @@
  * overlay is just the flight vehicle).
  */
 import { useState, useRef, useEffect } from 'react'
-import { motion, useTransform, useMotionValueEvent } from 'framer-motion'
-import StackIcon from '../LazyStackIcon'
+import { motion, useTransform, useMotionValueEvent, useReducedMotion } from 'framer-motion'
 import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
 import DogPet from './DogPet'
 import {
-  TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_HOBBIES, SOCIALS,
+  TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_STACK, SOCIALS,
 } from '../../data/aboutData'
 
-// ── Inline hobby glyphs (stroke) — tech glyphs come from tech-stack-icons ────
-const HOBBY_ICONS = {
-  hiking: 'm8 3 4 8 5-5 5 15H2L8 3z',
-  sketch: 'M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z',
-  reading:
-    'M12 7v13M3 18a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z',
-  cooking:
-    'M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6ZM6 17h12',
+// ── Tech-stack mini-bento mosaic ─────────────────────────────────────────────
+// Icon — two stacked SVGs from /public/icons: white at rest, brand-colour on
+// hover (CSS crossfades them per cell). `noWhite` items have no white/ variant
+// yet, so their rest state is the colour svg forced white via a CSS filter.
+function TechIcon({ name, noWhite }) {
+  return (
+    <>
+      <img
+        className="ab-mi ab-mi-rest"
+        src={`/icons/${noWhite ? 'default' : 'white'}/${name}.svg`}
+        style={noWhite ? { filter: 'brightness(0) invert(1)' } : undefined}
+        alt=""
+        aria-hidden="true"
+        draggable="false"
+      />
+      <img className="ab-mi ab-mi-color" src={`/icons/default/${name}.svg`} alt="" aria-hidden="true" draggable="false" />
+    </>
+  )
 }
 
-function HobbyGlyph({ name, className }) {
-  if (name === 'gaming') {
-    return (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <line x1="6" y1="12" x2="10" y2="12" /><line x1="8" y1="10" x2="8" y2="14" />
-        <line x1="15" y1="13" x2="15.01" y2="13" /><line x1="18" y1="11" x2="18.01" y2="11" />
-        <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.544-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z" />
-      </svg>
-    )
-  }
-  if (name === 'film') {
-    return (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M7 3v18M17 3v18M3 7.5h4M3 12h4M3 16.5h4M17 7.5h4M17 12h4M17 16.5h4" />
-      </svg>
-    )
-  }
+// Packed grid of rounded cells. Four are 2×2 anchors (the main stack at rest);
+// clicking a small cell promotes it and demotes the longest-held anchor, so
+// exactly four stay large. The whole field re-tiles in one Framer `layout`
+// spring — gated to an instant cut under reduced-motion.
+//
+// Mobile: the tech tile is a small, scroll-panned cell, so the 2×2 reflow is
+// dropped for a flat, uniform, non-interactive grid (the expand is a desktop
+// delight). Cells render as <div> there instead of <button>.
+function TechMosaic({ isMobile }) {
+  const reduce = useReducedMotion()
+  const [bigQueue, setBigQueue] = useState(() =>
+    TECH_STACK.filter((it) => it.big).map((it) => it.id),
+  )
+  const bigSet = new Set(bigQueue)
+  const promote = (id) =>
+    setBigQueue((q) => (q.includes(id) ? q : [...q.slice(1), id]))
+
+  const layoutTx = reduce
+    ? { duration: 0 }
+    : { type: 'spring', stiffness: 300, damping: 32 }
+
+  const Cell = isMobile ? motion.div : motion.button
+
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={HOBBY_ICONS[name]} />
-    </svg>
+    <div className="ab-mosaic">
+      {TECH_STACK.map((it) => {
+        const isBig = !isMobile && bigSet.has(it.id)
+        const interactiveProps = isMobile
+          ? {}
+          : { type: 'button', onClick: () => promote(it.id), 'aria-pressed': isBig }
+        return (
+          <Cell
+            key={it.id}
+            layout
+            transition={{ layout: layoutTx }}
+            aria-label={it.label}
+            title={it.label}
+            className={`ab-mcell${isBig ? ' ab-mcell--big' : ''}`}
+            {...interactiveProps}
+          >
+            <motion.span layout className="ab-micon">
+              <TechIcon name={it.id} noWhite={it.noWhite} />
+            </motion.span>
+          </Cell>
+        )
+      })}
+    </div>
   )
 }
 
@@ -219,31 +253,11 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
           )}
         </div>
 
-        {/* ── Tech stack & hobbies ─────────────────────────────────────────── */}
-        {/* Large, box-less icons floating on the glass (reference layout). */}
+        {/* ── Tech stack — mini-bento mosaic ───────────────────────────────── */}
         <Assemble progress={progress} start={0.52} area="ab-tech">
-          <div className="ab-tile flex h-full w-full flex-col p-5 md:p-7">
-            <p style={LABEL} className="mb-4 md:mb-5">Tech Stack &amp; Hobbies</p>
-            <div className="grid flex-1 grid-cols-3 place-items-center gap-x-4 gap-y-2" style={{ gridAutoRows: '1fr' }}>
-              {TECH_HOBBIES.map((it) => (
-                <div
-                  key={it.label}
-                  title={it.label}
-                  className="group/icon flex items-center justify-center opacity-90 transition-all duration-300 hover:scale-110 hover:opacity-100"
-                >
-                  {it.kind === 'tech' ? (
-                    <div className="h-10 w-10 md:h-[46px] md:w-[46px] [&_svg]:h-full [&_svg]:w-full">
-                      <StackIcon name={it.icon} />
-                    </div>
-                  ) : (
-                    <HobbyGlyph
-                      name={it.icon}
-                      className="h-9 w-9 text-cream/80 transition-colors duration-300 group-hover/icon:text-cream md:h-[42px] md:w-[42px]"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+          <div className="ab-tile flex h-full w-full flex-col p-4 md:p-5">
+            <p style={LABEL} className="mb-3 shrink-0">Tech Stack</p>
+            <TechMosaic isMobile={isMobile} />
           </div>
         </Assemble>
 
