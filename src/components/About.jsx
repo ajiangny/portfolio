@@ -1,7 +1,8 @@
 /**
  * About.jsx — About Section
  *
- * A 700vh scroll-driven section. The Hero hands off to a white gallery panel:
+ * A 700vh scroll-driven section. The Hero hands off to a white gallery panel,
+ * then the journey resolves into a bento grid (AboutBento):
  *
  * Phase 1 — Gallery wall (progress 0→0.15):
  *   A white panel fills the viewport with a grid of artwork (GridMontage),
@@ -11,20 +12,21 @@
  *   The outer images dissolve ring-by-ring toward the centre; the white panel
  *   fades to reveal the fluid gradient, leaving only the profile photo.
  *
- * Phase 3 — Portrait journey (progress 0.30→0.52):
- *   An overlay portrait takes over the centre cell, expands to a large centred
- *   portrait (hold), then glides to its resting spot (desktop right panel /
- *   mobile top-centre).
+ * Phase 3 — Portrait journey (progress 0.30→0.48):
+ *   An overlay portrait takes over the centre cell and moves DIRECTLY to the
+ *   bento PROFILE TILE's measured rect (no centre expand/hold). On desktop the
+ *   overlay simply settles there as the profile card. On mobile it crossfades
+ *   into the in-grid photo so the photo pans with the bento.
  *
- * Phase 4 — Text panel (progress 0.504→0.5725):
- *   Heading, bio, skills, and resume slide in from behind the portrait.
+ * Phase 4 — Bento assembly (progress 0.50→0.66):
+ *   The other six tiles self-assemble around the profile (AboutBento).
  *
- * Fade-out (progress 0.85→1.0):
- *   Content fades via a CSS mask gradient, revealing the gradient as it
- *   crossfades cobalt→cream into the Projects section.
+ * Leave (progress 0.85→1.0):
+ *   The whole stack WIPES UP via a hard clip-path edge (no fade), uncovering
+ *   the gradient as it crossfades cobalt→cream into the Projects section.
  */
-import { useRef, useEffect, useState } from 'react'
-import { motion, useMotionValue, useTransform, useMotionValueEvent, useSpring } from 'framer-motion'
+import { useRef, useEffect } from 'react'
+import { motion, useMotionValue, useTransform, useMotionValueEvent } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import {
@@ -32,16 +34,14 @@ import {
   GRID_IMAGES_MOBILE, GRID_COLS_MOBILE, GRID_PROFILE_INDEX_MOBILE,
 } from '../data/aboutData'
 import GridMontage from './about/GridMontage'
-import AboutTextPanel from './about/AboutTextPanel'
+import AboutBento from './about/AboutBento'
 
-// Portrait aspect (h / w) — matches the profile cell's 2:3 ratio so the
-// transform handoff starts from the cell with zero distortion. Used for every
-// keyframe (start/centre/final) so a single uniform scale reproduces the path.
-const RATIO = 1.5
-const RADIUS = 16 // fixed corner radius; scales naturally with the transform
+// Fixed corner radius for the flying profile card (matches the bento tiles).
+const RADIUS = 22
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
+const lerp = (a, b, t) => a + (b - a) * t
 const lerpRect = (a, b, t) => ({
   left: a.left + (b.left - a.left) * t,
   top: a.top + (b.top - a.top) * t,
@@ -49,74 +49,84 @@ const lerpRect = (a, b, t) => ({
   h: a.h + (b.h - a.h) * t,
 })
 
+// Gallery centre-cell shell (GridMontage) → bento .ab-tile shell. The flying
+// portrait MORPHS between these instead of crossfading, so the handoff reads as
+// one continuous element. Size-based props (radius, shadow offset/blur) are
+// counter-scaled by the live transform scale so the *rendered* value is exact
+// at both ends of the flight.
+const CELL_RADIUS = 10 // GridMontage centre cell (round(10 × scale 1))
+const CELL_BORDER_A = 0.40
+const TILE_BORDER_A = 0.18
+const CELL_SHADOW = { y: 18, blur: 50, r: 16, g: 20, b: 38, a: 0.34 }
+const TILE_SHADOW = { y: 8, blur: 30, r: 8, g: 12, b: 40, a: 0.18 }
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function About() {
   const containerRef = useRef(null)
+  const stickyRef = useRef(null)
   const lenisRef = useLenisContext()
   const progress = useMotionValue(0)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
-  // Ref on the grid's centre (profile) cell — used to read its exact rect so
-  // the overlay portrait can take over seamlessly.
+  // Ref on the grid's centre (profile) cell — the journey START rect.
   const profileCellRef = useRef(null)
   const cellRectRef = useRef(null)
+  // Ref on the bento profile tile — the journey END rect (measured below).
+  const profileTileRef = useRef(null)
 
-  // ── Overlay portrait motion values — the portrait keeps a FIXED layout box
-  // (its resting size) and reaches every keyframe via transform (translate +
-  // uniform scale) only. Animating transform/opacity instead of width/height/
-  // left/top means the image is painted ONCE and GPU-composited every frame —
-  // no per-frame relayout or image repaint over the live WebGL canvas.
-  const aboutX = useMotionValue(0)
-  const aboutY = useMotionValue(0)
-  const aboutScale = useMotionValue(1)
+  // ── Overlay portrait motion values — the FLIGHT vehicle. It morphs its REAL
+  // box (left/top/width/height), not a uniform transform scale, so the aspect
+  // can travel tall-portrait → square: the object-cover image re-crops
+  // continuously (face pinned via objectPosition) instead of snapping height at
+  // the handoff. It takes over the gallery cell fully opaque (no crossfade) and,
+  // on mobile only, fades out at landing as the in-grid bento photo fades in.
+  const aboutLeft = useMotionValue(0)
+  const aboutTop = useMotionValue(0)
+  const aboutW = useMotionValue(0)
+  const aboutH = useMotionValue(0)
   const aboutOpacity = useMotionValue(0)
 
-  // Resting box of the portrait (viewport-derived; recomputed on resize). The
-  // element is sized to this in CSS; transforms map it onto each keyframe rect.
-  // A ref mirrors it for the per-frame scroll handler (no stale closure).
-  const [finalBox, setFinalBox] = useState(null)
+  // Shell motion values — morph the flying card's radius/border/shadow from the
+  // gallery-cell look to the bento-tile look across the flight (see CELL_*/TILE_*).
+  const aboutRadius = useMotionValue(RADIUS)
+  const aboutBorderColor = useMotionValue(`rgba(255,255,255,${TILE_BORDER_A})`)
+  const aboutShadow = useMotionValue(
+    `0 ${TILE_SHADOW.y}px ${TILE_SHADOW.blur}px rgba(${TILE_SHADOW.r},${TILE_SHADOW.g},${TILE_SHADOW.b},${TILE_SHADOW.a})`,
+  )
+
+  // Resting box of the portrait = the bento profile cell's rect, expressed in
+  // sticky-relative coords (== pinned viewport coords). Measured after layout
+  // and on resize; a ref mirrors it for the per-frame scroll handler.
   const finalBoxRef = useRef(null)
   useEffect(() => {
-    const compute = () => {
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      const mobile = vw < 768
-      const finalW = mobile ? vw * 0.68 : vw * 0.30
-      const finalH = finalW * RATIO
-      const box = mobile
-        // 104px clears the global header pill on any phone
-        ? { left: (vw - finalW) / 2, top: 104, w: finalW, h: finalH }
-        : { left: vw * 0.63, top: (vh - finalH) / 2, w: finalW, h: finalH }
+    const measure = () => {
+      const tile = profileTileRef.current
+      const sticky = stickyRef.current
+      if (!tile || !sticky) return
+      const t = tile.getBoundingClientRect()
+      const s = sticky.getBoundingClientRect()
+      // Sticky child pins at viewport (0,0); subtracting its origin yields the
+      // tile's pinned-state rect regardless of current scroll position.
+      const box = { left: t.left - s.left, top: t.top - s.top, w: t.width, h: t.height }
       finalBoxRef.current = box
-      setFinalBox(box)
+      // If we're already parked at/after the landing (settled desktop card),
+      // keep it on the freshly-measured tile — covers a resize while the bento
+      // is on screen (no scroll event to re-run the flight handler).
+      if (progress.get() >= 0.48) {
+        aboutLeft.set(box.left); aboutTop.set(box.top)
+        aboutW.set(box.w); aboutH.set(box.h)
+      }
     }
-    compute()
-    window.addEventListener('resize', compute)
-    return () => window.removeEventListener('resize', compute)
-  }, [])
-
-  // ── Mouse parallax for the settled portrait ───────────────────────────────
-  const profileMouseX = useMotionValue(0)
-  const profileMouseY = useMotionValue(0)
-  const smoothProfileX = useSpring(profileMouseX, { stiffness: 150, damping: 20 })
-  const smoothProfileY = useSpring(profileMouseY, { stiffness: 150, damping: 20 })
-
-  const profileRotateX = useTransform(smoothProfileY, [-1, 1], [8, -8])
-  const profileRotateY = useTransform(smoothProfileX, [-1, 1], [-8, 8])
-
-  const handleProfileMouseMove = (e) => {
-    if (progress.get() < 0.52) return;
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / rect.width * 2 - 1
-    const y = (e.clientY - rect.top) / rect.height * 2 - 1
-    profileMouseX.set(x)
-    profileMouseY.set(y)
-  }
-
-  const handleProfileMouseLeave = () => {
-    profileMouseX.set(0)
-    profileMouseY.set(0)
-  }
+    measure()
+    const raf = requestAnimationFrame(measure)
+    const late = setTimeout(measure, 300) // catch late font/layout shifts
+    window.addEventListener('resize', measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(late)
+      window.removeEventListener('resize', measure)
+    }
+  }, [isMobile, progress, aboutLeft, aboutTop, aboutW, aboutH])
 
   // ── Lenis scroll listener ─────────────────────────────────────────────────
   useEffect(() => {
@@ -142,47 +152,45 @@ export default function About() {
   }, [lenisRef, progress])
 
   // ── Panel + grid dissolve windows ─────────────────────────────────────────
-  // The white panel + grid are fully present from progress 0 (and so already
-  // visible peeking up from below as Hero exits — nothing fades IN). The panel
-  // only fades OUT to reveal the fluid gradient once the dissolve has run.
-  const panelOpacity = useTransform(progress, [0.30, 0.42], [1, 0])
-  // Centre cell hides as the overlay portrait fades in (seamless — same image).
-  const profileCellHide = useTransform(progress, [0.30, 0.315], [1, 0])
+  // The white panel WIPES UP (no fade): its bottom inset grows 0→100% across
+  // 0.30→0.42, so the fluid gradient is uncovered from the bottom edge upward —
+  // matching the cards, which wipe up just before it. `none` at rest avoids any
+  // clip while the panel is the full-bleed backdrop.
+  const panelClip = useTransform(progress, (p) => {
+    const t = clamp01((p - 0.30) / 0.12)
+    return t <= 0 ? 'none' : `inset(0% 0% ${(t * 100).toFixed(2)}% 0%)`
+  })
+  // Centre cell hides near-instantly UNDER the now-opaque overlay (which has
+  // already taken over the same rect + shell at 0.298) — so there is no visible
+  // crossfade, just a covered hand-off.
+  const profileCellHide = useTransform(progress, [0.298, 0.302], [1, 0])
 
-  // Gradient fade out from bottom to top, 0.85→1.0; 'none' below so the wrapper
-  // isn't a CSS backdrop root mid-section.
-  const maskImage = useTransform(progress, (p) => {
+  // Leave (0.85→1.0): the whole bento WIPES UP with a HARD edge (clip-path, no
+  // fade) — the bottom inset grows 0→100%, uncovering the gradient/Projects from
+  // the bottom up. Matches the gallery cards / white panel exactly (no mask).
+  const leaveClip = useTransform(progress, (p) => {
     if (p < 0.8) return 'none'
     const t = Math.min(1, Math.max(0, (p - 0.85) / 0.15))
-    const stop1 = -100 + t * 200
-    const stop2 = t * 200
-    return `linear-gradient(to top, transparent ${stop1}%, black ${stop2}%)`
+    return t <= 0 ? 'none' : `inset(0% 0% ${(t * 100).toFixed(2)}% 0%)`
   })
 
   // ── Drive the overlay portrait from the centre cell's actual DOM rect ──────
-  //  A (0.30→0.40): centre cell → large CENTRED portrait
-  //  hold (0.40→0.45): rests centre-stage
-  //  B (0.45→0.52): glides to its resting spot
+  // The overlay takes over the gallery centre cell (0.30) and moves DIRECTLY to
+  // the bento profile tile (0.30→0.48) — no centre expansion or hold. Desktop:
+  // it settles there as the profile card and stays. Mobile: it fades out at
+  // landing as the in-grid photo fades in (so the photo pans with the bento).
   useMotionValueEvent(progress, 'change', (v) => {
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const mobile = vw < 768
-
-    // Reset parallax until the portrait has settled at its resting spot.
-    if (v < 0.52) {
-      profileMouseX.set(0)
-      profileMouseY.set(0)
-    }
+    const mobile = window.innerWidth < 768
 
     // Keep the centre-cell rect fresh while the wall is settled; freeze it once
-    // the handoff begins so the expansion starts from a stable point.
+    // the handoff begins so the move starts from a stable point.
     if (v >= 0.27 && profileCellRef.current) {
       if (v < 0.30 || !cellRectRef.current) {
         cellRectRef.current = profileCellRef.current.getBoundingClientRect()
       }
     }
 
-    if (v < 0.30) {
+    if (v < 0.298) {
       aboutOpacity.set(0)
       return
     }
@@ -190,30 +198,43 @@ export default function About() {
     const rect = cellRectRef.current
     if (!rect) return
 
-    // Fade the overlay in across the handoff window (0.30→0.315).
-    aboutOpacity.set(clamp01((v - 0.30) / 0.015))
-
     const final = finalBoxRef.current
     if (!final) return
 
+    // Instant, fully-opaque take-over (no start crossfade): the overlay appears
+    // matching the gallery cell's exact rect AND shell while the in-grid cell
+    // hides underneath it, so the swap is imperceptible. Mobile alone fades the
+    // overlay out at landing as the in-grid bento photo fades in.
+    const fadeOut = mobile ? 1 - clamp01((v - 0.48) / 0.03) : 1
+    aboutOpacity.set(fadeOut)
+
+    // Single eased BOX morph from the gallery cell → bento profile tile. We move
+    // the real left/top/width/height so the aspect interpolates tall-portrait →
+    // square; the object-cover image re-crops continuously (objectPosition keeps
+    // the face pinned) — no uniform-scale aspect snap, so no crossfade is needed.
     const start = { left: rect.left, top: rect.top, w: rect.width, h: rect.height }
+    const t = easeInOut(clamp01((v - 0.30) / 0.18)) // 0.30 → 0.48
+    const cur = lerpRect(start, final, t)
+    aboutLeft.set(cur.left)
+    aboutTop.set(cur.top)
+    aboutW.set(cur.w)
+    aboutH.set(cur.h)
 
-    const centerW = mobile ? vw * 0.56 : vw * 0.34
-    const centerH = centerW * RATIO
-    const center = { left: (vw - centerW) / 2, top: (vh - centerH) / 2, w: centerW, h: centerH }
-
-    let cur
-    if (v < 0.40) cur = lerpRect(start, center, easeInOut(clamp01((v - 0.30) / 0.10)))
-    else if (v < 0.45) cur = center
-    else if (v < 0.52) cur = lerpRect(center, final, easeInOut(clamp01((v - 0.45) / 0.07)))
-    else cur = final
-
-    // Map the cur rect onto the fixed `final` box via translate + uniform scale
-    // (transform-origin centre). Aspect is constant (RATIO), so one scale hits
-    // both width and height exactly — no distortion, no relayout.
-    aboutScale.set(cur.w / final.w)
-    aboutX.set((cur.left + cur.w / 2) - (final.left + final.w / 2))
-    aboutY.set((cur.top + cur.h / 2) - (final.top + final.h / 2))
+    // Morph the shell cell-look → tile-look along the same eased flight. The box
+    // is real-sized now, so these are direct (no counter-scaling).
+    aboutRadius.set(lerp(CELL_RADIUS, RADIUS, t))
+    aboutBorderColor.set(`rgba(255,255,255,${lerp(CELL_BORDER_A, TILE_BORDER_A, t).toFixed(3)})`)
+    const sy = lerp(CELL_SHADOW.y, TILE_SHADOW.y, t).toFixed(1)
+    const sb = lerp(CELL_SHADOW.blur, TILE_SHADOW.blur, t).toFixed(1)
+    const sr = Math.round(lerp(CELL_SHADOW.r, TILE_SHADOW.r, t))
+    const sg = Math.round(lerp(CELL_SHADOW.g, TILE_SHADOW.g, t))
+    const sbl = Math.round(lerp(CELL_SHADOW.b, TILE_SHADOW.b, t))
+    // Fade the overlay's shadow in across the cell-hide window (0.298→0.302) so
+    // it cross-fades with the in-grid cell's identical, fading shadow instead of
+    // briefly stacking on it — the stack was the hand-off shadow flicker.
+    const shadowFade = clamp01((v - 0.298) / 0.004)
+    const sa = (lerp(CELL_SHADOW.a, TILE_SHADOW.a, t) * shadowFade).toFixed(3)
+    aboutShadow.set(`0 ${sy}px ${sb}px rgba(${sr},${sg},${sbl},${sa})`)
   })
 
   const grid = isMobile
@@ -228,32 +249,23 @@ export default function About() {
       style={{ height: '700vh', backgroundColor: 'transparent' }}
     >
 
-      <div className="sticky top-0 overflow-hidden" style={{ height: '100vh' }}>
-        <motion.div style={{ WebkitMaskImage: maskImage, maskImage, width: '100%', height: '100%' }}>
+      <div ref={stickyRef} className="sticky top-0 overflow-hidden" style={{ height: '100vh' }}>
+        <motion.div style={{ clipPath: leaveClip, width: '100%', height: '100%' }}>
 
           {/* ── White gallery panel ─────────────────────────────────────────── */}
-          {/* Fills the viewport behind the grid, then fades to reveal the fluid */}
-          {/* gradient once the images have dissolved inward.                    */}
           <motion.div
             aria-hidden="true"
             style={{
               position: 'absolute',
               inset: 0,
               backgroundColor: '#ffffff',
-              opacity: panelOpacity,
+              clipPath: panelClip,
               zIndex: 0,
               pointerEvents: 'none',
             }}
           />
 
           {/* ── Gallery-wall grid ───────────────────────────────────────────── */}
-          {/* Static montage; outer cells dissolve inward on scroll, profile     */}
-          {/* (centre) survives and is handed off to the overlay portrait.       */}
-          {/* paddingTop clears the navbar: SiteHeader sits at top:18, height:46
-               → 64px bottom edge + 16px breathing = 80px. paddingBottom adds
-               16px at the bottom. navClearancePx (80+16=96) mirrors this so
-               GridMontage derives the exact width that keeps portrait cells
-               inside the available 100vh − 96px space. */}
           <div
             className="absolute inset-0 flex items-center justify-center"
             style={{ paddingTop: 80, paddingBottom: 16, zIndex: 1 }}
@@ -270,57 +282,39 @@ export default function About() {
             />
           </div>
 
-          {/* ── About — overlay portrait ────────────────────────────────────── */}
-          {/* Starts at the grid centre cell's exact rect, then expands to the   */}
-          {/* centred portrait and glides to its resting spot.                   */}
+          {/* ── About — bento grid (settled state + profile landing site) ───── */}
+          <AboutBento progress={progress} isMobile={isMobile} profileTileRef={profileTileRef} />
+
+          {/* ── About — profile card (flight vehicle → settled card) ────────── */}
+          {/* Takes over the gallery centre cell and moves to the bento profile  */}
+          {/* tile. Carries the same glass material as the tiles/navbar.         */}
           <motion.div
             style={{
               position: 'absolute',
-              left: finalBox?.left ?? 0,
-              top: finalBox?.top ?? 0,
-              width: finalBox?.w ?? 0,
-              height: finalBox?.h ?? 0,
-              x: aboutX,
-              y: aboutY,
-              scale: aboutScale,
+              left: aboutLeft,
+              top: aboutTop,
+              width: aboutW,
+              height: aboutH,
               opacity: aboutOpacity,
-              borderRadius: RADIUS,
+              borderRadius: aboutRadius,
+              overflow: 'hidden',
+              borderStyle: 'solid',
+              borderWidth: 1,
+              borderColor: aboutBorderColor,
+              boxShadow: aboutShadow,
               zIndex: 3,
-              rotateX: profileRotateX,
-              rotateY: profileRotateY,
-              transformPerspective: 1200,
-              transformOrigin: 'center',
-              backfaceVisibility: 'hidden',
-              willChange: 'transform',
+              pointerEvents: 'none',
             }}
-            onMouseMove={handleProfileMouseMove}
-            onMouseLeave={handleProfileMouseLeave}
-            className="group"
           >
-            {/* Pulse Glow */}
-            <motion.div
-              className="absolute inset-0 pointer-events-none"
-              style={{ animation: 'pulse-glow 2s ease-out infinite', borderRadius: RADIUS }}
+            <img
+              src="/art/profile.webp"
+              alt="Andrew Jiang"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: 'top center' }}
             />
-            {/* Pulse Ring */}
-            <motion.div
-              className="absolute inset-0 border border-[#f5f0e8] pointer-events-none"
-              style={{ animation: 'pulse-ring 2s ease-out infinite', backfaceVisibility: 'hidden', borderRadius: RADIUS }}
-            />
-            <motion.div style={{ borderRadius: RADIUS, overflow: 'hidden', width: '100%', height: '100%', position: 'relative' }}>
-              <img
-                src="/art/profile.webp"
-                alt="Andrew Jiang"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                style={{ objectPosition: 'top center' }}
-              />
-            </motion.div>
           </motion.div>
 
-          {/* ── About — text panel ──────────────────────────────────────────── */}
-          <AboutTextPanel progress={progress} isMobile={isMobile} />
         </motion.div>
-
       </div>
     </motion.div>
   )
