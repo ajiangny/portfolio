@@ -302,6 +302,9 @@ export default function SpotifyCard() {
 
   const handleBarMouseLeave = () => setHoverPct(null)
 
+  const isInteractive = ready && duration > 0
+  const trackExpanded = hoverPct !== null || isDragging
+
   const handleBarKeyDown = (e) => {
     if (!isInteractive) return
     const STEP_MS = 5000
@@ -359,8 +362,6 @@ export default function SpotifyCard() {
     </div>
   )
 
-  const isInteractive = ready && duration > 0
-  const trackExpanded = hoverPct !== null || isDragging
   const progressRow = (
     <div className="flex items-center gap-2.5">
       <span className="shrink-0 font-mono tabular-nums text-cream/45" style={{ fontSize: '10px' }}>
