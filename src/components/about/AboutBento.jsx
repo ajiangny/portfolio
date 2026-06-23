@@ -216,8 +216,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                 className="icon-btn"
               >
                 <div className="relative h-full w-full">
-                  <img className="icon-btn-img-rest" src="/icons/white/resume.svg" alt="Resume" draggable="false" />
-                  <img className="icon-btn-img-color" src="/icons/default/resume.svg" alt="" aria-hidden="true" draggable="false" />
+                  <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
                 </div>
               </a>
             </div>

@@ -113,12 +113,16 @@ export const STATUS_ITEMS = [
 ];
 
 // ── Spotify tile ─────────────────────────────────────────────────────────────
-// Custom faux-player UI; the whole card links out to the playlist.
+// Custom glass player bridged to the Spotify iframe API for playback. Live
+// playlist name + cover come from /api/playlist (Spotify Web API, server-side
+// Client Credentials). `track`/`author` are the static fallbacks shown before
+// (or if) that fetch resolves — e.g. under plain `vite` dev with no /api route.
 export const SPOTIFY = {
-  url: 'https://open.spotify.com/playlist/13dthduoXicGhZ7rRTUz4D?si=1e9fb7a9c380461a&pt=d7d5f2e01d2d3d37ca62a792c4633f22',   // placeholder — your playlist URL
-  track: 'My Playlist',               // placeholder
-  author: 'Andrew Jiang',                   // placeholder
-  cover: '',                          // optional cover image path; '' → disc placeholder
+  playlistId: '13dthduoXicGhZ7rRTUz4D',
+  url: 'https://open.spotify.com/playlist/13dthduoXicGhZ7rRTUz4D?si=1e9fb7a9c380461a&pt=d7d5f2e01d2d3d37ca62a792c4633f22',
+  embedUri: 'spotify:playlist:13dthduoXicGhZ7rRTUz4D',
+  track: 'My Playlist',
+  author: 'Andrew Jiang',
 };
 
 // ── Socials tile ─────────────────────────────────────────────────────────────

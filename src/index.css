@@ -367,31 +367,7 @@ body {
   .ab-micon { width: 82%; }
 }
 
-/* ── Spotify faux-player — scrubber + equalizer ────── */
-.ab-spotify-bar {
-  position: relative;
-  height: 3px;
-  border-radius: 3px;
-  background: rgba(245, 240, 232, 0.18);
-  overflow: hidden;
-}
-
-.ab-spotify-fill {
-  position: absolute;
-  inset: 0;
-  width: 30%;
-  border-radius: 3px;
-  background: rgba(245, 240, 232, 0.85);
-  transform-origin: left center;
-  animation: ab-scrub 9s linear infinite;
-}
-
-@keyframes ab-scrub {
-  0%   { width: 6%; }
-  100% { width: 92%; }
-}
-
-/* Tiny equalizer next to the now-playing label */
+/* ── Spotify equalizer bars (visible when playing) ── */
 .ab-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
 .ab-eq span {
   width: 2px;
@@ -406,12 +382,10 @@ body {
 
 @keyframes ab-eq-bounce {
   0%, 100% { transform: scaleY(0.4); }
-  50%      { transform: scaleY(1); }
+  50%       { transform: scaleY(1); }
 }
 
-/* Reduced motion: freeze the scrubber/equalizer at a static state. */
 @media (prefers-reduced-motion: reduce) {
-  .ab-spotify-fill { animation: none; width: 32%; }
   .ab-eq span { animation: none; }
 }
 

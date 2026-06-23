@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Env / secrets (keep the example tracked)
+.env
+.env.*
+!.env.example
+
+# Vercel CLI project metadata (created by `vercel link` / `vercel dev`)
+.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -35,8 +43,9 @@ scripts/shots/
 .superpowers/
 
 # Documentation
-docs/superpowers/
-docs/ARCHITECTURE.md
+docs/
+CLAUDE.md
 
 # Test
 test
+.env*
