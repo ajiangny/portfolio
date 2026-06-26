@@ -25,15 +25,17 @@ import { artworks } from '../data/galleryData'
 
 // Artworks are scattered bento-style among blank cells so the grid
 // reads as an intentional composition instead of one full row + blanks.
-// Desktop: 9 cols × 3 rows (27 cells), diagonal drift pattern.
-// Mobile:  3 cols × 5 rows (15 cells), symmetric checkerboard.
+// Desktop: 9 cols × 3 rows (27 cells) — 17 art + View All + 9 scattered blanks.
+// Mobile:  3 cols × 6 rows (18 cells) — 17 art + View All, fully packed.
+// NOTE: when adding artwork beyond 17, extend these position arrays (and grow
+// the grids: another desktop column-set / another mobile row in index.css).
 const DESKTOP_CELLS = 27
-const MOBILE_CELLS = 15
-const DESKTOP_ART_POSITIONS = [1, 4, 7, 9, 12, 15, 18, 20, 23]
-const MOBILE_ART_POSITIONS = [0, 2, 4, 6, 7, 8, 10, 12, 13]
+const MOBILE_CELLS = 18
+const DESKTOP_ART_POSITIONS = [0, 1, 3, 4, 6, 8, 10, 11, 12, 14, 15, 17, 18, 20, 22, 23, 25]
+const MOBILE_ART_POSITIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 // Bottom-right cell — "View All" teaser for the future gallery page
 const DESKTOP_VIEWALL_POSITION = 26
-const MOBILE_VIEWALL_POSITION = 14
+const MOBILE_VIEWALL_POSITION = 17
 
 // ─── Shared cell choreography ─────────────────────────────────────
 // Every grid cell (art, blank, view-all) staggers in during the reveal
