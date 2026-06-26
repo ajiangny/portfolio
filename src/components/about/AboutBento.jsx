@@ -94,6 +94,93 @@ function TechMosaic({ isMobile }) {
 }
 
 
+// ── Typewriter — reveals BIO_PARAGRAPHS over ghost text once isActive fires ───
+// The full text is always rendered at ghost opacity; charCount advances the
+// opaque "revealed" portion left-to-right so layout never reflows. A ref on the
+// leading ghost span keeps the frontier scrolled into view. Skips animation
+// under reduced motion.
+function TypewriterBio({ paragraphs, isActive, skip }) {
+  const totalLen = paragraphs.reduce((n, p) => n + p.length + 2, 0)
+  const [charCount, setCharCount] = useState(skip ? totalLen : 0)
+  const [done, setDone] = useState(skip)
+  const scrollRef = useRef(null)
+  const frontierRef = useRef(null)
+  const userScrolledUpRef = useRef(false)
+
+  useEffect(() => {
+    if (!isActive || done || skip) return
+    const id = setInterval(() => {
+      setCharCount((prev) => {
+        const next = Math.min(prev + 1, totalLen)
+        if (next >= totalLen) setDone(true)
+        return next
+      })
+    }, 50)
+    return () => clearInterval(id)
+  }, [isActive, done, skip, totalLen])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      userScrolledUpRef.current = el.scrollHeight - el.scrollTop - el.clientHeight > 40
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Scroll just enough to keep the reveal frontier visible
+  useEffect(() => {
+    const container = scrollRef.current
+    const frontier = frontierRef.current
+    if (!container || !frontier || userScrolledUpRef.current) return
+    const cRect = frontier.getBoundingClientRect()
+    const pRect = container.getBoundingClientRect()
+    if (cRect.bottom > pRect.bottom) {
+      container.scrollTop += cRect.bottom - pRect.bottom + 8
+    }
+  }, [charCount])
+
+  // Split each paragraph into revealed / ghost at charCount
+  let offset = 0
+  const chunks = paragraphs.map((para) => {
+    const start = offset
+    offset += para.length + 2 // +2 for the \n\n separator
+    const revealEnd = Math.max(0, Math.min(para.length, charCount - start))
+    return {
+      revealed: para.slice(0, revealEnd),
+      ghost: para.slice(revealEnd),
+      isFrontier: charCount > start && charCount < start + para.length,
+    }
+  })
+
+  return (
+    <div
+      ref={scrollRef}
+      data-lenis-prevent
+      className="ab-about-scroll flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto"
+    >
+      {chunks.map(({ revealed, ghost, isFrontier }, idx) => (
+        <p
+          key={idx}
+          className="font-mono"
+          style={{ fontSize: 'var(--text-body)', lineHeight: 1.65 }}
+        >
+          <span style={{ color: 'rgba(245,240,232,0.75)' }}>{revealed}</span>
+          {ghost && (
+            <span
+              ref={isFrontier ? frontierRef : undefined}
+              style={{ color: 'rgba(245,240,232,0.15)' }}
+            >
+              {ghost}
+            </span>
+          )}
+        </p>
+      ))}
+    </div>
+  )
+}
+
 // ── Staggered assembly wrapper — transparent grid child, scroll-driven ───────
 // Each tile WIPES UP into place (clip-path top inset 100%→0%, no fade), matching
 // the gallery cards. At rest → 'none' so the tile's glass shadow isn't clipped.
@@ -122,6 +209,8 @@ const LABEL = {
 }
 
 export default function AboutBento({ progress, isMobile, profileTileRef }) {
+  const reduceMotion = useReducedMotion()
+
   // Mobile only: the in-grid profile photo crossfades in as the flying overlay
   // fades out at landing, so the photo pans with the bento. Desktop keeps the
   // overlay as the settled card, leaving this grid cell an empty placeholder.
@@ -130,9 +219,12 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
   // Disable pointer + keyboard on the tiles until they've assembled, so hidden
   // links aren't clickable/focusable during Hero and the portrait flight.
   const [interactive, setInteractive] = useState(false)
+  // Fire the typewriter as soon as the About tile starts its wipe-in (p > 0.54).
+  const [bioActive, setBioActive] = useState(false)
   useMotionValueEvent(progress, 'change', (p) => {
     const on = p > 0.52
     setInteractive((prev) => (prev === on ? prev : on))
+    if (!bioActive && p > 0.54) setBioActive(true)
   })
 
   // ── Mobile vertical pan ─────────────────────────────────────────────────────
@@ -251,17 +343,9 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
 
         {/* ── About description ────────────────────────────────────────────── */}
         <Assemble progress={progress} start={0.54} area="ab-about">
-          <div className="ab-tile ab-tile-hover flex h-full w-full flex-col justify-start gap-2.5 p-5 md:p-6">
-            <p style={LABEL}>About</p>
-            {BIO_PARAGRAPHS.map((para, idx) => (
-              <p
-                key={idx}
-                className="font-mono text-cream/75"
-                style={{ fontSize: 'var(--text-body)', lineHeight: 1.65 }}
-              >
-                {para}
-              </p>
-            ))}
+          <div className="ab-tile ab-tile-hover flex h-full w-full flex-col gap-2.5 p-5 md:p-6">
+            <p style={LABEL} className="shrink-0">About</p>
+            <TypewriterBio paragraphs={BIO_PARAGRAPHS} isActive={bioActive} skip={reduceMotion} />
           </div>
         </Assemble>
 
