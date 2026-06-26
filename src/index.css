@@ -294,6 +294,10 @@ body {
 
 .ab-mcell:active { filter: brightness(1.15); }
 
+/* Hide scrollbar in About tile scroll region (scrolling still works) */
+.ab-about-scroll { scrollbar-width: none; }
+.ab-about-scroll::-webkit-scrollbar { display: none; }
+
 /* ── Reusable icon button ────────────────────────────────────────────────────
    Transparent at rest; border + white bg revealed on hover. Place
    .icon-btn-img-rest (white svg) and .icon-btn-img-color (brand svg) inside
