@@ -255,6 +255,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   border: 1px solid transparent;
   background: transparent;
   border-radius: 14px;
@@ -270,6 +271,7 @@ body {
   position: relative;
   display: block;
   width: 82%;
+  max-height: 82%;
   aspect-ratio: 1 / 1;
   line-height: 0;
 }
@@ -341,21 +343,21 @@ body {
 }
 
 /* Mobile: a tall single-column stack (profile beside the tech grid). It is
-   taller than the viewport on purpose — AboutBento pans it vertically with the
-   leftover section scroll so every tile is reachable. Rows are in vh so the
-   overflow is deterministic. */
+   taller than the viewport on purpose — AboutBento measures the overflow and
+   pans it vertically with the leftover section scroll so every tile is reachable.
+   Rows use fixed px heights so content never clips regardless of device height. */
 @media (max-width: 767px) {
   .about-bento {
     width: calc(100vw - 28px);
     height: auto;
     gap: 10px;
     grid-template-columns: 0.82fr 1fr;
-    grid-template-rows: 30vh 17vh 19vh 10vh 13vh 11vh;
+    grid-template-rows: 220px 80px 130px 180px 120px 120px;
     grid-template-areas:
       "profile tech"
+      "status status"
       "tagline tagline"
-      "about   about"
-      "status  status"
+      "about about"
       "spotify spotify"
       "social  social";
   }
@@ -369,6 +371,18 @@ body {
   }
   .ab-mcell { border-radius: 11px; }
   .ab-micon { width: 82%; }
+}
+
+/* Laptop / medium desktop (768–1499px): flatten to a 4×3 grid — the 2×2 anchors
+   need a wider tech column (≥1500px) to breathe without icons crowding each other. */
+@media (min-width: 768px) and (max-width: 1499px) {
+  .ab-mosaic {
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+  .ab-mcell--big {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
 }
 
 /* ── Spotify equalizer bars (visible when playing) ── */

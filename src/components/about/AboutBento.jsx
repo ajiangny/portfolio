@@ -14,7 +14,7 @@
  * and aim the flying portrait at it. Tilt + pulse-ring live here now (the
  * overlay is just the flight vehicle).
  */
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, useTransform, useMotionValueEvent, useReducedMotion } from 'framer-motion'
 import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
@@ -66,9 +66,16 @@ function TechMosaic({ isMobile }) {
 
   const Cell = isMobile ? motion.div : motion.button
 
+  // Big cells first so the 4×4 block (rows 1–4) always fills completely;
+  // small cells fill rows 5–6. Any mix of 4 big + 8 small tiles hole-free.
+  const sortedStack = useMemo(
+    () => [...TECH_STACK].sort((a, b) => (bigSet.has(b.id) ? 1 : 0) - (bigSet.has(a.id) ? 1 : 0)),
+    [bigQueue], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   return (
     <div className="ab-mosaic">
-      {TECH_STACK.map((it) => {
+      {sortedStack.map((it) => {
         const isBig = !isMobile && bigSet.has(it.id)
         const interactiveProps = isMobile
           ? {}
@@ -214,7 +221,16 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
   // Mobile only: the in-grid profile photo crossfades in as the flying overlay
   // fades out at landing, so the photo pans with the bento. Desktop keeps the
   // overlay as the settled card, leaving this grid cell an empty placeholder.
-  const profileOpacity = useTransform(progress, [0.48, 0.51], [0, 1])
+  const profileOpacity = useTransform(progress, (v) => v >= 0.48 ? 1 : 0)
+  // The overlay (About.jsx) carries its own border during the flight/fade. Keep
+  // the in-grid tile border transparent while the overlay is still visible, then
+  // fade it in once the overlay is fully gone — prevents two 0.18-alpha borders
+  // stacking to ~0.33 and flashing brighter than every other tile.
+  const profileBorderColor = useTransform(
+    progress,
+    [0.51, 0.53],
+    ['rgba(255,255,255,0)', 'rgba(255,255,255,0.18)'],
+  )
 
   // Disable pointer + keyboard on the tiles until they've assembled, so hidden
   // links aren't clickable/focusable during Hero and the portrait flight.
@@ -277,7 +293,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
               className="text-cream"
               style={{
                 fontFamily: "'DM Sans', sans-serif",
-                fontSize: 'clamp(2rem, 3.4vw, 7rem)',
+                fontSize: isMobile ? 'clamp(1rem, 5vw, 1.5rem)' : 'clamp(2rem, 3.4vw, 7rem)',
                 lineHeight: 1.04,
                 letterSpacing: '-0.01em',
               }}
@@ -294,26 +310,44 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                   >
                     {s.t}
                   </span>
-                  {s.break ? <br /> : ' '}
+                  {s.break && !isMobile ? <br /> : ' '}
                 </span>
               ))}
             </p>
 
-            <div className="flex justify-end">
-              <a
-                href={RESUME_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Resume"
-                className="icon-btn"
-              >
-                <div className="relative h-full w-full">
-                  <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
+            {isMobile ? (
+              <div className="flex items-end">
+                <DogPet size={100} />
+                <a
+                  href={RESUME_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Resume"
+                  className="icon-btn ml-auto"
+                >
+                  <div className="relative h-full w-full">
+                    <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
+                  </div>
+                </a>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <a
+                    href={RESUME_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Resume"
+                    className="icon-btn"
+                  >
+                    <div className="relative h-full w-full">
+                      <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
+                    </div>
+                  </a>
                 </div>
-              </a>
-            </div>
-
-            {isMobile ? <DogPet size={48} /> : <DogPet jumpScale={2.25} />}
+                <DogPet jumpScale={2.25} />
+              </>
+            )}
           </div>
         </Assemble>
 
@@ -322,7 +356,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
         {/* here as the card. Mobile: the photo lives in the grid so it pans.     */}
         <div className="ab-profile" ref={profileTileRef}>
           {isMobile && (
-            <motion.div className="ab-tile relative h-full w-full" style={{ opacity: profileOpacity }}>
+            <motion.div className="ab-tile relative h-full w-full" style={{ opacity: profileOpacity, borderColor: profileBorderColor }}>
               <img
                 src="/art/profile.webp"
                 alt="Andrew Jiang"

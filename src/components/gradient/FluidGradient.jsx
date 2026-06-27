@@ -38,7 +38,7 @@ export default function FluidGradient() {
     const start = performance.now()
     const frameMs = isMobile ? GRADIENT.FRAME_MS_MOBILE : 0
 
-    // Hero nav-blob hover preview: eased crossfade toward the hovered section's
+    // Hero nav hover preview: eased crossfade toward the hovered section's
     // palette while Hero holds the viewport centre. `hoverDestId` persists
     // through the fade-out so leaving a blob eases back to Hero, not snaps.
     let hoverStrength = 0
