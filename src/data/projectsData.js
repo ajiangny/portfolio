@@ -15,14 +15,6 @@
 
 export const works = [
   {
-    title: 'Interactive Portfolio',
-    subtitle: 'Immersive personal portfolio featuring custom animations, dynamic halftone effects, and seamless page transitions.',
-    tech: ['React', 'Tailwind CSS', 'Framer Motion', 'Vite'],
-    github: null,
-    live: null,
-    thumbnail: '/thumbnail/portfolio.png'
-  },
-  {
     title: 'Pear Protocol',
     subtitle: 'Engineered and composited a 10,000+ image generative collection using Python pipelines and automated smart contract metadata formatting.',
     tech: ['Python', 'Photoshop', 'Automation scripts'],

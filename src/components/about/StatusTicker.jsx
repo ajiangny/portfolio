@@ -59,7 +59,6 @@ export default function StatusTicker() {
               className="font-mono text-cream"
               style={{ fontSize: 'var(--text-body)', lineHeight: 1.35 }}
             >
-              <span className="text-cream/55">{item.label}: </span>
               {item.value}
             </motion.p>
           </AnimatePresence>

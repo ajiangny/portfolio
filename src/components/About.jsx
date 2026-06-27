@@ -21,9 +21,11 @@
  * Phase 4 — Bento assembly (progress 0.50→0.66):
  *   The other six tiles self-assemble around the profile (AboutBento).
  *
- * Leave (progress 0.85→1.0):
- *   The whole stack WIPES UP via a hard clip-path edge (no fade), uncovering
- *   the gradient as it crossfades cobalt→cream into the Projects section.
+ * Leave (progress 1.0):
+ *   No wipe. The settled bento holds, then the sticky releases and the whole
+ *   stack scrolls up flush (Projects sits -2px beneath) — a continuous handoff
+ *   into the Projects "Selected Works" opener as the gradient crossfades
+ *   cobalt→cream.
  */
 import { useRef, useEffect } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent } from 'framer-motion'
@@ -165,14 +167,9 @@ export default function About() {
   // crossfade, just a covered hand-off.
   const profileCellHide = useTransform(progress, [0.298, 0.302], [1, 0])
 
-  // Leave (0.85→1.0): the whole bento WIPES UP with a HARD edge (clip-path, no
-  // fade) — the bottom inset grows 0→100%, uncovering the gradient/Projects from
-  // the bottom up. Matches the gallery cards / white panel exactly (no mask).
-  const leaveClip = useTransform(progress, (p) => {
-    if (p < 0.8) return 'none'
-    const t = Math.min(1, Math.max(0, (p - 0.85) / 0.15))
-    return t <= 0 ? 'none' : `inset(0% 0% ${(t * 100).toFixed(2)}% 0%)`
-  })
+  // Leave: no wipe. The settled bento holds through the tail of the scroll, then
+  // the sticky releases and the whole stack scrolls up flush into Projects (which
+  // sits -2px beneath) — one continuous handoff, no clip-path edge.
 
   // ── Drive the overlay portrait from the centre cell's actual DOM rect ──────
   // The overlay takes over the gallery centre cell (0.30) and moves DIRECTLY to
@@ -250,7 +247,7 @@ export default function About() {
     >
 
       <div ref={stickyRef} className="sticky top-0 overflow-hidden" style={{ height: '100vh' }}>
-        <motion.div style={{ clipPath: leaveClip, width: '100%', height: '100%' }}>
+        <div style={{ width: '100%', height: '100%' }}>
 
           {/* ── White gallery panel ─────────────────────────────────────────── */}
           <motion.div
@@ -314,7 +311,7 @@ export default function About() {
             />
           </motion.div>
 
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   )
