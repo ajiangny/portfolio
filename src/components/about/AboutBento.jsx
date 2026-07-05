@@ -321,20 +321,22 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
             </p>
 
             {isMobile ? (
-              <div className="flex items-end">
+              <>
+                <div className="flex justify-end">
+                  <a
+                    href={RESUME_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Resume"
+                    className="icon-btn"
+                  >
+                    <div className="relative h-full w-full">
+                      <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
+                    </div>
+                  </a>
+                </div>
                 <DogPet size={100} />
-                <a
-                  href={RESUME_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Resume"
-                  className="icon-btn ml-auto"
-                >
-                  <div className="relative h-full w-full">
-                    <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
-                  </div>
-                </a>
-              </div>
+              </>
             ) : (
               <>
                 <div className="flex justify-end">
@@ -359,7 +361,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
         {/* ── Profile photo — journey landing site ─────────────────────────── */}
         {/* Desktop: an empty placeholder; the flying overlay (About.jsx) settles */}
         {/* here as the card. Mobile: the photo lives in the grid so it pans.     */}
-        <div className="ab-profile" ref={profileTileRef}>
+        <div className="ab-profile" ref={profileTileRef} style={isMobile ? undefined : { pointerEvents: 'none' }}>
           {isMobile && (
             <motion.div className="ab-tile relative h-full w-full" style={{ opacity: profileOpacity, borderColor: profileBorderColor }}>
               <img
@@ -374,7 +376,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
 
         {/* ── Tech stack — mini-bento mosaic ───────────────────────────────── */}
         <Assemble progress={progress} start={0.52} area="ab-tech">
-          <div className="ab-tile flex h-full w-full flex-col p-4 md:p-5">
+          <div className="ab-tile ab-tile-hover flex h-full w-full flex-col p-4 md:p-5">
             <p style={LABEL} className="mb-3 shrink-0">Tech Stack</p>
             <TechMosaic isMobile={isMobile} />
           </div>

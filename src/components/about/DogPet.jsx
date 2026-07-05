@@ -8,11 +8,19 @@
  * a double hop — then it resumes roaming.
  *
  * Sprites live in /public/animation/dog as horizontal sheets of 48×48 frames
- * (idle 4, walk 6, bark 4), white silhouettes facing right. Frame stepping and
- * movement are driven by ONE requestAnimationFrame loop that reads/writes refs
- * each frame (never effect-closure state) — matching the canvas/RAF pattern used
- * by the gradient. The whole thing self-confines to the left floor so it never
- * overlaps the Resume button at bottom-right.
+ * (idle 4, walk 6, bark 4), white silhouettes facing right.
+ *
+ * ANIMATION STRATEGY (flicker-free):
+ * Sprite frame stepping uses a CSS `steps()` animation that runs entirely on
+ * the compositor thread. This is critical for mobile Safari: if the RAF loop
+ * writes to the DOM every frame (even just to update a transform), it triggers
+ * main-thread style recalculations. When sibling tiles have `backdrop-filter`,
+ * those recalcs force the browser to continuously resample the blur, causing
+ * violent flickering and shadow bleeding across the grid.
+ * 
+ * By using CSS animations for the sprite sheet, we achieve ZERO DOM writes
+ * during idle and bark states. The RAF loop only touches the DOM during walk,
+ * jump, or pet to update positional coordinates.
  *
  * Sizing: pass a fixed `size` (number) for a constant pixel size (mobile), or
  * omit it to size the dog RESPONSIVELY as a fraction of the measured tile
@@ -49,13 +57,15 @@ export default function DogPet({
   const initialSize = fixed ? size : 120 // pre-measure placeholder; corrected on mount
   const layerRef = useRef(null) // the inset-0 stage; its size = tile interior
   const dogRef = useRef(null) // the moving sprite (a <button>)
+  const spriteRef = useRef(null) // the inner sprite sheet
   const widthRef = useRef(0)
   const sizeRef = useRef(initialSize) // live render size, read each frame
 
   useEffect(() => {
     const layer = layerRef.current
     const dog = dogRef.current
-    if (!layer || !dog) return
+    const sprite = spriteRef.current
+    if (!layer || !dog || !sprite) return
 
     const reduce =
       typeof window !== 'undefined' &&
@@ -81,11 +91,22 @@ export default function DogPet({
       const SIZE = sizeRef.current
       dog.style.width = `${SIZE}px`
       dog.style.height = `${SIZE}px`
-      dog.style.backgroundImage = `url(${SHEETS.idle.src})`
-      dog.style.backgroundSize = `${SHEETS.idle.frames * SIZE}px ${SIZE}px`
-      dog.style.backgroundPosition = '0px 0px'
       dog.style.transform = `translateX(${Math.round(SIZE * 0.5)}px)`
+      sprite.style.width = `${SHEETS.idle.frames * SIZE}px`
+      sprite.style.height = `${SIZE}px`
+      sprite.style.backgroundImage = `url(${SHEETS.idle.src})`
+      sprite.style.backgroundSize = `${SHEETS.idle.frames * SIZE}px ${SIZE}px`
+      sprite.style.transform = `translateX(0px)`
       return () => ro.disconnect()
+    }
+
+    // ── Helper: apply CSS steps() animation to the sprite ────────────────────
+    // Runs entirely on the compositor — zero JS DOM writes per frame.
+    // translateX(-100%) slides the full sprite-sheet width, and steps(N)
+    // divides it into exactly N frame positions.
+    const applySpriteAnim = (sheet) => {
+      const dur = (sheet.frames / sheet.fps).toFixed(4)
+      sprite.style.animation = `dog-sprite ${dur}s steps(${sheet.frames}) infinite`
     }
 
     // ── Mutable per-frame state (read/written in the RAF loop) ─────────────────
@@ -104,6 +125,7 @@ export default function DogPet({
 
     let currentSheet = '' // avoid resetting background-image (and reloading) every frame
     let appliedSize = -1 // last size written to the DOM
+    let lastDogTx = '' // last dog transform string written
 
     const bounds = () => Math.max(0, widthRef.current - sizeRef.current - RIGHT_SAFE)
 
@@ -155,6 +177,9 @@ export default function DogPet({
     dog.addEventListener('click', pet)
 
     // ── The loop ──────────────────────────────────────────────────────────────
+    // During idle/bark the ONLY DOM writes are when the sheet or size changes
+    // (behaviour transitions). The per-frame sprite stepping is handled entirely
+    // by the CSS animation — the loop just runs timer math.
     let raf = 0
     let last = performance.now()
     const loop = (now) => {
@@ -186,26 +211,33 @@ export default function DogPet({
         }
       }
 
-      // Apply size + sprite frame. backgroundSize/backgroundImage only change on
-      // a size change or sheet change; backgroundPosition + transform every frame.
+      // ── Size change (resize) — update button + sprite dimensions ──────────
       const sheet = SHEETS[st.sheet]
-      let bgSizeDirty = false
       if (SIZE !== appliedSize) {
         dog.style.width = `${SIZE}px`
         dog.style.height = `${SIZE}px`
+        sprite.style.height = `${SIZE}px`
+        sprite.style.width = `${sheet.frames * SIZE}px`
+        sprite.style.backgroundSize = `${sheet.frames * SIZE}px ${SIZE}px`
         appliedSize = SIZE
-        bgSizeDirty = true
       }
-      if (st.sheet !== currentSheet) {
-        dog.style.backgroundImage = `url(${sheet.src})`
-        currentSheet = st.sheet
-        bgSizeDirty = true
-      }
-      if (bgSizeDirty) dog.style.backgroundSize = `${sheet.frames * SIZE}px ${SIZE}px`
 
-      const frame = Math.floor(now / (1000 / sheet.fps)) % sheet.frames
-      dog.style.backgroundPosition = `${-frame * SIZE}px 0px`
-      dog.style.transform = `translateX(${st.x.toFixed(2)}px) translateY(${(-hop).toFixed(2)}px) scaleX(${st.facing})`
+      // ── Sheet change (behaviour transition) — swap image + CSS anim ───────
+      if (st.sheet !== currentSheet) {
+        sprite.style.backgroundImage = `url(${sheet.src})`
+        sprite.style.width = `${sheet.frames * SIZE}px`
+        sprite.style.backgroundSize = `${sheet.frames * SIZE}px ${SIZE}px`
+        applySpriteAnim(sheet)
+        currentSheet = st.sheet
+      }
+
+      // ── Dog position — only write when the value actually changed ─────────
+      // During idle/bark, x/hop/facing are static → string matches → zero writes.
+      const dogTx = `translateX(${st.x.toFixed(2)}px) translateY(${(-hop).toFixed(2)}px) scaleX(${st.facing})`
+      if (dogTx !== lastDogTx) {
+        dog.style.transform = dogTx
+        lastDogTx = dogTx
+      }
     }
     raf = requestAnimationFrame(loop)
 
@@ -230,22 +262,36 @@ export default function DogPet({
   }, [fixed, size, jumpScale, minSize, maxSize, widthFactor, heightFactor])
 
   return (
-    <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
-      <button
-        ref={dogRef}
-        type="button"
-        aria-label="Pet the dog"
-        title="Pet me!"
-        className="pointer-events-auto absolute left-0 cursor-pointer border-0 bg-transparent p-0"
-        style={{
-          bottom: FLOOR,
-          width: initialSize,
-          height: initialSize,
-          backgroundRepeat: 'no-repeat',
-          imageRendering: 'pixelated',
-          willChange: 'transform',
-        }}
-      />
-    </div>
+    <>
+      {/* Keyframe for compositor-driven sprite stepping — translateX(-100%)
+          slides exactly one full sheet width; steps(N) chops it into N frames.
+          Defined here so it exists once per DogPet instance. */}
+      <style>{`@keyframes dog-sprite{to{transform:translateX(-100%)}}`}</style>
+      <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
+        <button
+          ref={dogRef}
+          type="button"
+          aria-label="Pet the dog"
+          title="Pet me!"
+          className="pointer-events-auto absolute left-0 cursor-pointer border-0 bg-transparent p-0 overflow-hidden"
+          style={{
+            bottom: FLOOR,
+            width: initialSize,
+            height: initialSize,
+            willChange: 'transform',
+          }}
+        >
+          <div
+            ref={spriteRef}
+            style={{
+              height: '100%',
+              backgroundRepeat: 'no-repeat',
+              imageRendering: 'pixelated',
+            }}
+          />
+        </button>
+      </div>
+    </>
   )
 }
+

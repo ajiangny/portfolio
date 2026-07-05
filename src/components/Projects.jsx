@@ -2,8 +2,7 @@ import ProjectCard, { CircleLink } from './projects/ProjectCard'
 import InkReveal from './InkDissolve'
 import { works } from '../data/projectsData'
 
-const projects = works.filter((w) => !w.isGithubCard)
-const githubCta = works.find((w) => w.isGithubCard)
+const projects = works
 
 export default function Projects() {
   return (
@@ -35,14 +34,7 @@ export default function Projects() {
         ))}
       </div>
 
-      {/* Closing CTA — full GitHub profile */}
-      {githubCta && (
-        <InkReveal className="flex justify-center mt-24 lg:mt-40">
-          <CircleLink href={githubCta.github} label="View GitHub profile">
-            View All Work — GitHub
-          </CircleLink>
-        </InkReveal>
-      )}
+
     </section>
   )
 }

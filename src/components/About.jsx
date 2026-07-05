@@ -27,7 +27,7 @@
  *   into the Projects "Selected Works" opener as the gradient crossfades
  *   cobalt→cream.
  */
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { motion, useMotionValue, useTransform, useMotionValueEvent } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -173,8 +173,10 @@ export default function About() {
   // the bento profile tile (0.30→0.48) — no centre expansion or hold. Desktop:
   // it settles there as the profile card and stays. Mobile: it fades out at
   // landing as the in-grid photo fades in (so the photo pans with the bento).
+  const [settled, setSettled] = useState(false)
   useMotionValueEvent(progress, 'change', (v) => {
     const mobile = window.innerWidth < 768
+    setSettled((prev) => { const on = v > 0.52; return prev === on ? prev : on })
 
     // Keep the centre-cell rect fresh while the wall is settled; freeze it once
     // the handoff begins so the move starts from a stable point.
@@ -283,6 +285,7 @@ export default function About() {
           {/* Takes over the gallery centre cell and moves to the bento profile  */}
           {/* tile. Carries the same glass material as the tiles/navbar.         */}
           <motion.div
+            className={settled ? 'ab-tile-hover' : undefined}
             style={{
               position: 'absolute',
               left: aboutLeft,
@@ -296,8 +299,10 @@ export default function About() {
               borderWidth: 1,
               borderColor: aboutBorderColor,
               boxShadow: aboutShadow,
-              zIndex: 3,
-              pointerEvents: 'none',
+              background: 'rgba(18, 22, 46, 0.40)',
+              transition: settled ? 'border-radius 0.35s cubic-bezier(0.2, 0, 0, 1), background 0.35s ease, border-color 0.35s ease' : 'none',
+              zIndex: settled ? 5 : 3,
+              pointerEvents: settled ? 'auto' : 'none',
             }}
           >
             <img

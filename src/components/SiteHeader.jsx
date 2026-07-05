@@ -260,21 +260,42 @@ export default function SiteHeader() {
           />
         </motion.svg>
 
-        {/* Mobile dropdown */}
+        {/* Mobile dropdown and backdrop */}
+        <AnimatePresence>
+          {isMobile && menuOpen && (
+            <motion.div
+              key="mobile-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMenuOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: light ? 'rgba(245, 240, 232, 0.4)' : 'rgba(18, 22, 46, 0.4)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                zIndex: -1,
+                cursor: 'pointer',
+              }}
+            />
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {isMobile && menuOpen && (
             <motion.ul
               key="mobile-menu"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0, y: -8, x: '-50%' }}
+              animate={{ opacity: 1, y: 0, x: '-50%' }}
+              exit={{ opacity: 0, y: -8, x: '-50%' }}
               transition={{ duration: 0.2 }}
               className="font-sans font-bold uppercase"
               style={{
                 position: 'absolute',
                 top: BAR_H + 10,
                 left: '50%',
-                transform: 'translateX(-50%)',
                 margin: 0,
                 padding: 8,
                 listStyle: 'none',
@@ -309,6 +330,7 @@ export default function SiteHeader() {
                       font: 'inherit',
                       letterSpacing: 'inherit',
                       textTransform: 'inherit',
+                      textIndent: '0.18em', // Fixes off-center appearance from letter-spacing
                     }}
                   >
                     {s.label}

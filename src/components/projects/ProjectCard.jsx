@@ -7,7 +7,7 @@
  * Typography/surfaces follow our own system: cream + mono meta, Instrument
  * Sans titles, glass border/shadow on the image frame.
  */
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 
 function WrenchIcon() {
@@ -61,6 +61,44 @@ function MetaLabel({ children }) {
   )
 }
 
+const TECH_ICON_MAP = {
+  'TypeScript': 'typescript.svg',
+  'Tailwind': 'tailwindcss.svg',
+  'Express': 'expressjs.svg',
+  'Python': 'python.svg',
+  'React': 'react.svg',
+  'Three.js': 'threejs.svg',
+  'Vercel': 'vercel.svg',
+  'JavaScript': 'javascript.svg',
+};
+
+function TechIconBadge({ name }) {
+  const iconFile = TECH_ICON_MAP[name];
+
+  if (iconFile) {
+    return (
+      <div 
+        className="flex items-center justify-center w-8 h-8 rounded border border-white/10 bg-white/5 p-1.5 shrink-0"
+        title={name}
+      >
+        <img src={`/icons/default/${iconFile}`} alt={name} className="w-full h-full object-contain" />
+      </div>
+    );
+  }
+
+  // Fallback placeholder: 2-letter abbreviation
+  return (
+    <div 
+      className="flex items-center justify-center w-8 h-8 rounded border border-white/10 bg-white/5 shrink-0"
+      title={name}
+    >
+      <span className="font-mono text-[11px] text-cream/60 font-bold uppercase tracking-tighter">
+        {name.substring(0, 2)}
+      </span>
+    </div>
+  );
+}
+
 export default function ProjectCard({ work, index }) {
   const reduceMotion = useReducedMotion()
   const itemRef = useRef(null)
@@ -74,6 +112,10 @@ export default function ProjectCard({ work, index }) {
   const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '-10%'])
 
   const thumbnailSrc = work.thumbnail ?? null
+  const hoverSrc = work.hoverThumbnail ?? null
+  const [isHovered, setIsHovered] = useState(false)
+
+  const activeSrc = hoverSrc && isHovered ? hoverSrc : thumbnailSrc
 
   return (
     <article
@@ -92,10 +134,13 @@ export default function ProjectCard({ work, index }) {
       <div className="lg:col-start-8 lg:col-end-13 lg:row-start-1">
         <div
           className="relative overflow-hidden aspect-576/420 rounded-[16px]"
+          onMouseEnter={() => hoverSrc && setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          {thumbnailSrc ? (
+          {activeSrc ? (
             <motion.img
-              src={thumbnailSrc}
+              key={activeSrc}
+              src={activeSrc}
               alt={work.title}
               className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
               style={reduceMotion ? undefined : { y: imgY }}
@@ -111,12 +156,7 @@ export default function ProjectCard({ work, index }) {
 
       {/* ── Info — sticky left column on desktop ── */}
       <div className="lg:col-start-1 lg:col-end-6 lg:row-start-1 lg:sticky lg:top-24 lg:self-start max-w-[600px]">
-        <span
-          className="font-mono tracking-[0.25em] text-cream/40 tabular-nums"
-          style={{ fontSize: 'var(--text-meta)' }}
-        >
-          {String(index + 1).padStart(2, '0')}
-        </span>
+
 
         <h3
           className="font-heading font-semibold uppercase text-cream tracking-tight leading-tight mt-3 mb-4"
@@ -155,15 +195,9 @@ export default function ProjectCard({ work, index }) {
         {work.tech?.length > 0 && (
           <div className="mb-10">
             <MetaLabel>Stack</MetaLabel>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {work.tech.map((t) => (
-                <span
-                  key={t}
-                  className="font-mono px-2.5 py-1 rounded-full border border-white/10 text-cream/40 tracking-wide"
-                  style={{ fontSize: 'var(--text-meta)' }}
-                >
-                  {t}
-                </span>
+                <TechIconBadge key={t} name={t} />
               ))}
             </div>
           </div>

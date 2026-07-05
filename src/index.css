@@ -223,15 +223,15 @@ body {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 30px rgba(8, 12, 40, 0.18);
-  transition: border-color 0.35s ease, background 0.35s ease, transform 0.35s cubic-bezier(0.2, 0, 0, 1);
+  transition: border-radius 0.35s cubic-bezier(0.2, 0, 0, 1), background 0.35s ease, border-color 0.35s ease;
 }
 
-/* Interactive tiles lift slightly on hover (desktop pointer only). */
+/* Interactive tiles sharpen corners and darken on hover (desktop pointer only). */
 @media (hover: hover) {
   .ab-tile-hover:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.30);
-    background: rgba(18, 22, 46, 0.52);
+    border-radius: 0px !important;
+    background: rgba(18, 22, 46, 0.68);
+    border-color: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -395,6 +395,12 @@ body {
   }
   .ab-mcell { border-radius: 11px; }
   .ab-micon { width: 82%; }
+
+  /* On mobile the 10px gap is tight — the downward box-shadow from each tile
+     bleeds behind the tile below and gets amplified by its backdrop-filter,
+     producing a visible dark band. The frosted glass + border is enough depth
+     at this scale, so drop the shadow entirely. */
+  .ab-tile { box-shadow: none; }
 }
 
 /* Laptop / medium desktop (768–1499px): flatten to a 4×3 grid — the 2×2 anchors
@@ -767,8 +773,7 @@ body {
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0.25rem;
-  justify-content: center;
+  padding: 0.25rem 1rem;
 }
 
 .gallery-lightbox-carousel::-webkit-scrollbar {
