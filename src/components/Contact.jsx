@@ -62,17 +62,19 @@ export default function Contact() {
     <div
       id="contact"
       ref={sectionRef}
-      className="relative overflow-hidden" style={{ backgroundColor: 'transparent' }}
+      className="relative overflow-hidden flex min-h-screen flex-col" style={{ backgroundColor: 'transparent' }}
     >
 
-      {/* ── Main content — pointer-events-none on wrapper, re-enabled on children ── */}
+      {/* ── Main content — pointer-events-none on wrapper, re-enabled on children.
+          flex-1 shares the viewport with the footer so the section totals ~100vh
+          and the heading isn't pushed above the fold at max scroll. ── */}
       <div
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-24 pb-14 md:py-24 pointer-events-none"
+        className="relative flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-10 md:pb-12 pointer-events-none"
         style={{ zIndex: 2 }}
       >
         {/* Heading — in flow so it stays attached to the form at any viewport height */}
         <motion.div
-          className="flex flex-col items-center text-center pointer-events-auto mb-8"
+          className="flex flex-col items-center text-center pointer-events-auto mb-6"
           initial={{ opacity: 0, y: 32 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
@@ -96,7 +98,7 @@ export default function Contact() {
           {/* Tagline */}
           <motion.p
             variants={itemVariants}
-            className="font-mono text-cream/60 text-body text-center mb-8 pointer-events-none"
+            className="font-mono text-cream/60 text-body text-center mb-6 pointer-events-none"
           >
             Have a project in mind, want to collaborate, or just say hi?<br />
             I'd love to hear from you.
@@ -175,7 +177,7 @@ export default function Contact() {
                   <textarea
                     id="contact-message"
                     name="message"
-                    rows={5}
+                    rows={4}
                     required
                     placeholder="Tell me about your project or idea..."
                     value={form.message}
@@ -203,10 +205,10 @@ export default function Contact() {
 
       {/* ── Footer — nav links + signature ─────────────────────────────── */}
       <footer
-        className="relative border-t border-white/10 px-6 py-10"
+        className="relative border-t border-white/10 px-6 py-8"
         style={{ zIndex: 2 }}
       >
-        <div className="max-w-3xl mx-auto flex flex-col items-center gap-7">
+        <div className="max-w-3xl mx-auto flex flex-col items-center gap-5">
           <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-3 gap-y-1">
             {SECTIONS.map(({ id, label }) => (
               <button

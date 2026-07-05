@@ -1,133 +1,249 @@
 /**
- * Gallery.jsx — Gallery Section
+ * Gallery.jsx — Gallery Section ("drifting print-desk")
  *
- * A 400vh scroll-driven section displaying artwork in a responsive
- * bento grid (9×3 desktop / 3×5 mobile). Features:
+ * A 240vh scroll-pinned section where the artworks float freely on a
+ * contained stage instead of sitting in a grid (design system: MASTER.md):
  *
- *   • Staggered card reveal — each card fades in at a slightly offset
- *     scroll threshold for a cascade entrance effect
- *   • Scroll-driven exit — cards scale down and fade as the user
- *     scrolls past, transitioning into the Contact section
- *   • Lightbox — clicking any artwork opens a fullscreen viewer with
- *     keyboard navigation and a thumbnail carousel strip
+ *   • Ambient drift — each piece wanders on its own slow (8–14s) path,
+ *     pausing while hovered or dragged
+ *   • Drag — pieces are draggable 1:1 with a soft glide-to-stop, constrained
+ *     inside the stage so nothing escapes or clips
+ *   • Click-to-front — pointer-down raises a piece above the others;
+ *     tapping the piece that is already at the front opens the lightbox
+ *   • Scroll choreography — staggered drift-in on arrival, slip-away on
+ *     exit toward Contact (same gap/pin progress pattern as before)
+ *   • Mobile (≤767px) — the stage widens to 200vw inside a native
+ *     horizontal scroller; pieces still drift and drag
  *
- * Grid cells beyond the artwork count are filled with blank placeholders
- * to maintain the grid structure.
+ * Scatter spots live in DESKTOP_SPOTS / MOBILE_SPOTS below — one per
+ * artwork plus a final spot for the "View All" card. When adding artwork
+ * beyond 17, append a spot to BOTH arrays.
  */
-import { useRef, useEffect, useState } from 'react'
-import { motion, useTransform, useSpring, useMotionValue, AnimatePresence } from 'framer-motion'
+import { useRef, useEffect, useState, useCallback } from 'react'
+import {
+  motion, useTransform, useSpring, useMotionValue,
+  AnimatePresence, useReducedMotion,
+} from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import GalleryLightbox from './gallery/GalleryLightbox'
 import { artworks } from '../data/galleryData'
 
+// ─── Scatter layout ───────────────────────────────────────────────
+// x/y are % of the stage (top-left of the piece), t = size tier (width;
+// height follows each artwork's natural aspect ratio from galleryData).
+// The last spot is reserved for the "View All" card. Overlap is
+// intentional (pieces raise on click); the mount-time clamp in
+// FloatingPiece pulls any overflowing piece back inside the stage on
+// small viewports.
+const DESKTOP_SPOTS = [
+  { x: 2, y: 10, t: 'L' }, { x: 13, y: 58, t: 'M' },
+  { x: 16, y: 6, t: 'S' }, { x: 28, y: 14, t: 'L' },
+  { x: 25, y: 44, t: 'M' }, { x: 40, y: 62, t: 'M' },
+  { x: 41, y: 4, t: 'M' }, { x: 50, y: 28, t: 'L' },
+  { x: 55, y: 68, t: 'S' }, { x: 66, y: 8, t: 'M' },
+  { x: 70, y: 46, t: 'M' }, { x: 82, y: 12, t: 'S' },
+  { x: 84, y: 56, t: 'S' }, { x: 5, y: 36, t: 'S' },
+  { x: 35, y: 30, t: 'S' }, { x: 60, y: 48, t: 'S' },
+  { x: 86, y: 30, t: 'S' },
+  { x: 76, y: 74, t: 'S' }, // View All
+]
+const MOBILE_SPOTS = [
+  { x: 2, y: 8, t: 'L' }, { x: 10, y: 52, t: 'S' },
+  { x: 16, y: 14, t: 'S' }, { x: 22, y: 46, t: 'M' },
+  { x: 28, y: 6, t: 'M' }, { x: 34, y: 54, t: 'S' },
+  { x: 40, y: 16, t: 'M' }, { x: 46, y: 46, t: 'M' },
+  { x: 53, y: 8, t: 'S' }, { x: 58, y: 38, t: 'M' },
+  { x: 64, y: 10, t: 'M' }, { x: 71, y: 56, t: 'S' },
+  { x: 76, y: 14, t: 'S' }, { x: 81, y: 42, t: 'M' },
+  { x: 88, y: 8, t: 'S' }, { x: 68, y: 64, t: 'S' },
+  { x: 78, y: 26, t: 'S' },
+  { x: 84, y: 54, t: 'S' }, // View All
+]
 
-// Artworks are scattered bento-style among blank cells so the grid
-// reads as an intentional composition instead of one full row + blanks.
-// Desktop: 9 cols × 3 rows (27 cells) — 17 art + View All + 9 scattered blanks.
-// Mobile:  3 cols × 6 rows (18 cells) — 17 art + View All, fully packed.
-// NOTE: when adding artwork beyond 17, extend these position arrays (and grow
-// the grids: another desktop column-set / another mobile row in index.css).
-const DESKTOP_CELLS = 27
-const MOBILE_CELLS = 18
-const DESKTOP_ART_POSITIONS = [0, 1, 3, 4, 6, 8, 10, 11, 12, 14, 15, 17, 18, 20, 22, 23, 25]
-const MOBILE_ART_POSITIONS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-// Bottom-right cell — "View All" teaser for the future gallery page
-const DESKTOP_VIEWALL_POSITION = 26
-const MOBILE_VIEWALL_POSITION = 17
+// Piece sizing (MASTER.md → Piece geometry). Tiers set the width; the
+// min() also caps piece HEIGHT (42vh desktop / 36vh mobile) via the
+// aspect ratio, so tall portraits never outgrow short viewports.
+const TIER_W = {
+  S: 'clamp(110px, 11vw, 190px)',
+  M: 'clamp(130px, 13.5vw, 235px)',
+  L: 'clamp(150px, 16vw, 275px)',
+}
+const TIER_W_MOBILE = { S: '30vw', M: '36vw', L: '42vw' }
 
-// ─── Shared cell choreography ─────────────────────────────────────
-// Every grid cell (art, blank, view-all) staggers in during the reveal
-// window and out during the exit window. Windows are normalized by cell
-// count so even the last cell finishes revealing before progress hits 1.
-function useCellReveal(index, totalCells, revealProgress, exitProgress) {
-  const inStart = 0.55 + (index / totalCells) * 0.30
-  const inEnd = inStart + 0.14
-
-  const outStart = 0.80 + (index / totalCells) * 0.11
-  const outEnd = outStart + 0.08
-
-  const inOpacity = useTransform(revealProgress, [inStart, inEnd], [0, 1])
-  const inScale = useTransform(revealProgress, [inStart, inEnd], [0.85, 1])
-
-  const outOpacity = useTransform(exitProgress, [outStart, outEnd], [1, 0])
-  const outScale = useTransform(exitProgress, [outStart, outEnd], [1, 0.9])
-
-  const opacity = useTransform([inOpacity, outOpacity], ([i, o]) => i * o)
-  const scale = useTransform([inScale, outScale], ([i, o]) => i * o)
-
-  return { opacity, scale }
+function pieceWidth(t, ratio, isMobile) {
+  return isMobile
+    ? `min(${TIER_W_MOBILE[t]}, calc(36vh * ${ratio}))`
+    : `min(${TIER_W[t]}, calc(42vh * ${ratio}))`
 }
 
-// ─── Single gallery card ──────────────────────────────────────────
-function ArtCard({ art, artIndex, index, totalCells, revealProgress, exitProgress, onSelect }) {
-  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
+// Keep pieces this far (px) inside the stage — covers the ambient drift
+// amplitude + the bounding-box growth from the base tilt, so a piece
+// parked against the constraint edge still never clips.
+const EDGE_PAD = 40
+const EDGE_PAD_MOBILE = 26
+
+// Deterministic pseudo-random in [0, 1) — stable per piece across renders
+// so drift paths and tilts don't reshuffle on re-render.
+function prand(i, salt) {
+  const s = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453
+  return s - Math.floor(s)
+}
+
+// ─── Scroll choreography (per piece) ──────────────────────────────
+// Staggered drift-in over the seam-gap progress, slip-away over the
+// pin progress — same windows idea as the old grid reveal.
+function usePieceReveal(index, total, revealProgress, exitProgress) {
+  const inStart = 0.45 + (index / total) * 0.4
+  const inEnd = inStart + 0.15
+  const outStart = 0.78 + (index / total) * 0.13
+  const outEnd = outStart + 0.08
+
+  const inO = useTransform(revealProgress, [inStart, inEnd], [0, 1])
+  const outO = useTransform(exitProgress, [outStart, outEnd], [1, 0])
+  const opacity = useTransform([inO, outO], ([a, b]) => a * b)
+
+  const inY = useTransform(revealProgress, [inStart, inEnd], [48, 0])
+  const outY = useTransform(exitProgress, [outStart, outEnd], [0, -36])
+  const y = useTransform([inY, outY], ([a, b]) => a + b)
+
+  const inS = useTransform(revealProgress, [inStart, inEnd], [0.94, 1])
+  const outS = useTransform(exitProgress, [outStart, outEnd], [1, 0.96])
+  const scale = useTransform([inS, outS], ([a, b]) => a * b)
+
+  return { opacity, y, scale }
+}
+
+// ─── Floating piece shell ─────────────────────────────────────────
+// Three nested transforms, one element each so they never fight:
+//   outer  — anchor position + scroll entry/exit (opacity/y/scale)
+//   drag   — pointer drag x/y + base tilt + hover/drag scale
+//   drift  — ambient wander keyframes (paused on hover/drag)
+function FloatingPiece({
+  index, total, spot, ratio, stageRef, isMobile, zIndex, isFront,
+  onRaise, onActivate, revealProgress, exitProgress, label,
+  frameClassName = '', children,
+}) {
+  const reduceMotion = useReducedMotion()
+  const outerRef = useRef(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const [constraints, setConstraints] = useState(null)
+  const [paused, setPaused] = useState(false)
+  const wasFrontRef = useRef(false)
+
+  const { opacity, y: entryY, scale: entryScale } =
+    usePieceReveal(index, total, revealProgress, exitProgress)
+
+  // Deterministic personality
+  const tilt = prand(index, 1) * 8 - 4
+  const driftDur = 8 + prand(index, 2) * 6
+  const ampBase = isMobile ? 8 : 14
+  const ampSpan = isMobile ? 14 : 20
+  const dx = ampBase + prand(index, 3) * ampSpan
+  const dy = ampBase + prand(index, 4) * ampSpan
+  const dr = 0.6 + prand(index, 5) * 0.6
+
+  // Measure drag bounds against the stage and pull any initially
+  // overflowing piece back inside (short viewports, resizes).
+  useEffect(() => {
+    const measure = () => {
+      const el = outerRef.current
+      const stage = stageRef.current
+      if (!el || !stage) return
+      const pad = isMobile ? EDGE_PAD_MOBILE : EDGE_PAD
+      const left = pad - el.offsetLeft
+      const top = pad - el.offsetTop
+      const right = stage.clientWidth - pad - el.offsetLeft - el.offsetWidth
+      const bottom = stage.clientHeight - pad - el.offsetTop - el.offsetHeight
+      const c = {
+        left: Math.min(left, right), right: Math.max(left, right),
+        top: Math.min(top, bottom), bottom: Math.max(top, bottom),
+      }
+      setConstraints(c)
+      x.set(Math.max(c.left, Math.min(c.right, x.get())))
+      y.set(Math.max(c.top, Math.min(c.bottom, y.get())))
+    }
+    // Slight timeout so clamp()/vh sizes settle before measuring
+    const t = setTimeout(measure, 60)
+    window.addEventListener('resize', measure)
+    return () => { clearTimeout(t); window.removeEventListener('resize', measure) }
+  }, [isMobile, spot, stageRef, x, y])
+
+  const interact = () => {
+    wasFrontRef.current = isFront
+    onRaise()
+  }
+
+  const drifting = !(reduceMotion || paused)
 
   return (
     <motion.div
-      style={{ opacity, scale }}
-      className="gallery-cell gallery-cell-art group"
-      onClick={() => onSelect(artIndex)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(artIndex) } }}
-      role="button"
-      tabIndex={0}
-      aria-label={`View ${art.title || art.medium}`}
+      ref={outerRef}
+      style={{
+        position: 'absolute',
+        left: `${spot.x}%`,
+        top: `${spot.y}%`,
+        width: pieceWidth(spot.t, ratio, isMobile),
+        aspectRatio: ratio,
+        zIndex,
+        opacity,
+        ...(reduceMotion ? {} : { y: entryY, scale: entryScale }),
+      }}
     >
-      <img
-        src={art.src}
-        alt={art.title || art.medium}
-        className="gallery-cell-img"
-        loading="lazy"
-      />
-      {/* Hover overlay */}
-      <div className="gallery-cell-overlay">
-        <span className="font-mono text-cream/90 text-label uppercase tracking-[0.2em]">
-          {art.medium}
-        </span>
-      </div>
+      <motion.div
+        className={`gallery-piece${isFront ? ' is-front' : ''}`}
+        style={{ x, y, rotate: tilt, width: '100%', height: '100%' }}
+        drag={!!constraints}
+        dragConstraints={constraints || undefined}
+        dragElastic={0.08}
+        dragTransition={{ power: 0.2, timeConstant: 200 }}
+        whileHover={{ scale: 1.03 }}
+        whileDrag={{ scale: 1.05 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        onPointerDown={interact}
+        onHoverStart={() => setPaused(true)}
+        onHoverEnd={() => setPaused(false)}
+        onDragStart={() => setPaused(true)}
+        onDragEnd={() => setPaused(false)}
+        onTap={() => { if (wasFrontRef.current) onActivate() }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            if (isFront) onActivate()
+            else onRaise()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+      >
+        <motion.div
+          className={`gallery-piece-frame ${frameClassName}`}
+          animate={drifting
+            ? { x: [0, dx, -dx * 0.6, 0], y: [0, -dy * 0.7, dy, 0], rotate: [0, dr, -dr, 0] }
+            : { x: 0, y: 0, rotate: 0 }}
+          transition={drifting
+            ? { duration: driftDur, repeat: Infinity, ease: 'easeInOut' }
+            : { duration: 0.6, ease: 'easeOut' }}
+        >
+          {children}
+        </motion.div>
+      </motion.div>
     </motion.div>
   )
 }
 
-// ─── Blank placeholder cell ───────────────────────────────────────
-function BlankCard({ index, totalCells, revealProgress, exitProgress }) {
-  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
-
-  return (
-    <motion.div
-      style={{ opacity, scale }}
-      className="gallery-cell gallery-cell-blank"
-    />
-  )
-}
-
-// ─── "View All" teaser cell ───────────────────────────────────────
-// Links to a dedicated gallery page (not built yet) — hover or tap
+// ─── "View All" card content ──────────────────────────────────────
+// Teaser for the future gallery page — hover (or tap-activate on touch)
 // flips the label to "Coming Soon".
-function ViewAllCard({ index, totalCells, revealProgress, exitProgress }) {
-  const [showSoon, setShowSoon] = useState(false)
-  const { opacity, scale } = useCellReveal(index, totalCells, revealProgress, exitProgress)
-
-  const reveal = () => setShowSoon(true)
-  const conceal = () => setShowSoon(false)
-
+function ViewAllContent({ showSoon, onHover }) {
   return (
-    <motion.div
-      style={{ opacity, scale }}
-      className="gallery-cell gallery-cell-viewall"
-      role="button"
-      tabIndex={0}
-      aria-label="View all artwork — coming soon"
-      onMouseEnter={reveal}
-      onMouseLeave={conceal}
-      onFocus={reveal}
-      onBlur={conceal}
-      onClick={() => {
-        // Touch has no hover — flash the label for a beat instead
-        setShowSoon(true)
-        setTimeout(() => setShowSoon(false), 1600)
-      }}
+    <div
+      className="gallery-piece-viewall"
+      onMouseEnter={() => onHover(true)}
+      onMouseLeave={() => onHover(false)}
     >
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
@@ -136,7 +252,7 @@ function ViewAllCard({ index, totalCells, revealProgress, exitProgress }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="gallery-cell-viewall-label"
+          className="gallery-piece-viewall-label"
         >
           {showSoon ? 'Coming Soon' : (
             <>
@@ -148,21 +264,21 @@ function ViewAllCard({ index, totalCells, revealProgress, exitProgress }) {
           )}
         </motion.span>
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────
 export default function Gallery() {
   const containerRef = useRef(null)
+  const stageRef = useRef(null)
   const lenisRef = useLenisContext()
 
-  // Sticky travel = container (340vh) − viewport (100vh) = 240vh,
-  // trimmed from 300vh so the run-out into Contact doesn't drag.
-  const rawProgress = useScrollTimeline(containerRef, 2.4)
+  // Sticky travel = container (240vh) − viewport (100vh) = 140vh.
+  const rawProgress = useScrollTimeline(containerRef, 1.4)
   const progress = useSpring(rawProgress, { stiffness: 240, damping: 30 })
 
-  // ── Scroll gap progress ──────────────────────────────────────────
+  // ── Scroll gap progress (seam from Projects) ────────────────────
   const gapProgressRaw = useMotionValue(0)
   const gapProgress = useSpring(gapProgressRaw, { stiffness: 300, damping: 40 })
 
@@ -191,28 +307,50 @@ export default function Gallery() {
 
       check({ scroll: lenis.scroll ?? window.scrollY })
 
+      // Native fallback: Lenis doesn't emit for scrolls it didn't drive
+      // (keyboard paging, anchor/programmatic jumps) — without this the
+      // reveal clock stalls at 0 and the stage never fades in.
+      const nativeCheck = () => check({ scroll: window.scrollY })
       lenis.on('scroll', check)
-      unlisten = () => lenis.off('scroll', check)
+      window.addEventListener('scroll', nativeCheck, { passive: true })
+      unlisten = () => {
+        lenis.off('scroll', check)
+        window.removeEventListener('scroll', nativeCheck)
+      }
     }, 0)
     return () => { clearTimeout(t); unlisten() }
   }, [lenisRef, gapProgressRaw])
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
 
-  // ── Combined header opacity: entry × exit ───────────────────────
-  const headerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
-  const headerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
-  const headerOpacity = useTransform([headerEntryO, headerExitO], ([inO, outO]) => inO * outO)
-  // The header layer is position:fixed and always mounted, so when invisible
+  // ── Combined layer opacity: entry × exit ────────────────────────
+  const layerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
+  const layerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
+  const layerOpacity = useTransform([layerEntryO, layerExitO], ([inO, outO]) => inO * outO)
+  // The stage layer is position:fixed and always mounted, so when invisible
   // it must also be visibility:hidden — pointer-events:none alone is undone
-  // by interactive header children (e.g. links/buttons re-enable pointer
-  // events, making the Gallery header tappable from the Hero section).
-  const headerVisibility = useTransform(headerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
+  // by interactive children (draggable pieces re-enable pointer events,
+  // making the Gallery tappable from other sections).
+  const layerVisibility = useTransform(layerOpacity, (o) => (o > 0.02 ? 'visible' : 'hidden'))
 
-  const gridPointerEvents = useTransform(
+  const stagePointerEvents = useTransform(
     [revealRaw, progress],
     ([r, p]) => (r > 0.6 && p < 0.85) ? 'auto' : 'none'
   )
+
+  const hintOpacity = useTransform(revealRaw, [0.85, 1], [0, 1])
+
+  // ── Z-order: raise on interaction, front-most tap opens lightbox ─
+  const zCounter = useRef(artworks.length + 2)
+  const [zMap, setZMap] = useState({})
+  const [frontId, setFrontId] = useState(null)
+
+  const raise = useCallback((id) => {
+    zCounter.current += 1
+    const z = zCounter.current
+    setFrontId(id)
+    setZMap((m) => ({ ...m, [id]: z }))
+  }, [])
 
   // ── Lightbox state ──────────────────────────────────────────────
   const [lightboxIndex, setLightboxIndex] = useState(null)
@@ -226,81 +364,121 @@ export default function Gallery() {
     return () => lenis.start()
   }, [lightboxIndex, lenisRef])
 
-  // ── Build the grid with artworks scattered among blanks ─────────
-  const isMobile = useMediaQuery('(max-width: 767px)')
-  const totalCells = isMobile ? MOBILE_CELLS : DESKTOP_CELLS
-  const artPositions = isMobile ? MOBILE_ART_POSITIONS : DESKTOP_ART_POSITIONS
-  const viewAllPosition = isMobile ? MOBILE_VIEWALL_POSITION : DESKTOP_VIEWALL_POSITION
+  // ── View All flash (touch has no hover) ─────────────────────────
+  const [viewAllSoon, setViewAllSoon] = useState(false)
+  const flashViewAll = useCallback(() => {
+    setViewAllSoon(true)
+    setTimeout(() => setViewAllSoon(false), 1600)
+  }, [])
 
-  const cells = []
-  for (let i = 0; i < totalCells; i++) {
-    const artIndex = artPositions.indexOf(i)
-    if (artIndex !== -1 && artIndex < artworks.length) {
-      cells.push({ type: 'art', art: artworks[artIndex], artIndex, index: i })
-    } else if (i === viewAllPosition) {
-      cells.push({ type: 'viewall', index: i })
-    } else {
-      cells.push({ type: 'blank', index: i })
-    }
-  }
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const spots = isMobile ? MOBILE_SPOTS : DESKTOP_SPOTS
+  const totalPieces = artworks.length + 1 // + View All card
+  const viewAllSpot = spots[artworks.length] ?? spots[spots.length - 1]
+
+  const pieces = (
+    <>
+      {artworks.map((art, i) => (
+        <FloatingPiece
+          key={art.id}
+          index={i}
+          total={totalPieces}
+          spot={spots[i]}
+          ratio={art.w / art.h}
+          stageRef={stageRef}
+          isMobile={isMobile}
+          zIndex={zMap[`a${art.id}`] ?? i + 1}
+          isFront={frontId === `a${art.id}`}
+          onRaise={() => raise(`a${art.id}`)}
+          onActivate={() => setLightboxIndex(i)}
+          revealProgress={revealRaw}
+          exitProgress={progress}
+          label={`${art.title || art.medium} — drag to move, click again to view`}
+        >
+          <img
+            src={art.src}
+            alt={art.title || art.medium}
+            className="gallery-piece-img"
+            loading="lazy"
+            draggable={false}
+          />
+          <div className="gallery-piece-overlay">
+            <span className="font-mono text-cream/90 text-label uppercase tracking-[0.2em]">
+              {art.medium}
+            </span>
+          </div>
+        </FloatingPiece>
+      ))}
+      <FloatingPiece
+        key="viewall"
+        index={artworks.length}
+        total={totalPieces}
+        spot={viewAllSpot}
+        ratio={1}
+        stageRef={stageRef}
+        isMobile={isMobile}
+        zIndex={zMap.viewall ?? artworks.length + 1}
+        isFront={frontId === 'viewall'}
+        onRaise={() => raise('viewall')}
+        onActivate={flashViewAll}
+        revealProgress={revealRaw}
+        exitProgress={progress}
+        label="View all artwork — coming soon"
+        frameClassName="gallery-piece-frame-viewall"
+      >
+        <ViewAllContent showSoon={viewAllSoon} onHover={setViewAllSoon} />
+      </FloatingPiece>
+    </>
+  )
 
   return (
-    <div id="gallery" ref={containerRef} style={{ height: '340vh' }}>
+    <div id="gallery" ref={containerRef} style={{ height: '240vh' }}>
 
       {/* Screen-reader landmark — kept outside the visibility-gated fixed
-          header so it stays in the document outline at all times. */}
+          layer so it stays in the document outline at all times. */}
       <h2 className="sr-only">Gallery</h2>
 
-      {/* ── Fixed header — z-50 puts it ABOVE the Projects overlay (z-40) ── */}
+      {/* ── Fixed stage layer — z-50 puts it ABOVE the Projects overlay (z-40) ── */}
       <motion.div
         style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           zIndex: 50,
           pointerEvents: 'none',
-          opacity: headerOpacity,
-          visibility: headerVisibility,
+          opacity: layerOpacity,
+          visibility: layerVisibility,
         }}
       >
-        {/* 5×3 viewport-filling grid */}
         <motion.div
-          className="gallery-grid-viewport"
-          style={{ pointerEvents: gridPointerEvents }}
+          className="gallery-stage-viewport"
+          style={{ pointerEvents: stagePointerEvents }}
         >
-          <div className="gallery-grid">
-            {cells.map((cell) =>
-              cell.type === 'art' ? (
-                <ArtCard
-                  key={cell.art.id}
-                  art={cell.art}
-                  artIndex={cell.artIndex}
-                  index={cell.index}
-                  totalCells={totalCells}
-                  revealProgress={revealRaw}
-                  exitProgress={progress}
-                  onSelect={setLightboxIndex}
-                />
-              ) : cell.type === 'viewall' ? (
-                <ViewAllCard
-                  key="viewall"
-                  index={cell.index}
-                  totalCells={totalCells}
-                  revealProgress={revealRaw}
-                  exitProgress={progress}
-                />
-              ) : (
-                <BlankCard
-                  key={`blank-${cell.index}`}
-                  index={cell.index}
-                  totalCells={totalCells}
-                  revealProgress={revealRaw}
-                  exitProgress={progress}
-                />
-              )
-            )}
-          </div>
-        </motion.div>
+          {isMobile ? (
+            <div className="gallery-stage-scroller">
+              <div
+                className="gallery-stage is-wide"
+                ref={stageRef}
+                role="group"
+                aria-label="Floating gallery — drag artworks to rearrange, swipe sideways to roam"
+              >
+                {pieces}
+              </div>
+            </div>
+          ) : (
+            <div
+              className="gallery-stage"
+              ref={stageRef}
+              role="group"
+              aria-label="Floating gallery — drag artworks to rearrange"
+            >
+              {pieces}
+            </div>
+          )}
 
+          <motion.p className="gallery-hint" style={{ opacity: hintOpacity }}>
+            drag the prints · take your time{isMobile ? ' · swipe →' : ''}
+          </motion.p>
+        </motion.div>
       </motion.div>
 
       {/* ── Lightbox ── */}
@@ -316,7 +494,7 @@ export default function Gallery() {
 
       {/* ── Sticky pin frame ─────────────────────────────────────────── */}
       <div className="sticky top-0 h-screen overflow-hidden">
-        {/* Empty black background scrolls up behind the fixed Grid and pins */}
+        {/* Empty background scrolls up behind the fixed stage and pins */}
       </div>
     </div>
   )

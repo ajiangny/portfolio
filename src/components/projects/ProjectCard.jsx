@@ -26,7 +26,7 @@ function ArrowUpRight({ className }) {
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 36 },
+  hidden: { opacity: 0, y: 32 },
   show: {
     opacity: 1,
     y: 0,
@@ -63,118 +63,112 @@ export default function ProjectCard({ work, index }) {
           WebkitBackdropFilter: 'blur(16px)',
           boxShadow: '0 8px 30px rgba(8,12,40,0.18)',
         }}
-        className="overflow-hidden transition-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-[rgba(18,22,46,0.52)]"
+        className="h-full flex flex-col overflow-hidden transition-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-[rgba(18,22,46,0.52)]"
       >
-        {/* ── Header row ───────────────────────────────── */}
-        <div className="flex justify-between items-center px-5 md:px-6 pt-5 pb-4">
-          <span className="font-mono text-meta tracking-[0.25em] text-cobalt/80 tabular-nums">
+        {/* ── Image — title/category overlay bottom-left, index badge top-right ── */}
+        <div className="relative w-full aspect-4/3 shrink-0 overflow-hidden bg-white/4 border-b border-white/6">
+          {thumbnailSrc ? (
+            <img
+              src={thumbnailSrc}
+              alt={isGithub ? 'GitHub' : work.title}
+              className="w-full h-full object-cover transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
+              draggable="false"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <WrenchIcon />
+            </div>
+          )}
+
+          {/* Scrim so the title stays legible over any thumbnail */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/5 to-transparent pointer-events-none" />
+
+          <span
+            className="absolute top-4 right-4 font-mono tracking-[0.25em] text-cream/80 tabular-nums bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full"
+            style={{ fontSize: 'var(--text-meta)' }}
+          >
             {String(index + 1).padStart(2, '0')}
           </span>
-          <span className="font-mono text-meta tracking-[0.25em] uppercase text-white/20">
-            {typeLabel}
-          </span>
+
+          <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
+            <h3
+              className="font-heading font-semibold uppercase text-cream mb-1.5 leading-tight tracking-tight"
+              style={{ fontSize: 'var(--text-title)' }}
+            >
+              {work.title}
+            </h3>
+            <span className="font-mono text-meta tracking-[0.25em] uppercase text-cream/55">
+              {typeLabel}
+            </span>
+          </div>
         </div>
 
-        {/* ── Divider ──────────────────────────────────── */}
-        <div className="h-px bg-white/10 mx-5 md:mx-6" />
+        {/* ── Body — tags, description, links ─────────────────────────── */}
+        <div className="flex flex-col flex-1 gap-4 p-5 md:p-6">
+          {/* Tech chips */}
+          {work.tech?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {work.tech.map((t) => (
+                <span
+                  key={t}
+                  className="font-mono px-2.5 py-1 rounded-full border border-white/10 text-cream/30 tracking-wide"
+                  style={{ fontSize: 'var(--text-meta)' }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
 
-        {/* ── Body ─────────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row gap-5 p-5 md:p-6">
+          <p
+            className="font-mono text-cream/45 leading-relaxed"
+            style={{ fontSize: 'var(--text-body)' }}
+          >
+            {work.subtitle}
+          </p>
 
-          {/* Thumbnail */}
-          <div className="w-full md:w-[38%] shrink-0 aspect-video rounded-xl overflow-hidden bg-white/[0.04] border border-white/[0.06]">
-            {thumbnailSrc ? (
-              <img
-                src={thumbnailSrc}
-                alt={isGithub ? 'GitHub' : work.title}
-                className="w-full h-full object-cover transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
-                draggable="false"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <WrenchIcon />
-              </div>
+          {/* Links */}
+          <div className="flex gap-4 mt-auto pt-2 justify-end">
+            {work.github && !isGithub && (
+              <a
+                href={work.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/link flex items-center gap-1.5 font-mono text-cream/40 hover:text-cream/80 transition-colors duration-150 tracking-wider"
+                style={{ fontSize: 'var(--text-label)' }}
+                aria-label={`${work.title} on GitHub`}
+              >
+                GitHub
+                <ArrowUpRight className="w-3 h-3 opacity-60 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+              </a>
+            )}
+            {work.live && (
+              <a
+                href={work.live}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
+                style={{ fontSize: 'var(--text-label)' }}
+                aria-label={`${work.title} live site`}
+              >
+                Live
+                <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+              </a>
+            )}
+            {isGithub && (
+              <a
+                href={work.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
+                style={{ fontSize: 'var(--text-label)' }}
+                aria-label="View GitHub profile"
+              >
+                Profile
+                <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+              </a>
             )}
           </div>
-
-          {/* Content */}
-          <div className="flex flex-col justify-between flex-1 gap-4 md:py-1">
-            <div>
-              <h3
-                className="font-display text-cream/90 mb-2 leading-tight tracking-tight"
-                style={{ fontSize: 'var(--text-title)' }}
-              >
-                {work.title}
-              </h3>
-              <p
-                className="font-mono text-cream/45 leading-relaxed"
-                style={{ fontSize: 'var(--text-body)' }}
-              >
-                {work.subtitle}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              {/* Tech chips */}
-              {work.tech?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {work.tech.map((t) => (
-                    <span
-                      key={t}
-                      className="font-mono px-2.5 py-1 rounded-full border border-white/10 text-cream/30 tracking-wide"
-                      style={{ fontSize: 'var(--text-meta)' }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Links */}
-              <div className="flex gap-4 shrink-0 ml-auto">
-                {work.github && !isGithub && (
-                  <a
-                    href={work.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/link flex items-center gap-1.5 font-mono text-cream/40 hover:text-cream/80 transition-colors duration-150 tracking-wider"
-                    style={{ fontSize: 'var(--text-label)' }}
-                    aria-label={`${work.title} on GitHub`}
-                  >
-                    GitHub
-                    <ArrowUpRight className="w-3 h-3 opacity-60 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-                  </a>
-                )}
-                {work.live && (
-                  <a
-                    href={work.live}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
-                    style={{ fontSize: 'var(--text-label)' }}
-                    aria-label={`${work.title} live site`}
-                  >
-                    Live
-                    <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-                  </a>
-                )}
-                {isGithub && (
-                  <a
-                    href={work.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
-                    style={{ fontSize: 'var(--text-label)' }}
-                    aria-label="View GitHub profile"
-                  >
-                    Profile
-                    <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-
         </div>
       </motion.div>
     </motion.div>

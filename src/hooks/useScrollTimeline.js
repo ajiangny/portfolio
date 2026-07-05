@@ -45,12 +45,17 @@ export default function useScrollTimeline(containerRef, activeVh) {
 
       const onScroll = ({ scroll }) => calc(scroll)
       const onResize = () => calc(lenis.scroll ?? window.scrollY)
+      // Native fallback: Lenis doesn't emit for scrolls it didn't drive
+      // (keyboard paging, anchor/programmatic jumps).
+      const onNativeScroll = () => calc(window.scrollY)
       calc(lenis.scroll ?? window.scrollY)
 
       lenis.on('scroll', onScroll)
+      window.addEventListener('scroll', onNativeScroll, { passive: true })
       window.addEventListener('resize', onResize)
       unlisten = () => {
         lenis.off('scroll', onScroll)
+        window.removeEventListener('scroll', onNativeScroll)
         window.removeEventListener('resize', onResize)
       }
     }, 0)

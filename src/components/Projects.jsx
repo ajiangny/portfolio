@@ -5,17 +5,12 @@ import { works } from '../data/projectsData'
 const listVariants = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.09 },
+    transition: { staggerChildren: 0.1 },
   },
 }
 
 // Section opener reveal — same language as the cards (fade + rise, sharp
-// ease-out). The eyebrow and headline stagger in as the section scrolls up.
-const headerVariants = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
-}
-
+// ease-out).
 const headerItem = {
   hidden: { opacity: 0, y: 28 },
   show: {
@@ -37,40 +32,27 @@ export default function Projects() {
     <section
       id="projects"
       style={{ marginTop: '-2px' }}
-      className="px-5 md:px-10 pt-24 pb-32 md:pt-32 md:pb-40"
+      className="pt-24 pb-32 md:pt-32 md:pb-40"
     >
-      {/* ── Section opener — eyebrow + display headline ─────────────────── */}
-      <motion.header
-        className="mb-12 md:mb-20 max-w-[2200px] mx-auto"
-        variants={headerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: reduceMotion ? '0px' : '-80px' }}
-      >
-        <motion.div
-          variants={reduceMotion ? headerItemReduced : headerItem}
-          className="flex justify-between items-baseline mb-4 md:mb-6"
-        >
-          <span className="font-mono text-label tracking-[0.3em] uppercase text-ink/40">
-            Projects
-          </span>
-          <span className="font-mono text-meta text-ink/25 tracking-widest">
-            {String(works.filter(w => !w.isGithubCard).length).padStart(2, '0')} works
-          </span>
-        </motion.div>
-
+      {/* ── Section opener — a transparent headline that scrolls with the
+          section, letting the fluid gradient read through (same treatment
+          as Contact's display type). ── */}
+      <header className="bg-transparent max-w-[2200px] mx-auto px-5 md:px-10 mb-12 md:mb-20">
         <motion.h2
           variants={reduceMotion ? headerItemReduced : headerItem}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: reduceMotion ? '0px' : '-80px' }}
           className="font-display text-ink leading-[0.95] tracking-tight"
           style={{ fontSize: 'var(--text-section)' }}
         >
-          Selected Works
+          Selected Projects
         </motion.h2>
-      </motion.header>
+      </header>
 
-      {/* Card list */}
+      {/* Card grid */}
       <motion.div
-        className="flex flex-col gap-4 md:gap-5 max-w-[2200px] mx-auto"
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-[2200px] mx-auto px-5 md:px-10"
         variants={listVariants}
         initial="hidden"
         whileInView="show"

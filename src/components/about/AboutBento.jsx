@@ -149,17 +149,18 @@ function TypewriterBio({ paragraphs, isActive, skip }) {
   }, [charCount])
 
   // Split each paragraph into revealed / ghost at charCount
+  const chunks = []
   let offset = 0
-  const chunks = paragraphs.map((para) => {
+  for (const para of paragraphs) {
     const start = offset
     offset += para.length + 2 // +2 for the \n\n separator
     const revealEnd = Math.max(0, Math.min(para.length, charCount - start))
-    return {
+    chunks.push({
       revealed: para.slice(0, revealEnd),
       ghost: para.slice(revealEnd),
       isFrontier: charCount > start && charCount < start + para.length,
-    }
-  })
+    })
+  }
 
   return (
     <div
