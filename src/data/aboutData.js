@@ -69,8 +69,11 @@ export const TAGLINE_SEGMENTS = [
 
 // ── About description tile ───────────────────────────────────────────────────
 export const BIO_PARAGRAPHS = [
-  `I'm an aspiring software engineer based in New York, currently pursuing my BS in Computer Science at Queens College. Coming from an artistic background, I believe design can solve problems and improve how people interact with technology. My goal is to create digital experiences that are both functional and enjoyable.`,
-  `When I'm not building, you'll find me on a scenic hike, sketching in my notebook, or experimenting in the kitchen.`,
+  `Welcome to my portfolio! This is my digital playground where I experiment with new web techniques and interactive technologies.`,
+  `I'm an aspiring software engineer based in New York, currently pursuing my BS in Computer Science at Queens College. 
+  Coming from an artistic background, I believe thoughtful design solves real problems and elevates how people interact with software. 
+  My goal is to build digital experiences that are as intuitive as they are enjoyable.`,
+  `When I'm not writing code, you can usually find me grinding Teamfight Tactics, filling up my sketchbook, or experimenting in the kitchen.`,
 ];
 
 // ── Resume button (tagline tile) ─────────────────────────────────────────────

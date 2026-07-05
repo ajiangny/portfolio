@@ -14,6 +14,7 @@
  */
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
+import InkReveal from './InkDissolve'
 import HeroWordmark from './hero/HeroWordmark'
 
 export default function Hero() {
@@ -42,10 +43,13 @@ export default function Hero() {
         className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
         style={{ opacity: eyebrowOpacity, y: eyebrowY, zIndex: 2 }}
       >
-        <motion.p
-          initial={{ clipPath: 'inset(100% 0 0 0)' }}
-          animate={{ clipPath: 'inset(0% 0 0 0)' }}
-          transition={{ duration: 0.8, delay: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+        {/* Ink-dissolve entrance (shared primitive — InkDissolve.jsx), gentler
+            displacement so the small type stays legible while it settles. */}
+        <InkReveal
+          delay={0.25}
+          duration={1.2}
+          maxScale={30}
+          maxBlur={8}
           className="font-sans whitespace-nowrap"
           style={{
             color: 'rgba(245,248,255,0.94)',
@@ -55,7 +59,7 @@ export default function Hero() {
         >
           <span style={{ fontWeight: 200 }}>PORTFOLIO</span>
           <span style={{ fontWeight: 700, fontStyle: 'italic', marginLeft: '0.35em' }}>2026</span>
-        </motion.p>
+        </InkReveal>
       </motion.div>
 
       {/* Full-bleed wordmark — white, no scroll-driven colour or shadow.

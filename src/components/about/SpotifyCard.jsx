@@ -225,7 +225,7 @@ export default function SpotifyCard() {
     return () => io.disconnect()
   }, [revealed, reduceMotion, isMobile])
 
-  // After the wipe plays, drop the clip so hover transforms aren't clipped. The
+  // After the dissolve plays, drop the blur/transition styles entirely. The
   // same timeout mints a fresh token so the play-filled self-draw plays from a
   // never-decoded URL (see animToken) once the tile has fully revealed.
   useEffect(() => {
@@ -530,16 +530,19 @@ export default function SpotifyCard() {
     </a>
   )
 
-  // One-time reveal when the tile settles: the skips WIPE up (clip-path), while
-  // the play FADES in (no clip — so its play-filled self-draw is visible). The
-  // skip clip is dropped after the wipe so it never clips the hover scale-up.
+  // One-time reveal when the tile settles: the skips INK-DISSOLVE in (blur +
+  // fade — the ink treatment at icon scale, where turbulence would just read
+  // as noise), while the play FADES in (no blur — so its play-filled self-draw
+  // stays crisp). The blur is dropped after the reveal so it never fights the
+  // hover scale-up.
   const transportShown = revealed || reduceMotion
   const wipeStyle = (i) => ({
     display: 'inline-flex',
-    clipPath: (reduceMotion || wipeDone) ? 'none' : (transportShown ? 'inset(0% 0% 0% 0%)' : 'inset(100% 0% 0% 0%)'),
-    transition: reduceMotion ? undefined : 'clip-path 0.5s cubic-bezier(0.2, 0, 0, 1)',
+    opacity: transportShown ? 1 : 0,
+    filter: (reduceMotion || wipeDone) ? 'none' : (transportShown ? 'blur(0px)' : 'blur(6px)'),
+    transition: reduceMotion ? undefined : 'opacity 0.5s cubic-bezier(0.2, 0, 0, 1), filter 0.5s cubic-bezier(0.2, 0, 0, 1)',
     transitionDelay: (transportShown && !wipeDone && !reduceMotion) ? `${i * 0.1}s` : '0s',
-    willChange: (transportShown && !wipeDone) ? 'clip-path' : 'auto',
+    willChange: (transportShown && !wipeDone) ? 'opacity, filter' : 'auto',
   })
   // The play-filled self-draw IS the entrance, so we keep the opacity fade short
   // and undelayed — otherwise it overlaps the 0.5s stroke-draw + 0.4s fill and

@@ -22,7 +22,7 @@
  *   The other six tiles self-assemble around the profile (AboutBento).
  *
  * Leave (progress 1.0):
- *   No wipe. The settled bento holds, then the sticky releases and the whole
+ *   No exit effect. The settled bento holds, then the sticky releases and the whole
  *   stack scrolls up flush (Projects sits -2px beneath) — a continuous handoff
  *   into the Projects "Selected Works" opener as the gradient crossfades
  *   cobalt→cream.
@@ -154,22 +154,19 @@ export default function About() {
   }, [lenisRef, progress])
 
   // ── Panel + grid dissolve windows ─────────────────────────────────────────
-  // The white panel WIPES UP (no fade): its bottom inset grows 0→100% across
-  // 0.30→0.42, so the fluid gradient is uncovered from the bottom edge upward —
-  // matching the cards, which wipe up just before it. `none` at rest avoids any
-  // clip while the panel is the full-bleed backdrop.
-  const panelClip = useTransform(progress, (p) => {
-    const t = clamp01((p - 0.30) / 0.12)
-    return t <= 0 ? 'none' : `inset(0% 0% ${(t * 100).toFixed(2)}% 0%)`
-  })
+  // The white panel INK-DISSOLVES out across 0.30→0.42, matching the cards,
+  // which dissolve just before it. It's a full-bleed flat fill, so the ink
+  // filter's displacement/blur would have no visible interior detail to chew
+  // on — the honest dissolve is a straight fade.
+  const panelOpacity = useTransform(progress, (p) => 1 - clamp01((p - 0.30) / 0.12))
   // Centre cell hides near-instantly UNDER the now-opaque overlay (which has
   // already taken over the same rect + shell at 0.298) — so there is no visible
   // crossfade, just a covered hand-off.
   const profileCellHide = useTransform(progress, [0.298, 0.302], [1, 0])
 
-  // Leave: no wipe. The settled bento holds through the tail of the scroll, then
-  // the sticky releases and the whole stack scrolls up flush into Projects (which
-  // sits -2px beneath) — one continuous handoff, no clip-path edge.
+  // Leave: no exit effect. The settled bento holds through the tail of the
+  // scroll, then the sticky releases and the whole stack scrolls up flush into
+  // Projects (which sits -2px beneath) — one continuous handoff.
 
   // ── Drive the overlay portrait from the centre cell's actual DOM rect ──────
   // The overlay takes over the gallery centre cell (0.30) and moves DIRECTLY to
@@ -256,7 +253,7 @@ export default function About() {
               position: 'absolute',
               inset: 0,
               backgroundColor: '#ffffff',
-              clipPath: panelClip,
+              opacity: panelOpacity,
               zIndex: 0,
               pointerEvents: 'none',
             }}

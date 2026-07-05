@@ -17,7 +17,7 @@
  *
  * Scatter spots live in DESKTOP_SPOTS / MOBILE_SPOTS below — one per
  * artwork plus a final spot for the "View All" card. When adding artwork
- * beyond 17, append a spot to BOTH arrays.
+ * beyond 24, append a spot to BOTH arrays.
  */
 import { useRef, useEffect, useState, useCallback } from 'react'
 import {
@@ -25,6 +25,7 @@ import {
   AnimatePresence, useReducedMotion,
 } from 'framer-motion'
 import useScrollTimeline from '../hooks/useScrollTimeline'
+import useInkFilter from '../hooks/useInkFilter'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
 import GalleryLightbox from './gallery/GalleryLightbox'
@@ -47,6 +48,11 @@ const DESKTOP_SPOTS = [
   { x: 84, y: 56, t: 'S' }, { x: 5, y: 36, t: 'S' },
   { x: 35, y: 30, t: 'S' }, { x: 60, y: 48, t: 'S' },
   { x: 86, y: 30, t: 'S' },
+  // artworks 18–24
+  { x: 20, y: 72, t: 'M' }, { x: 45, y: 78, t: 'S' },
+  { x: 72, y: 72, t: 'M' }, { x: 8, y: 80, t: 'S' },
+  { x: 56, y: 82, t: 'S' }, { x: 33, y: 84, t: 'M' },
+  { x: 90, y: 62, t: 'S' },
   { x: 76, y: 74, t: 'S' }, // View All
 ]
 const MOBILE_SPOTS = [
@@ -59,6 +65,11 @@ const MOBILE_SPOTS = [
   { x: 76, y: 14, t: 'S' }, { x: 81, y: 42, t: 'M' },
   { x: 88, y: 8, t: 'S' }, { x: 68, y: 64, t: 'S' },
   { x: 78, y: 26, t: 'S' },
+  // artworks 18–24
+  { x: 12, y: 70, t: 'M' }, { x: 30, y: 76, t: 'S' },
+  { x: 50, y: 68, t: 'M' }, { x: 6, y: 82, t: 'S' },
+  { x: 60, y: 80, t: 'S' }, { x: 40, y: 84, t: 'M' },
+  { x: 74, y: 72, t: 'S' },
   { x: 84, y: 54, t: 'S' }, // View All
 ]
 
@@ -323,6 +334,12 @@ export default function Gallery() {
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
 
+  // Section reveal = ink dissolve (shared InkDissolve filter): ONE filter over
+  // the whole stage settles as the seam progress runs, so the staggered pieces
+  // drift in through resolving ink. Scrubbed both ways; 'none' once settled.
+  const reduceMotion = useReducedMotion()
+  const { defs: inkDefs, filter: inkFilter } = useInkFilter(revealRaw, { maxScale: 60, maxBlur: 8, octaves: 2 })
+
   // ── Combined layer opacity: entry × exit ────────────────────────
   const layerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
   const layerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
@@ -451,8 +468,9 @@ export default function Gallery() {
       >
         <motion.div
           className="gallery-stage-viewport"
-          style={{ pointerEvents: stagePointerEvents }}
+          style={{ pointerEvents: stagePointerEvents, filter: reduceMotion ? 'none' : inkFilter }}
         >
+          {inkDefs}
           {isMobile ? (
             <div className="gallery-stage-scroller">
               <div

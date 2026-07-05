@@ -25,4 +25,11 @@ export const artworks = [
   { id: 15, title: '', medium: 'Digital Illustration', src: '/art/art15.webp', w: 600, h: 800 },
   { id: 16, title: '', medium: 'Digital Illustration', src: '/art/art16.webp', w: 800, h: 640 },
   { id: 17, title: '', medium: 'Digital Illustration', src: '/art/art17.webp', w: 800, h: 800 },
+  { id: 18, title: '', medium: 'Digital Illustration', src: '/art/art18.webp', w: 1440, h: 1080 },
+  { id: 19, title: '', medium: 'Digital Illustration', src: '/art/art19.webp', w: 1920, h: 1080 },
+  { id: 20, title: '', medium: 'Digital Illustration', src: '/art/art20.webp', w: 600, h: 833 },
+  { id: 21, title: '', medium: 'Digital Illustration', src: '/art/art21.webp', w: 1920, h: 2560 },
+  { id: 22, title: '', medium: 'Digital Illustration', src: '/art/art22.webp', w: 800, h: 800 },
+  { id: 23, title: '', medium: 'Digital Illustration', src: '/art/art23.webp', w: 800, h: 800 },
+  { id: 24, title: '', medium: 'Digital Illustration', src: '/art/art24.webp', w: 1920, h: 1080 },
 ];

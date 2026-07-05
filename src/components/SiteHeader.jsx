@@ -3,15 +3,17 @@
  *
  * One header for the whole site (rendered in App.jsx, fixed, z-200, below the
  * PageTransition curtain). Expanded = AJ monogram (left) + equal links
- * (about/projects/gallery/contact, right). It collapses smoothly to a monogram
- * pill while crossing section seams (useActiveSection) and re-expands when a
- * section is centred. Glass + text colours adapt to the active section's
- * themeRgb. Hovering a link previews that section's palette in the fluid
- * gradient (gated to Hero inside FluidGradient). On mobile it stays a monogram
- * pill that opens a dropdown.
+ * (about/projects/gallery/contact, right). Fully expanded only while the Hero
+ * section is active; past Hero it collapses to a monogram pill wrapped in a
+ * scroll-progress ring, and re-expands on hover. A single sliding pill
+ * indicator tracks the hovered/active link. Glass + text colours adapt to the
+ * active section's background (logo inverts to black on light sections).
+ * Hovering a link previews that section's palette in the fluid gradient
+ * (gated to Hero inside FluidGradient). On mobile it stays a monogram pill
+ * that opens a dropdown on tap.
  */
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion, useAnimation } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion, useAnimation, useScroll } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -35,7 +37,7 @@ export default function SiteHeader() {
   const { navigate } = useTransitionContext()
   const isMobile = useMediaQuery('(max-width: 767px)')
   const reduce = useReducedMotion()
-  const { index, settled } = useActiveSection()
+  const { index } = useActiveSection()
 
   // Expanded pill width tracks the viewport (minus gutters), capped at MAX_W.
   const [expandedW, setExpandedW] = useState(MAX_W)
@@ -56,10 +58,14 @@ export default function SiteHeader() {
   const glassBorder = light ? 'rgba(20,22,34,0.12)' : 'rgba(255,255,255,0.18)'
   const activeFill = light ? 'rgba(20,22,34,0.92)' : 'rgba(245,240,232,0.95)'
   const activeText = light ? 'rgba(245,240,232,0.98)' : 'rgba(18,22,46,0.95)'
-  const hoverFill = light ? 'rgba(20,22,34,0.10)' : 'rgba(255,255,255,0.14)'
 
-  // Mobile is always the collapsed pill; reduced-motion is always expanded.
-  const expanded = reduce ? true : isMobile ? false : settled
+  // Desktop: full bar only while Hero is active; past it, a logo pill that
+  // re-expands on hover. Mobile is always the pill; reduced-motion always expanded.
+  const [pillHovered, setPillHovered] = useState(false)
+  const expanded = reduce ? true : isMobile ? false : index === 0 || pillHovered
+
+  // Whole-page scroll progress drives the ring around the collapsed pill.
+  const { scrollYProgress } = useScroll()
 
   const logoAnim = useAnimation()
   const onLogoHover = async () => {
@@ -99,7 +105,7 @@ export default function SiteHeader() {
     e.stopPropagation()
     setMenuOpen(false)
     onLeave()
-    goToSection(navigate, id, e)
+    goToSection(navigate, id)
   }
 
   const pillWidth = isMobile ? BAR_H : expanded ? expandedW : BAR_H
@@ -119,7 +125,12 @@ export default function SiteHeader() {
         pointerEvents: 'none',
       }}
     >
-      <div ref={wrapRef} style={{ position: 'relative', pointerEvents: 'auto' }}>
+      <div
+        ref={wrapRef}
+        onMouseEnter={() => setPillHovered(true)}
+        onMouseLeave={() => setPillHovered(false)}
+        style={{ position: 'relative', pointerEvents: 'auto' }}
+      >
         <motion.div
           animate={{ width: pillWidth }}
           transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 30 }}
@@ -160,6 +171,7 @@ export default function SiteHeader() {
               src={LOGO} alt="" width={24} height={24} draggable={false}
               animate={logoAnim}
               onHoverStart={onLogoHover}
+              style={{ filter: light ? 'invert(1)' : 'none', transition: 'filter 0.5s ease' }}
             />
           </button>
 
@@ -182,20 +194,32 @@ export default function SiteHeader() {
               }}
             >
               {NAV_SECTIONS.map((s, i) => {
-                const active = section.id === s.id
-                const hovered = hoveredId === s.id
-                const bg = active ? activeFill : hovered ? hoverFill : 'transparent'
-                const fg = active ? activeText : textColor
+                // One shared-layout pill slides to the hovered link, resting
+                // on the active section when nothing is hovered.
+                const targeted = (hoveredId ?? section.id) === s.id
                 return (
-                  <li key={s.id}>
+                  <li key={s.id} style={{ position: 'relative', display: 'flex' }}>
+                    {targeted && (
+                      <motion.span
+                        layoutId="nav-indicator"
+                        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 999,
+                          background: activeFill,
+                        }}
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={(e) => go(s.id, e)}
                       onMouseEnter={() => onEnter(s.id, i)}
                       onMouseLeave={onLeave}
                       style={{
-                        background: bg,
-                        color: fg,
+                        position: 'relative',
+                        background: 'transparent',
+                        color: targeted ? activeText : textColor,
                         border: 'none',
                         cursor: 'pointer',
                         padding: '8px 16px',
@@ -203,8 +227,7 @@ export default function SiteHeader() {
                         font: 'inherit',
                         letterSpacing: 'inherit',
                         textTransform: 'inherit',
-                        transform: hovered && !active ? 'scale(1.06)' : 'scale(1)',
-                        transition: 'background 0.25s ease, color 0.25s ease, transform 0.2s ease',
+                        transition: 'color 0.25s ease',
                       }}
                     >
                       {s.label}
@@ -215,6 +238,27 @@ export default function SiteHeader() {
             </motion.ul>
           )}
         </motion.div>
+
+        {/* Scroll-progress ring around the collapsed logo pill */}
+        <motion.svg
+          width={BAR_H}
+          height={BAR_H}
+          viewBox={`0 0 ${BAR_H} ${BAR_H}`}
+          animate={{ opacity: expanded ? 0 : 1 }}
+          transition={{ duration: 0.25 }}
+          style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', rotate: -90 }}
+        >
+          <motion.circle
+            cx={BAR_H / 2}
+            cy={BAR_H / 2}
+            r={BAR_H / 2 - 1.5}
+            fill="none"
+            stroke={textColor}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            style={{ pathLength: scrollYProgress, transition: 'stroke 0.5s ease' }}
+          />
+        </motion.svg>
 
         {/* Mobile dropdown */}
         <AnimatePresence>

@@ -14,14 +14,14 @@
  *   • centre col — full-height portraits; every other column is shorter
  *                  (COL_HEIGHT), so the central vertical strip reads tallest.
  *
- * Entrance: each card WIPES itself in (clip-path, no fade) when that card
- * individually enters the viewport — a per-card IntersectionObserver fires a
- * bottom-up wipe, so the wall reveals progressively as the section rises into
- * view rather than all at once. Cards reveal at their resting per-ring opacity
- * (the dimmer outer rings stay dim — the wipe never touches opacity).
+ * Entrance: each card INK-DISSOLVES in (shared InkDissolve filter: turbulence
+ * displacement + blur settle to 0 as opacity leads) when that card individually
+ * enters the viewport — a per-card IntersectionObserver fires the dissolve, so
+ * the wall reveals progressively as the section rises into view rather than
+ * all at once. Cards settle at their resting per-ring opacity.
  *
- * Exit: on scroll the OUTER cells wipe UP (ring by ring — bottom inset grows,
- * no fade), leaving only the profile, which About.jsx hands off to an expanding
+ * Exit: on scroll the OUTER cells ink-dissolve away (ring by ring, scrubbed),
+ * leaving only the profile, which About.jsx hands off to an expanding
  * portrait overlay.
  *
  * Parallax + tilt: each OUTER card carries a 3D tilt that grows with its
@@ -33,9 +33,9 @@
  * entrance reveal; parallax rides `progress`; both off under reduced motion.
  *
  * Performance: every per-cell opacity is the product of three motion values
- * (entrance reveal × dissolve × resting opacity) resolved in ONE useTransform —
- * no geometry change, so the fade is a pure compositor op over the live WebGL
- * gradient.
+ * (entrance reveal × dissolve × resting opacity) resolved in ONE useTransform.
+ * The ink filter drops to 'none' outside its (0,1) window, so settled and
+ * hidden cells stay pure compositor ops over the live WebGL gradient.
  *
  * Sizing: every dimension is proportional to a single derived `cellW`. We
  * compute the cluster's normalised extent (in cellW units) from the constants
@@ -45,6 +45,7 @@
  */
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import { motion, useTransform, useMotionValue, useReducedMotion, animate } from 'framer-motion'
+import useInkFilter from '../../hooks/useInkFilter'
 
 // ── Cluster geometry (relative to a unit cellW; cellH = cellW × ASPECT) ──────
 const ASPECT = 1.5 // portrait 2:3 (h / w)
@@ -62,24 +63,15 @@ const COL_HEIGHT = 0.88
 // The middle row reads slightly larger overall.
 const MID_ROW_SCALE = 1.1
 
-// ── Entrance (per-card wipe — no fade — fired when each card enters view) ─────
-const REVEAL_AMOUNT = 0.25 // fraction of a card visible before its wipe fires
+// ── Entrance (per-card ink dissolve — fired when each card enters view) ──────
+const REVEAL_AMOUNT = 0.25 // fraction of a card visible before its dissolve fires
 // Pulls the observer's trigger line UP from the viewport bottom so cards stay
-// hidden until they've risen well into view (they wipe in late, near settle).
+// hidden until they've risen well into view (they dissolve in late, near settle).
 // More-negative bottom % = later, but the bottom row settles low — past ~-22%
 // it can never clear REVEAL_AMOUNT and would stay hidden. '0px' = peeks-in.
 const REVEAL_ROOT_MARGIN = '0px 0px -20% 0px'
-const WIPE_DURATION = 0.55 // seconds for one card's wipe
-const WIPE_EASE = [0.22, 1, 0.36, 1] // crisp ease-out, no overshoot
-// One clip-path drives both wipes (both travel UP): the TOP inset shrinks
-// 100%→0% to reveal a card from its bottom edge up (entrance), then the BOTTOM
-// inset grows 0%→100% to wipe it away bottom-up (exit, replacing the fade). At
-// rest both are 0 → 'none' so the card's drop shadow (painted outside the box,
-// which inset(0) would clip) is restored.
-const wipeClip = (top, bottom) =>
-  top <= 0 && bottom <= 0
-    ? 'none'
-    : `inset(${top.toFixed(2)}% 0% ${bottom.toFixed(2)}% 0%)`
+const REVEAL_DURATION = 0.8 // seconds for one card's dissolve
+const REVEAL_EASE = [0.215, 0.61, 0.355, 1] // power3.out — matches the ink reference
 
 // ── Dissolve timing ─────────────────────────────────────────────────────────
 const DISSOLVE_START = 0.15
@@ -102,13 +94,11 @@ const pick = (arr, r) => arr[Math.min(r, arr.length - 1)]
 const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
 function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, reduced }) {
-  // Per-card wipe: a clip-path reveal (0 → 1) fired once when THIS card enters
-  // the viewport, so the wall reveals progressively as the section rises — not
-  // all at once. `reveal` never touches opacity, so the wipe is fade-free.
+  // Per-card ink dissolve: a reveal value (0 → 1) fired once when THIS card
+  // enters the viewport, so the wall reveals progressively as the section
+  // rises — not all at once.
   const reveal = useMotionValue(reduced ? 1 : 0)
-  // Observe the OUTER (unclipped) cell — never the inner card. The inner starts
-  // at clip-path inset(100%), which zeroes its intersection area, so an observer
-  // on it would never fire (the clip would gate its own reveal — a deadlock).
+  // Observe the OUTER cell — never the inner card (which starts at opacity 0).
   // Merge the observed ref with cellRef so the profile still exposes its rect.
   const outerRef = useRef(null)
   const setOuterRef = useCallback((node) => {
@@ -123,7 +113,7 @@ function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, r
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          controls = animate(reveal, 1, { duration: WIPE_DURATION, ease: WIPE_EASE })
+          controls = animate(reveal, 1, { duration: REVEAL_DURATION, ease: REVEAL_EASE })
           io.disconnect()
         }
       },
@@ -132,19 +122,26 @@ function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, r
     io.observe(el)
     return () => { io.disconnect(); controls?.stop() }
   }, [reduced, reveal])
-  // Exit wipe-up: 1 (settled) → 0 (gone), ring-staggered. The profile is handed
-  // off to the overlay instead of wiping, so it never gets an exit wipe.
+  // Exit dissolve: 1 (settled) → 0 (gone), ring-staggered. The profile is handed
+  // off to the overlay instead, so it never gets an exit dissolve.
   const dissolve = useTransform(progress, [layout.dissolveStart, layout.dissolveStart + DURATION], [1, 0])
-  // Single clip-path = entrance wipe-up (top inset) + exit wipe-up (bottom inset).
-  const clipPath = useTransform([reveal, dissolve], ([rv, ds]) =>
-    wipeClip((1 - rv) * 100, isProfile ? 0 : (1 - ds) * 100),
+  // One ink value drives entrance + exit: t = min(reveal, dissolve). The shared
+  // filter (turbulence displacement + blur → 0) settles as t → 1; opacity leads
+  // so the card materialises out of the noise. Small cells get a gentler
+  // displacement + fewer octaves than the section-level ink (perf + legibility).
+  const inkT = useTransform([reveal, dissolve], ([rv, ds]) =>
+    Math.min(rv, isProfile ? 1 : ds),
   )
-  // Opacity is now ONLY the resting per-ring hierarchy (the exit is a wipe, not a
-  // fade) — plus the profile-hide handoff for the centre cell. Stays on the OUTER
-  // cell so the handoff reads the same box it always did.
-  const opacity = useTransform(profileHideOpacity, (hide) => (isProfile ? hide : layout.baseOpacity))
-  // 3D tilt rides the wipe reveal (0 → target), so each card tilts into its pose
-  // as it wipes in, then holds. Centre cell targets → 0, so it never tilts.
+  const { defs: inkDefs, filter: inkFilter } = useInkFilter(inkT, { maxScale: 40, maxBlur: 8, octaves: 2 })
+  const inkOpacity = useTransform(inkT, [0, 0.35], [0, 1])
+  // Opacity = ink visibility × resting per-ring hierarchy — plus the profile-hide
+  // handoff for the centre cell. Stays on the OUTER cell so the handoff reads the
+  // same box it always did.
+  const opacity = useTransform([inkOpacity, profileHideOpacity], ([ink, hide]) =>
+    ink * (isProfile ? hide : layout.baseOpacity),
+  )
+  // 3D tilt rides the reveal (0 → target), so each card tilts into its pose
+  // as it dissolves in, then holds. Centre cell targets → 0, so it never tilts.
   const rotateX = useTransform(reveal, [0, 1], [0, layout.rotXTarget])
   const rotateY = useTransform(reveal, [0, 1], [0, layout.rotYTarget])
   // Scroll parallax: outer cards drift apart as you scroll into the wall
@@ -167,6 +164,7 @@ function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, r
         zIndex: layout.z,
       }}
     >
+      {inkDefs}
       <motion.div
         className="absolute inset-0 overflow-hidden"
         style={{
@@ -177,7 +175,7 @@ function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, r
           transformPerspective: TILT_PERSPECTIVE,
           borderRadius: `${layout.radius}px`,
           boxShadow: layout.shadow,
-          clipPath,
+          filter: reduced ? 'none' : inkFilter,
         }}
       >
         <img

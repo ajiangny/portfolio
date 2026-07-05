@@ -6,7 +6,7 @@
  *
  * Wraps everything in:
  *   • LenisContext  — smooth-scroll instance shared across sections
- *   • TransitionProvider — blob-expand page-transition state
+ *   • TransitionProvider — blur/ink-dissolve page-transition state
  */
 import { MotionConfig } from 'framer-motion'
 import useLenis from './hooks/useLenis'

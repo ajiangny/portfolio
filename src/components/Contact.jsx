@@ -14,6 +14,7 @@ import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, goToSection } from '../config/sections'
+import InkReveal from './InkDissolve'
 import ElasticHeading from './hero/ElasticHeading'
 
 const CONTACT_EMAIL = 'andrewjiang74@gmail.com'
@@ -42,8 +43,8 @@ export default function Contact() {
 
   const sectionRef = useRef(null)
 
-  // Curtain colour + landing offset come from config/sections.js
-  const footerNavigate = (id, e) => goToSection(transitionNavigate, id, e)
+  // Veil colour + landing offset come from config/sections.js
+  const footerNavigate = (id) => goToSection(transitionNavigate, id)
 
   const handle = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -67,8 +68,10 @@ export default function Contact() {
 
       {/* ── Main content — pointer-events-none on wrapper, re-enabled on children.
           flex-1 shares the viewport with the footer so the section totals ~100vh
-          and the heading isn't pushed above the fold at max scroll. ── */}
-      <div
+          and the heading isn't pushed above the fold at max scroll.
+          Ink-dissolve section reveal (shared primitive — InkDissolve.jsx); the
+          inner stagger springs play while the ink settles over them. ── */}
+      <InkReveal
         className="relative flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-10 md:pb-12 pointer-events-none"
         style={{ zIndex: 2 }}
       >
@@ -201,7 +204,7 @@ export default function Contact() {
 
 
         </motion.div>
-      </div>
+      </InkReveal>
 
       {/* ── Footer — nav links + signature ─────────────────────────────── */}
       <footer

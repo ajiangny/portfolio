@@ -16,6 +16,7 @@
  */
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, useTransform, useMotionValueEvent, useReducedMotion } from 'framer-motion'
+import useInkFilter from '../../hooks/useInkFilter'
 import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
 import DogPet from './DogPet'
@@ -190,18 +191,21 @@ function TypewriterBio({ paragraphs, isActive, skip }) {
 }
 
 // ── Staggered assembly wrapper — transparent grid child, scroll-driven ───────
-// Each tile WIPES UP into place (clip-path top inset 100%→0%, no fade), matching
-// the gallery cards. At rest → 'none' so the tile's glass shadow isn't clipped.
+// Each tile INK-DISSOLVES into place (shared InkDissolve filter: opacity leads,
+// turbulence displacement + blur settle to 0 across the window), matching the
+// gallery cards. The filter drops to 'none' at rest, restoring the tiles'
+// glass backdrop-blur once settled.
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
-const ASSEMBLE_SPAN = 0.05 // progress units for one tile's reveal wipe
+const ASSEMBLE_SPAN = 0.05 // progress units for one tile's reveal dissolve
 
 function Assemble({ progress, start, area, children }) {
-  const clipPath = useTransform(progress, (p) => {
-    const t = clamp01((p - start) / ASSEMBLE_SPAN)
-    return t >= 1 ? 'none' : `inset(${((1 - t) * 100).toFixed(2)}% 0% 0% 0%)`
-  })
+  const reduce = useReducedMotion()
+  const t = useTransform(progress, (p) => clamp01((p - start) / ASSEMBLE_SPAN))
+  const { defs, filter } = useInkFilter(t, { maxScale: 50, maxBlur: 8, octaves: 3 })
+  const opacity = useTransform(t, [0, 0.3], [0, 1])
   return (
-    <motion.div className={area} style={{ clipPath }}>
+    <motion.div className={area} style={{ opacity, filter: reduce ? 'none' : filter }}>
+      {defs}
       {children}
     </motion.div>
   )
@@ -236,7 +240,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
   // Disable pointer + keyboard on the tiles until they've assembled, so hidden
   // links aren't clickable/focusable during Hero and the portrait flight.
   const [interactive, setInteractive] = useState(false)
-  // Fire the typewriter as soon as the About tile starts its wipe-in (p > 0.54).
+  // Fire the typewriter as soon as the About tile starts its dissolve-in (p > 0.54).
   const [bioActive, setBioActive] = useState(false)
   useMotionValueEvent(progress, 'change', (p) => {
     const on = p > 0.52

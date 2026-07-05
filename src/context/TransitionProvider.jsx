@@ -1,14 +1,13 @@
 /**
  * TransitionProvider.jsx — Page Transition State Provider
  *
- * Provides a blob-expand navigation effect shared across the entire app.
+ * Provides a blur/ink-dissolve navigation effect shared across the entire app.
  * When `navigate()` is called, it:
- *   1. Records the click position for the expand origin
- *   2. Sets the transition color (section-specific)
- *   3. Activates the blob (PageTransition renders the expanding circle)
- *   4. After the blob covers the screen (600ms), performs an instant
+ *   1. Sets the transition color (section-specific)
+ *   2. Activates the veil (PageTransition blurs + dissolves over the page)
+ *   3. After the veil covers the screen (600ms), performs an instant
  *      Lenis scroll jump to the target section
- *   5. Shrinks the blob to reveal the new section
+ *   4. Dissolves the veil away to reveal the new section
  */
 import { useState, useRef, useCallback } from 'react'
 import { TransitionContext } from './TransitionContext'
@@ -16,41 +15,25 @@ import { useLenisContext } from './LenisContext'
 
 export function TransitionProvider({ children }) {
   const [isActive, setIsActive] = useState(false)
-  const [clickPos, setClickPos] = useState({ x: 0, y: 0 })
   const [transitionColor, setTransitionColor] = useState('var(--color-cobalt)')
   const lenisRef = useLenisContext()
   const isTransitioning = useRef(false)
 
-  const navigate = useCallback((href, options = {}, e = null, colorStr = null) => {
+  const navigate = useCallback((href, options = {}, colorStr = null) => {
     if (isTransitioning.current) return
     isTransitioning.current = true
 
-    // Set the blob's fill color — each section has a themed color
+    // Set the veil's tint — each section has a themed color
     setTransitionColor(colorStr || 'var(--color-cobalt)')
-
-    // Resolve click coordinates for the expand origin
-    let clientX
-    let clientY
-
-    if (e) {
-      clientX = e.clientX ?? e.touches?.[0]?.clientX ?? e.nativeEvent?.clientX
-      clientY = e.clientY ?? e.touches?.[0]?.clientY ?? e.nativeEvent?.clientY
-    }
-
-    if (clientX !== undefined && clientY !== undefined) {
-      setClickPos({ x: clientX, y: clientY })
-    } else {
-      setClickPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
-    }
 
     setIsActive(true)
 
-    // Phase 1: Wait for blob to fully expand (600ms CSS transition)
+    // Phase 1: Wait for the veil to fully cover (600ms)
     setTimeout(() => {
-      // Instant jump while the blob hides the page
+      // Instant jump while the veil hides the page
       lenisRef?.current?.scrollTo(href, { ...options, immediate: true, duration: 0 })
 
-      // Phase 2: Brief pause for DOM to settle, then shrink the blob
+      // Phase 2: Brief pause for DOM to settle, then dissolve the veil
       setTimeout(() => {
         setIsActive(false)
 
@@ -63,7 +46,7 @@ export function TransitionProvider({ children }) {
   }, [lenisRef])
 
   return (
-    <TransitionContext.Provider value={{ isActive, navigate, clickPos, transitionColor }}>
+    <TransitionContext.Provider value={{ isActive, navigate, transitionColor }}>
       {children}
     </TransitionContext.Provider>
   )

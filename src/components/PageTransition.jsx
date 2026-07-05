@@ -1,44 +1,78 @@
 /**
- * PageTransition.jsx — Blob-Expand Page Transition Overlay
+ * PageTransition.jsx — Blur + Ink-Dissolve Page Transition Veil
  *
- * Renders a fixed-position organic blob that expands from the click point
- * to cover the entire screen, then shrinks back. Used by TransitionContext
- * to create a curtain effect during section-to-section navigation.
- *
- * The blob cycles through organic border-radius shapes (from orbitConstants)
- * for a fluid, non-circular expansion feel.
+ * A fixed full-screen veil used by TransitionContext during section-to-section
+ * navigation: the backdrop blurs up while the section-coloured tint dissolves
+ * in through turbulence-thresholded ink blots (same SVG technique as
+ * hooks/useInkFilter.jsx), the scroll jump happens under full cover, then the
+ * veil dissolves away to reveal the new section.
+ * Reduced motion → plain opacity fade, no dissolve filter.
  */
-import { motion } from 'framer-motion'
+import { useEffect, useRef } from 'react'
+import {
+  motion, useMotionValue, useMotionValueEvent, useTransform,
+  animate, useReducedMotion,
+} from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
-import { BLOB_SHAPES } from './hero/orbitConstants'
+
+// Alpha threshold sweep: alpha = SLOPE·noiseR + intercept, so as the
+// intercept rises the noise blots flip from transparent to opaque one
+// patch at a time — reading as ink flooding the screen.
+const SLOPE = 40
+const interceptAt = (t) => -SLOPE - 5 + (SLOPE + 10) * t // coverage 0 → full over t 0 → 1
+const matrixValues = (t) =>
+  `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  ${SLOPE} 0 0 0 ${interceptAt(t)}`
 
 export default function PageTransition() {
-  const { isActive, clickPos, transitionColor } = useTransitionContext()
+  const { isActive, transitionColor } = useTransitionContext()
+  const reduceMotion = useReducedMotion()
+  const t = useMotionValue(0)
+  const matrixRef = useRef(null)
+
+  useEffect(() => {
+    const controls = animate(t, isActive ? 1 : 0, {
+      duration: 0.6, // matches TransitionProvider's 600ms phases
+      ease: [0.76, 0, 0.24, 1],
+    })
+    return () => controls.stop()
+  }, [isActive, t])
+
+  useMotionValueEvent(t, 'change', (v) => {
+    matrixRef.current?.setAttribute('values', matrixValues(v))
+  })
+
+  const backdropFilter = useTransform(t, (v) => (v > 0 ? `blur(${24 * v}px)` : 'none'))
+  // Filter only mid-transition: settled/hidden states render unfiltered for perf.
+  const filter = useTransform(t, (v) =>
+    !reduceMotion && v > 0 && v < 1 ? 'url(#veil-dissolve)' : 'none'
+  )
+  const opacity = useTransform(t, (v) => (reduceMotion ? v : v > 0 ? 1 : 0))
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-9999 overflow-hidden">
+    <motion.div
+      className="fixed inset-0 pointer-events-none z-9999"
+      style={{ backdropFilter, opacity }}
+    >
+      <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <filter id="veil-dissolve" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="7" result="noise" />
+            <feColorMatrix ref={matrixRef} in="noise" type="matrix" values={matrixValues(0)} result="thresh" />
+            <feComposite in="SourceGraphic" in2="thresh" operator="in" result="cut" />
+            <feDisplacementMap in="cut" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+      {/* Tint bleeds 48px past the viewport so the edge displacement never
+          exposes a gap at the screen borders. */}
       <motion.div
-        initial={false}
-        animate={{
-          scale: isActive ? 3 : 0,
-          borderRadius: isActive ? [BLOB_SHAPES[0], BLOB_SHAPES[1]] : BLOB_SHAPES[2]
-        }}
-        transition={{
-          duration: 0.6,
-          ease: [0.76, 0, 0.24, 1] // Snappy curtain curve
-        }}
         style={{
           position: 'absolute',
-          top: clickPos?.y || 0,
-          left: clickPos?.x || 0,
-          x: '-50%',
-          y: '-50%',
-          width: '120vmax',
-          height: '120vmax',
+          inset: -48,
           backgroundColor: transitionColor,
-          transformOrigin: 'center center',
+          filter,
         }}
       />
-    </div>
+    </motion.div>
   )
 }

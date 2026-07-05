@@ -1,4 +1,14 @@
-import { motion, useReducedMotion } from 'framer-motion'
+/**
+ * ProjectCard.jsx — one work-list row (layout ref: kaiseisadatoki-v4 /work)
+ *
+ * Desktop: 12-col grid — info sticks in cols 1-5 while the image (cols 8-12,
+ * 576/420) scrolls past with a slow parallax (120%-tall image drifts -10%).
+ * Mobile: image first, info below.
+ * Typography/surfaces follow our own system: cream + mono meta, Instrument
+ * Sans titles, glass border/shadow on the image frame.
+ */
+import { useRef } from 'react'
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
 
 function WrenchIcon() {
   return (
@@ -17,61 +27,78 @@ function WrenchIcon() {
   )
 }
 
-function ArrowUpRight({ className }) {
+// Circle-with-dot launch link (reference's signature CTA, recoloured cream).
+export function CircleLink({ href, label, children }) {
   return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 13L13 3M13 3H6M13 3v7" />
-    </svg>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className="group/link inline-flex items-center gap-4 w-fit"
+    >
+      <span className="relative block w-11 h-11 md:w-12 md:h-12 rounded-full border border-cream/35 transition-colors duration-300 group-hover/link:border-cream/80">
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-cream transition-transform duration-300 group-hover/link:scale-[1.8]" />
+      </span>
+      <span
+        className="font-mono uppercase tracking-[0.2em] text-cream/80 transition-opacity duration-300 group-hover/link:opacity-50"
+        style={{ fontSize: 'var(--text-label)' }}
+      >
+        {children}
+      </span>
+    </a>
   )
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 32 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.45, ease: [0.2, 0, 0, 1] },
-  },
-}
-
-const itemVariantsReduced = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 0.3 } },
+function MetaLabel({ children }) {
+  return (
+    <span
+      className="block font-mono uppercase tracking-[0.25em] text-cream/40 mb-2"
+      style={{ fontSize: 'var(--text-meta)' }}
+    >
+      {children}
+    </span>
+  )
 }
 
 export default function ProjectCard({ work, index }) {
   const reduceMotion = useReducedMotion()
-  const isGithub = work.isGithubCard
-  const thumbnailSrc = isGithub ? '/thumbnail/github.svg' : (work.thumbnail ?? null)
-  const typeLabel = isGithub ? 'GitHub' : 'Project'
+  const itemRef = useRef(null)
+
+  // Parallax: track this row across the viewport; the 120%-tall image
+  // drifts up 10% of its height as the row passes (same ratio as the ref).
+  const { scrollYProgress } = useScroll({
+    target: itemRef,
+    offset: ['start end', 'end start'],
+  })
+  const imgY = useTransform(scrollYProgress, [0, 1], ['0%', '-10%'])
+
+  const thumbnailSrc = work.thumbnail ?? null
 
   return (
-    <motion.div
-      variants={reduceMotion ? itemVariantsReduced : itemVariants}
-      className="group"
+    <article
+      ref={itemRef}
+      className="grid grid-cols-1 gap-y-8 lg:grid-cols-12 lg:gap-x-8 p-6 md:p-10"
+      style={{
+        borderRadius: '22px',
+        border: '1px solid rgba(255,255,255,0.18)',
+        background: 'rgba(18,22,46,0.40)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        boxShadow: '0 8px 30px rgba(8,12,40,0.18)',
+      }}
     >
-      <motion.div
-        whileHover={reduceMotion ? undefined : { y: -4 }}
-        transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
-        style={{
-          borderRadius: '22px',
-          borderWidth: '1px',
-          borderStyle: 'solid',
-          borderColor: 'rgba(255,255,255,0.18)',
-          background: 'rgba(18,22,46,0.40)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 30px rgba(8,12,40,0.18)',
-        }}
-        className="h-full flex flex-col overflow-hidden transition-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-[rgba(18,22,46,0.52)]"
-      >
-        {/* ── Image — title/category overlay bottom-left, index badge top-right ── */}
-        <div className="relative w-full aspect-4/3 shrink-0 overflow-hidden bg-white/4 border-b border-white/6">
+      {/* ── Image — first on mobile, right column on desktop ── */}
+      <div className="lg:col-start-8 lg:col-end-13 lg:row-start-1">
+        <div
+          className="relative overflow-hidden aspect-576/420 rounded-[16px]"
+        >
           {thumbnailSrc ? (
-            <img
+            <motion.img
               src={thumbnailSrc}
-              alt={isGithub ? 'GitHub' : work.title}
-              className="w-full h-full object-cover transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] group-hover:scale-[1.04]"
+              alt={work.title}
+              className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
+              style={reduceMotion ? undefined : { y: imgY }}
               draggable="false"
             />
           ) : (
@@ -79,98 +106,80 @@ export default function ProjectCard({ work, index }) {
               <WrenchIcon />
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Scrim so the title stays legible over any thumbnail */}
-          <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/5 to-transparent pointer-events-none" />
+      {/* ── Info — sticky left column on desktop ── */}
+      <div className="lg:col-start-1 lg:col-end-6 lg:row-start-1 lg:sticky lg:top-24 lg:self-start max-w-[600px]">
+        <span
+          className="font-mono tracking-[0.25em] text-cream/40 tabular-nums"
+          style={{ fontSize: 'var(--text-meta)' }}
+        >
+          {String(index + 1).padStart(2, '0')}
+        </span>
 
-          <span
-            className="absolute top-4 right-4 font-mono tracking-[0.25em] text-cream/80 tabular-nums bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full"
-            style={{ fontSize: 'var(--text-meta)' }}
-          >
-            {String(index + 1).padStart(2, '0')}
-          </span>
+        <h3
+          className="font-heading font-semibold uppercase text-cream tracking-tight leading-tight mt-3 mb-4"
+          style={{ fontSize: 'clamp(1.75rem, 3.2vw, 3rem)' }}
+        >
+          {work.title}
+        </h3>
 
-          <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-            <h3
-              className="font-heading font-semibold uppercase text-cream mb-1.5 leading-tight tracking-tight"
-              style={{ fontSize: 'var(--text-title)' }}
-            >
-              {work.title}
-            </h3>
-            <span className="font-mono text-meta tracking-[0.25em] uppercase text-cream/55">
-              {typeLabel}
-            </span>
-          </div>
+        <p
+          className="font-mono text-cream/45 leading-relaxed mb-8"
+          style={{ fontSize: 'var(--text-body)' }}
+        >
+          {work.subtitle}
+        </p>
+
+        {/* Year / Role / Stack */}
+        <div className="flex gap-12 mb-6">
+          {work.year && (
+            <div>
+              <MetaLabel>Year</MetaLabel>
+              <p className="font-mono text-cream/80" style={{ fontSize: 'var(--text-body)' }}>
+                {work.year}
+              </p>
+            </div>
+          )}
+          {work.role && (
+            <div>
+              <MetaLabel>Role</MetaLabel>
+              <p className="font-mono text-cream/80" style={{ fontSize: 'var(--text-body)' }}>
+                {work.role}
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* ── Body — tags, description, links ─────────────────────────── */}
-        <div className="flex flex-col flex-1 gap-4 p-5 md:p-6">
-          {/* Tech chips */}
-          {work.tech?.length > 0 && (
+        {work.tech?.length > 0 && (
+          <div className="mb-10">
+            <MetaLabel>Stack</MetaLabel>
             <div className="flex flex-wrap gap-1.5">
               {work.tech.map((t) => (
                 <span
                   key={t}
-                  className="font-mono px-2.5 py-1 rounded-full border border-white/10 text-cream/30 tracking-wide"
+                  className="font-mono px-2.5 py-1 rounded-full border border-white/10 text-cream/40 tracking-wide"
                   style={{ fontSize: 'var(--text-meta)' }}
                 >
                   {t}
                 </span>
               ))}
             </div>
-          )}
-
-          <p
-            className="font-mono text-cream/45 leading-relaxed"
-            style={{ fontSize: 'var(--text-body)' }}
-          >
-            {work.subtitle}
-          </p>
-
-          {/* Links */}
-          <div className="flex gap-4 mt-auto pt-2 justify-end">
-            {work.github && !isGithub && (
-              <a
-                href={work.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group/link flex items-center gap-1.5 font-mono text-cream/40 hover:text-cream/80 transition-colors duration-150 tracking-wider"
-                style={{ fontSize: 'var(--text-label)' }}
-                aria-label={`${work.title} on GitHub`}
-              >
-                GitHub
-                <ArrowUpRight className="w-3 h-3 opacity-60 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-              </a>
-            )}
-            {work.live && (
-              <a
-                href={work.live}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
-                style={{ fontSize: 'var(--text-label)' }}
-                aria-label={`${work.title} live site`}
-              >
-                Live
-                <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-              </a>
-            )}
-            {isGithub && (
-              <a
-                href={work.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group/link flex items-center gap-1.5 font-mono text-cobalt-light hover:text-cobalt transition-colors duration-150 tracking-wider"
-                style={{ fontSize: 'var(--text-label)' }}
-                aria-label="View GitHub profile"
-              >
-                Profile
-                <ArrowUpRight className="w-3 h-3 opacity-70 transition-transform duration-150 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-              </a>
-            )}
           </div>
-        </div>
-      </motion.div>
-    </motion.div>
+        )}
+
+        {work.live && (
+          <CircleLink href={work.live} label={`${work.title} live site`}>
+            Launch Website
+          </CircleLink>
+        )}
+        {!work.live && work.github && (
+          <CircleLink href={work.github} label={`${work.title} on GitHub`}>
+            View Code
+          </CircleLink>
+        )}
+      </div>
+    </article>
   )
 }

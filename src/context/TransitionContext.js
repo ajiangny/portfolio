@@ -1,14 +1,14 @@
 /**
  * TransitionContext.js — Page Transition Context + Hook
  *
- * Holds the blob-expand navigation state shared across the app.
+ * Holds the blur/ink-dissolve navigation state shared across the app.
  * The provider component lives in TransitionProvider.jsx (kept separate
  * so this file only exports non-components — required for Fast Refresh).
  *
  * Consumers call `useTransitionContext()` for:
- *   • navigate(href, options, event, colorStr) — run the blob transition
- *   • isActive — true while the curtain covers the screen
- *   • clickPos / transitionColor — read by PageTransition to render the blob
+ *   • navigate(href, options, colorStr) — run the veil transition
+ *   • isActive — true while the veil covers the screen
+ *   • transitionColor — read by PageTransition to tint the veil
  */
 import { createContext, useContext } from 'react'
 
