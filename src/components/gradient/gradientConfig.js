@@ -24,23 +24,36 @@ export const SECTION_PALETTES = {
 
 // Stable-fluids sim tuning.
 export const SIM = {
-  RES: 256,
-  RES_MOBILE: 128,
-  JACOBI: 18,
-  JACOBI_MOBILE: 12,
-  DT: 0.2,                 // advection step — lower = slower, calmer overall flow
-  VEL_DISSIPATION: 0.985,
-  DYE_DISSIPATION: 0.987,  // dye lingers so the stirred trails fold into veins
-  SPLAT_RADIUS: 0.0000175,
-  AMBIENT_RADIUS: 0.0105,  // soft + broad so the many drift points blend, not blobs
-  CURSOR_FORCE: 3400,
-  AMBIENT_FORCE: 90,     // Hero-level stir (×section energy) — folds dye into filaments
-  FORCE_CLAMP: 0.02,
-  CURSOR_DENSITY: 1,
-  AMBIENT_DENSITY: 0.05,  // low per-point — many points overlap into a liquid wash
-  DYE_INTENSITY: 0.85,
-  DYE_MAX: 1,            // ink never fully covers the base (readability)
-  REFRACTION: 0.04,
+  // --- Resolution ---
+  RES: 256,              // fluid grid size on desktop — higher = more detail, more GPU cost
+  RES_MOBILE: 128,       // halved on mobile to save performance
+
+  // --- Pressure Solver ---
+  JACOBI: 18,            // Jacobi iterations per frame on desktop — more = smoother, more expensive
+  JACOBI_MOBILE: 12,     // fewer iterations on mobile
+
+  // --- Time & Dissipation ---
+  DT: 0.1,               // advection timestep — lower = slower/calmer flow, higher = faster/more chaotic
+  VEL_DISSIPATION: 0.985, // how fast velocity fades per frame — lower = thicker fluid, closer to 1 = flow persists longer
+  DYE_DISSIPATION: 0.988, // how fast ink fades — higher = trails linger longer into veins, lower = evaporates quickly
+
+  // --- Splat & Radius ---
+  SPLAT_RADIUS: 0.0000275, // size of the cursor ink injection point — very small = precise thin thread of ink
+  AMBIENT_RADIUS: 0.0205,  // spread of each ambient drift point — larger = softer, more blended wash
+
+  // --- Forces ---
+  CURSOR_FORCE: 5000,    // how hard the cursor pushes the fluid — higher = more dramatic mouse swirls
+  AMBIENT_FORCE: 200,     // base background stir strength (×section energy) — higher = more background turbulence
+  FORCE_CLAMP: 0.9,     // max force magnitude cap — prevents runaway velocity spikes
+
+  // --- Density / Ink ---
+  CURSOR_DENSITY: 0.5,     // dye injected by cursor per frame — 1 = full saturation at splat point
+  AMBIENT_DENSITY: 0.025, // dye per ambient drift point — low so many overlapping points create a smooth wash, not blobs
+  DYE_INTENSITY: 0.85,   // global ink vibrancy/opacity multiplier
+  DYE_MAX: 1,            // max ink coverage — keeps ink from fully overwriting the base gradient (preserves text readability)
+
+  // --- Refraction ---
+  REFRACTION: 0.04,      // light-bending distortion on the composite — 0 = off, higher = more shimmer
 }
 
 export const GRADIENT = {
