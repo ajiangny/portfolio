@@ -1,7 +1,30 @@
 # Portfolio
 
-Personal portfolio — React + Vite, Framer Motion, Lenis smooth scroll, and a
-WebGL fluid-gradient background.
+Personal portfolio — a single-page scroll experience built with **React 19 +
+Vite**, **Tailwind v4**, **Framer Motion**, **Lenis** smooth scroll, and a
+**Three.js** WebGL fluid-gradient background.
+
+Five sections in one scroll: `Hero → About → Projects → Gallery → Contact`.
+
+**→ [ARCHITECTURE.md](ARCHITECTURE.md)** — full system map, design tokens, and
+how-to-update recipes (add a project, add gallery artwork, edit bento content,
+add a section, tune the background). This file covers setup and the motion
+system.
+
+## Getting started
+
+```bash
+npm install
+npm run dev      # Vite dev server + in-process /api/* functions
+npm run lint     # ESLint
+npm run build    # production build
+node test/<f>    # gradient unit tests (test/*.test.mjs)
+```
+
+The About section's Spotify player needs a `.env` with `SPOTIFY_CLIENT_ID` and
+`SPOTIFY_CLIENT_SECRET` for per-song cover art (everything else degrades
+gracefully without it). Deploys on Vercel: static build + `api/` serverless
+functions, with the same two env vars set in the dashboard.
 
 ## Motion: the ink dissolve system
 

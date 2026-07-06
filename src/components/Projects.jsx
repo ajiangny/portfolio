@@ -1,8 +1,6 @@
-import ProjectCard, { CircleLink } from './projects/ProjectCard'
+import ProjectCard from './projects/ProjectCard'
 import InkReveal from './InkDissolve'
 import { works } from '../data/projectsData'
-
-const projects = works
 
 export default function Projects() {
   return (
@@ -27,9 +25,9 @@ export default function Projects() {
       {/* Work list — each card hidden until it scrolls into view, then
           ink-dissolves in with its own InkReveal. */}
       <div className="flex flex-col gap-24 lg:gap-40 max-w-[2200px] mx-auto px-5 md:px-10">
-        {projects.map((work, i) => (
+        {works.map((work, i) => (
           <InkReveal key={work.title ?? `card-${i}`}>
-            <ProjectCard work={work} index={i} />
+            <ProjectCard work={work} />
           </InkReveal>
         ))}
       </div>

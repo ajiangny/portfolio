@@ -24,9 +24,9 @@
 export const SECTIONS = [
   { id: 'hero',     label: 'Home',     themeRgb: [27, 58, 140],   scrollOffsetVh: 0 },
   { id: 'about',    label: 'About',    themeRgb: [37, 79, 193],   scrollOffsetVh: 4.5 },
-  { id: 'projects', label: 'Projects', themeRgb: [245, 240, 232], scrollOffsetVh: 0 },
+  { id: 'projects', label: 'Projects', themeRgb: [255, 255, 255], scrollOffsetVh: 0 },
   { id: 'gallery',  label: 'Gallery',  themeRgb: [0, 0, 0],       scrollOffsetVh: 0 },
-  { id: 'contact',  label: 'Contact',  themeRgb: [245, 240, 232], scrollOffsetVh: 0 },
+  { id: 'contact',  label: 'Contact',  themeRgb: [255, 255, 255], scrollOffsetVh: 0 },
 ]
 
 /** Sections shown in the global SiteHeader nav (everything except Home itself). */

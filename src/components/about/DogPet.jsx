@@ -32,6 +32,7 @@
  * Reduced motion: renders a single static idle frame, no RAF, no interaction.
  */
 import { useRef, useEffect } from 'react'
+import { motion, useInView } from 'framer-motion'
 
 const SHEETS = {
   idle: { src: '/animation/dog/idle.png', frames: 4, fps: 5 },
@@ -52,6 +53,7 @@ export default function DogPet({
   maxSize = 380,
   widthFactor = 0.36, // dog ≈ 36% of tile width (≈300px at a 1920-wide layout)
   heightFactor = 0.55, // …but never taller than 55% of the tile (guards short screens)
+  spawnDrop = false, // one-time fall-in from off-screen above (Contact instance only)
 }) {
   const fixed = typeof size === 'number'
   const initialSize = fixed ? size : 120 // pre-measure placeholder; corrected on mount
@@ -60,6 +62,10 @@ export default function DogPet({
   const spriteRef = useRef(null) // the inner sprite sheet
   const widthRef = useRef(0)
   const sizeRef = useRef(initialSize) // live render size, read each frame
+  // Tracks layerRef's own box, which isn't affected by its `overflow-hidden`
+  // (that only clips descendants) — a whileInView on the clipped/translated
+  // child below would see a permanently-empty intersection and never fire.
+  const spawned = useInView(layerRef, { once: true, amount: 0.4 })
 
   useEffect(() => {
     const layer = layerRef.current
@@ -267,29 +273,47 @@ export default function DogPet({
           slides exactly one full sheet width; steps(N) chops it into N frames.
           Defined here so it exists once per DogPet instance. */}
       <style>{`@keyframes dog-sprite{to{transform:translateX(-100%)}}`}</style>
-      <div ref={layerRef} className="pointer-events-none absolute inset-0 overflow-hidden" style={{ zIndex: 1 }}>
-        <button
-          ref={dogRef}
-          type="button"
-          aria-label="Pet the dog"
-          title="Pet me!"
-          className="pointer-events-auto absolute left-0 cursor-pointer border-0 bg-transparent p-0 overflow-hidden"
-          style={{
-            bottom: FLOOR,
-            width: initialSize,
-            height: initialSize,
-            willChange: 'transform',
-          }}
+      <div
+        ref={layerRef}
+        className="pointer-events-none absolute inset-0"
+        style={{ zIndex: 1, overflow: spawnDrop ? 'visible' : 'hidden' }}
+      >
+        {/* Spawn-drop (Contact only): once, the first time the section scrolls
+            into view, falls from off the top of the viewport (-100vh, not a
+            %, so it clears any size stage) — a separate transformed layer so
+            it never fights the RAF loop's own transform writes on the button
+            below. layerRef is overflow-visible while this is active so the
+            fall is masked only by Contact's own section-level clip, reading
+            as dropping in from the top of the page, not popping in locally. */}
+        <motion.div
+          className="absolute inset-0"
+          initial={spawnDrop ? { y: '-100vh' } : false}
+          animate={spawnDrop ? { y: spawned ? '0vh' : '-100vh' } : undefined}
+          transition={{ type: 'spring', bounce: 0.45, duration: 1.1 }}
         >
-          <div
-            ref={spriteRef}
+          <button
+            ref={dogRef}
+            type="button"
+            aria-label="Pet the dog"
+            data-cursor-label="Pet me!"
+            className="pointer-events-auto absolute left-0 cursor-pointer border-0 bg-transparent p-0 overflow-hidden"
             style={{
-              height: '100%',
-              backgroundRepeat: 'no-repeat',
-              imageRendering: 'pixelated',
+              bottom: FLOOR,
+              width: initialSize,
+              height: initialSize,
+              willChange: 'transform',
             }}
-          />
-        </button>
+          >
+            <div
+              ref={spriteRef}
+              style={{
+                height: '100%',
+                backgroundRepeat: 'no-repeat',
+                imageRendering: 'pixelated',
+              }}
+            />
+          </button>
+        </motion.div>
       </div>
     </>
   )

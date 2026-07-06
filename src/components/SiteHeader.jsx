@@ -53,11 +53,11 @@ export default function SiteHeader() {
 
   // Colour system adapts to the section background; CSS transitions tween it
   // across the seam so there's no hard flip.
-  const textColor = light ? 'rgba(20,22,34,0.92)' : 'rgba(245,240,232,0.92)'
-  const glassBg = light ? 'rgba(245,240,232,0.55)' : 'rgba(18,22,46,0.40)'
+  const textColor = light ? 'rgba(20,22,34,0.92)' : 'rgba(255,255,255,0.92)'
+  const glassBg = light ? 'rgba(255,255,255,0.55)' : 'rgba(18,22,46,0.40)'
   const glassBorder = light ? 'rgba(20,22,34,0.12)' : 'rgba(255,255,255,0.18)'
-  const activeFill = light ? 'rgba(20,22,34,0.92)' : 'rgba(245,240,232,0.95)'
-  const activeText = light ? 'rgba(245,240,232,0.98)' : 'rgba(18,22,46,0.95)'
+  const activeFill = light ? 'rgba(20,22,34,0.92)' : 'rgba(255,255,255,0.95)'
+  const activeText = light ? 'rgba(255,255,255,0.98)' : 'rgba(18,22,46,0.95)'
 
   // Desktop: full bar only while Hero is active; past it, a logo pill that
   // re-expands on hover. Mobile is always the pill; reduced-motion always expanded.
@@ -104,9 +104,22 @@ export default function SiteHeader() {
   const go = (id, e) => {
     e.stopPropagation()
     setMenuOpen(false)
-    onLeave()
+    // Pin the indicator on the clicked link instead of clearing hoveredId —
+    // clearing it here would fall back to the (still-old) active section and
+    // rubberband the pill back before the transition ever moves it forward.
+    setHoveredId(id)
+    setHoverSection(-1)
     goToSection(navigate, id)
   }
+
+  // Once the real active section catches up to the clicked target, drop the
+  // pin so hover/leave behaves normally again.
+  useEffect(() => {
+    // Deliberate: unpin exactly once when the scroll catches up to the clicked
+    // section; the functional update is a no-op re-render in every other case.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHoveredId((prev) => (prev === section.id ? null : prev))
+  }, [section.id])
 
   const pillWidth = isMobile ? BAR_H : expanded ? expandedW : BAR_H
 
@@ -273,7 +286,7 @@ export default function SiteHeader() {
               style={{
                 position: 'fixed',
                 inset: 0,
-                background: light ? 'rgba(245, 240, 232, 0.4)' : 'rgba(18, 22, 46, 0.4)',
+                background: light ? 'rgba(255, 255, 255, 0.4)' : 'rgba(18, 22, 46, 0.4)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
                 zIndex: -1,

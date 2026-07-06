@@ -34,7 +34,7 @@ export default function SkillIcon({ skill, index, progress, isMain, startAt = 0.
   return (
     <motion.div
       style={{ x, rotate, opacity, scale }}
-      className={`group flex items-center justify-center border border-[#f5f0e826] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#f5f0e866] hover:-translate-y-1 cursor-pointer ${sizeClass}`}
+      className={`group flex items-center justify-center border border-[#ffffff26] bg-white/5 transition-all duration-300 hover:bg-white/75 hover:border-[#ffffff66] hover:-translate-y-1 cursor-pointer ${sizeClass}`}
       title={skill.name}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

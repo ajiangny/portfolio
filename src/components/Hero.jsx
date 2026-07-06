@@ -68,14 +68,9 @@ export default function Hero() {
         className="absolute inset-x-0"
         style={{ bottom: '-0.5vw', opacity: wordmarkOpacity, zIndex: 2 }}
       >
-        <motion.div
-          initial={{ y: 300 }} // Hiding initially
-          animate={{ y: 0 }}
-          transition={{ duration: 0.9, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
-          style={{ color: '#ffffff' }}
-        >
+        <div style={{ color: '#ffffff' }}>
           <HeroWordmark className="block w-full select-none" />
-        </motion.div>
+        </div>
       </motion.div>
     </section>
   )

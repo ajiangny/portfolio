@@ -7,21 +7,19 @@
  * computed in the SVG's user-space (viewBox 0 0 1440 151) so the push scales
  * proportionally with the wordmark at any width.
  *
- * On top of the per-letter spring, a fluid-style ripple warps the glyph shapes
- * themselves while the cursor moves through the wordmark (feTurbulence +
- * feDisplacementMap): the displacement scale tracks cursor speed and eases back
- * to 0 when you stop, so the letters distort like the liquid background but
- * resolve crisp at rest. The filter is left fully alone (cached, no per-frame
- * cost) once idle, and is skipped entirely under reduced-motion.
+ * On mount (once scrolled into view) the glyphs ink-dissolve in using the
+ * shared filter (hooks/useInkFilter.jsx) — same turbulence-displacement +
+ * blur settling to 0 as the rest of the site, instead of a one-off entrance.
  *
  * Fill follows `currentColor` (colour driven from CSS); the tight viewBox means
  * width:100% spans edge-to-edge and seats the glyphs flush on the bottom.
  */
-import { useRef, useLayoutEffect } from 'react'
+import { useRef, useLayoutEffect, useEffect } from 'react'
 import {
-  motion, useMotionValue, useTransform, useSpring, useReducedMotion, useAnimationFrame,
-  useMotionTemplate,
+  motion, useMotionValue, useTransform, useSpring, useReducedMotion,
+  useMotionTemplate, useInView, animate,
 } from 'framer-motion'
+import useInkFilter from '../../hooks/useInkFilter'
 
 const VB_W = 1440
 const VB_H = 151
@@ -29,13 +27,6 @@ const OFF = -99999      // sentinel: cursor not over the wordmark
 const RADIUS = 190      // user-space units of influence around each letter
 const STRENGTH = 78     // max push, in user-space units
 const SPRING = { stiffness: 120, damping: 10, mass: 0.08 }
-
-// Ripple (shape-warp) tuning — all in SVG user-space units.
-const RIPPLE_MAX = 40     // peak displacement when the cursor is moving fast
-const RIPPLE_SENS = 260   // larger = needs faster cursor to reach full ripple
-const RIPPLE_DECAY = 0.86 // per-frame fall-off of cursor "speed" toward rest
-const RIPPLE_EASE = 0.2   // how quickly the scale chases its target
-const RIPPLE_FLOW = 8     // how far the noise drifts (animates the ripple)
 
 // One outlined glyph per entry (document order: A N D R E W  J I A N G).
 const LETTERS = [
@@ -98,14 +89,16 @@ export default function HeroWordmark({ className, style, title = 'Andrew Jiang' 
   const mouseX = useMotionValue(OFF)
   const mouseY = useMotionValue(OFF)
 
-  // Ripple state — kept in refs so the rAF reads/writes without re-rendering.
-  const dispRef = useRef(null)    // <feDisplacementMap> (animate `scale`)
-  const offsetRef = useRef(null)  // <feOffset> on the noise (animate `dx`/`dy` → flow)
-  const speed = useRef(0)         // accumulated cursor speed (0..1), decays each frame
-  const scale = useRef(0)         // current eased displacement scale
-  const phase = useRef(0)         // noise-drift phase
-  const parked = useRef(false)    // true while idle (filter left cached)
-  const last = useRef({ x: 0, y: 0, has: false })
+  // Ink-dissolve entrance, fired once the wordmark scrolls into view.
+  const inView = useInView(svgRef, { once: true, margin: '-100px' })
+  const t = useMotionValue(0)
+  const { defs: inkDefs, filter: inkFilter } = useInkFilter(t, { maxScale: 50, maxBlur: 10, octaves: 3 })
+  useEffect(() => {
+    if (!inView) return
+    const controls = animate(t, 1, { duration: reduce ? 0.3 : 1.6, ease: [0.215, 0.61, 0.355, 1] })
+    return () => controls.stop()
+  }, [inView, reduce, t])
+  const inkOpacity = useTransform(t, [0, reduce ? 1 : 0.12], [0, 1])
 
   // Map the cursor into SVG user-space (uniform scale, since preserveAspectRatio meet).
   const onMove = (e) => {
@@ -113,43 +106,13 @@ export default function HeroWordmark({ className, style, title = 'Andrew Jiang' 
     if (!svg) return
     const r = svg.getBoundingClientRect()
     const s = r.width / VB_W || 1
-    const sx = (e.clientX - r.left) / s
-    const sy = (e.clientY - r.top) / s
-    if (last.current.has) {
-      const dist = Math.hypot(sx - last.current.x, sy - last.current.y)
-      speed.current = Math.min(1, speed.current + dist / RIPPLE_SENS)
-    }
-    last.current = { x: sx, y: sy, has: true }
-    mouseX.set(sx)
-    mouseY.set(sy)
+    mouseX.set((e.clientX - r.left) / s)
+    mouseY.set((e.clientY - r.top) / s)
   }
   const onLeave = () => {
     mouseX.set(OFF)
     mouseY.set(OFF)
-    last.current.has = false
   }
-
-  // Drive the ripple: chase a cursor-speed target, drift the noise, and park the
-  // filter (no attribute writes) once everything is at rest so it stays cached.
-  useAnimationFrame((_t, delta) => {
-    if (reduce) return
-    speed.current *= RIPPLE_DECAY
-    const target = speed.current * RIPPLE_MAX
-    scale.current += (target - scale.current) * RIPPLE_EASE
-
-    if (scale.current < 0.05 && speed.current < 0.002) {
-      if (!parked.current) {
-        dispRef.current?.setAttribute('scale', '0')
-        parked.current = true
-      }
-      return
-    }
-    parked.current = false
-    dispRef.current?.setAttribute('scale', scale.current.toFixed(2))
-    phase.current += (delta || 16) * 0.0011
-    offsetRef.current?.setAttribute('dx', (Math.sin(phase.current) * RIPPLE_FLOW).toFixed(2))
-    offsetRef.current?.setAttribute('dy', (Math.cos(phase.current * 0.8) * RIPPLE_FLOW).toFixed(2))
-  })
 
   return (
     <svg
@@ -168,43 +131,20 @@ export default function HeroWordmark({ className, style, title = 'Andrew Jiang' 
       onPointerMove={reduce ? undefined : onMove}
       onPointerLeave={reduce ? undefined : onLeave}
     >
-      {/* Cursor-driven ripple: static fractal noise (computed once, cached),
-          drifted by feOffset and scaled by feDisplacementMap so the glyphs warp
-          like liquid while the cursor moves. Generous region clears the sprung
-          letters; sRGB keeps glyph edges from shifting colour. */}
-      {!reduce && (
-        <defs>
-          <filter
-            id="wm-ripple"
-            x="-15%" y="-60%" width="130%" height="220%"
-            colorInterpolationFilters="sRGB"
-            filterUnits="objectBoundingBox"
-          >
-            <feTurbulence
-              type="fractalNoise" baseFrequency="0.01 0.014" numOctaves="2"
-              seed="11" stitchTiles="stitch" result="noise"
-            />
-            <feOffset ref={offsetRef} in="noise" dx="0" dy="0" result="snoise" />
-            <feDisplacementMap
-              ref={dispRef} in="SourceGraphic" in2="snoise" scale="0"
-              xChannelSelector="R" yChannelSelector="G"
-            />
-          </filter>
-        </defs>
-      )}
+      {inkDefs}
 
       {/* Transparent hit area so pointermove fires across the whole wordmark
           box (not only over the painted glyphs). */}
       <rect x="0" y="0" width={VB_W} height={VB_H} fill="transparent" />
-      {reduce ? (
-        LETTERS.map((d, i) => <path key={i} d={d} />)
-      ) : (
-        <g filter="url(#wm-ripple)">
-          {LETTERS.map((d, i) => (
+      <motion.g style={{ opacity: inkOpacity, filter: reduce ? 'none' : inkFilter }}>
+        {reduce ? (
+          LETTERS.map((d, i) => <path key={i} d={d} />)
+        ) : (
+          LETTERS.map((d, i) => (
             <ElasticLetter key={i} d={d} mouseX={mouseX} mouseY={mouseY} />
-          ))}
-        </g>
-      )}
+          ))
+        )}
+      </motion.g>
     </svg>
   )
 }

@@ -2,7 +2,7 @@
  * Gallery.jsx — Gallery Section ("drifting print-desk")
  *
  * A 240vh scroll-pinned section where the artworks float freely on a
- * contained stage instead of sitting in a grid (design system: MASTER.md):
+ * contained stage instead of sitting in a grid ("drifting print-desk"):
  *
  *   • Ambient drift — each piece wanders on its own slow (8–14s) path,
  *     pausing while hovered or dragged
@@ -73,7 +73,7 @@ const MOBILE_SPOTS = [
   { x: 84, y: 54, t: 'S' }, // View All
 ]
 
-// Piece sizing (MASTER.md → Piece geometry). Tiers set the width; the
+// Piece sizing. Tiers set the width; the
 // min() also caps piece HEIGHT (42vh desktop / 36vh mobile) via the
 // aspect ratio, so tall portraits never outgrow short viewports.
 const TIER_W = {
@@ -334,16 +334,18 @@ export default function Gallery() {
 
   const revealRaw = useTransform(gapProgress, [0.35, 1.0], [0, 1])
 
-  // Section reveal = ink dissolve (shared InkDissolve filter): ONE filter over
-  // the whole stage settles as the seam progress runs, so the staggered pieces
-  // drift in through resolving ink. Scrubbed both ways; 'none' once settled.
-  const reduceMotion = useReducedMotion()
-  const { defs: inkDefs, filter: inkFilter } = useInkFilter(revealRaw, { maxScale: 60, maxBlur: 8, octaves: 2 })
-
   // ── Combined layer opacity: entry × exit ────────────────────────
   const layerExitO = useTransform(progress, [0.82, 1.0], [1, 0])
   const layerEntryO = useTransform(gapProgress, [0, 0.05], [0, 1])
   const layerOpacity = useTransform([layerEntryO, layerExitO], ([inO, outO]) => inO * outO)
+
+  // Section reveal/exit = ink dissolve (shared filter): settled (t=1) only
+  // between entry and exit, so the stage dissolves IN through resolving ink
+  // on the way from Projects and dissolves back OUT the same way on the way
+  // to Contact, instead of just fading.
+  const reduceMotion = useReducedMotion()
+  const inkT = useTransform([revealRaw, layerExitO], ([r, o]) => r * o)
+  const { defs: inkDefs, filter: inkFilter } = useInkFilter(inkT, { maxScale: 60, maxBlur: 8, octaves: 2 })
   // The stage layer is position:fixed and always mounted, so when invisible
   // it must also be visibility:hidden — pointer-events:none alone is undone
   // by interactive children (draggable pieces re-enable pointer events,

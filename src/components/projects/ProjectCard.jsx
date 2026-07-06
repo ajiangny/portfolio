@@ -7,8 +7,9 @@
  * Typography/surfaces follow our own system: cream + mono meta, Instrument
  * Sans titles, glass border/shadow on the image frame.
  */
-import { useRef, useState } from 'react'
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion'
+import { useRef, useState, useEffect } from 'react'
+import { motion, useScroll, useTransform, useMotionValue, animate, useReducedMotion } from 'framer-motion'
+import useInkFilter from '../../hooks/useInkFilter'
 
 function WrenchIcon() {
   return (
@@ -99,7 +100,7 @@ function TechIconBadge({ name }) {
   );
 }
 
-export default function ProjectCard({ work, index }) {
+export default function ProjectCard({ work }) {
   const reduceMotion = useReducedMotion()
   const itemRef = useRef(null)
 
@@ -115,7 +116,19 @@ export default function ProjectCard({ work, index }) {
   const hoverSrc = work.hoverThumbnail ?? null
   const [isHovered, setIsHovered] = useState(false)
 
-  const activeSrc = hoverSrc && isHovered ? hoverSrc : thumbnailSrc
+  // Hover crossfade uses the shared ink-dissolve filter (hooks/useInkFilter)
+  // instead of a hard image swap, matching the site-wide transition language.
+  const inkT = useMotionValue(0)
+  const { defs: inkDefs, filter: inkFilter } = useInkFilter(inkT, { maxScale: 40, maxBlur: 8, octaves: 3 })
+
+  useEffect(() => {
+    if (!hoverSrc) return
+    const controls = animate(inkT, isHovered ? 1 : 0, {
+      duration: reduceMotion ? 0.15 : 0.6,
+      ease: [0.76, 0, 0.24, 1],
+    })
+    return () => controls.stop()
+  }, [isHovered, hoverSrc, reduceMotion, inkT])
 
   return (
     <article
@@ -137,15 +150,33 @@ export default function ProjectCard({ work, index }) {
           onMouseEnter={() => hoverSrc && setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {activeSrc ? (
-            <motion.img
-              key={activeSrc}
-              src={activeSrc}
-              alt={work.title}
-              className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
-              style={reduceMotion ? undefined : { y: imgY }}
-              draggable="false"
-            />
+          {thumbnailSrc ? (
+            <>
+              <motion.img
+                src={thumbnailSrc}
+                alt={work.title}
+                className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
+                style={reduceMotion ? undefined : { y: imgY }}
+                draggable="false"
+              />
+              {hoverSrc && (
+                <>
+                  {inkDefs}
+                  <motion.img
+                    src={hoverSrc}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
+                    style={{
+                      y: reduceMotion ? undefined : imgY,
+                      opacity: inkT,
+                      filter: reduceMotion ? 'none' : inkFilter,
+                    }}
+                    draggable="false"
+                  />
+                </>
+              )}
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <WrenchIcon />

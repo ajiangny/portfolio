@@ -9,11 +9,12 @@
  * from playback_update. The visible glass card shows the current song.
  */
 import { useState, useEffect, useRef } from 'react'
+import { motion, useMotionValue, animate } from 'framer-motion'
 import { SPOTIFY } from '../../data/aboutData'
 import useMediaQuery from '../../hooks/useMediaQuery'
+import useInkFilter from '../../hooks/useInkFilter'
 
 const GREEN = '#1ed760'
-const COVER_FILTER_ID = 'sp-cover-distort' // SVG displacement filter (codrops SVGImageHover)
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
 
 function fmt(ms) {
@@ -43,11 +44,12 @@ export default function SpotifyCard() {
   const positionRef = useRef(0)
   const endGuardRef = useRef(false)
 
-  // SVG displacement morph, coordinated with the cover swap (codrops SVGImageHover).
-  const dispRef = useRef(null) // <feDisplacementMap>
-  const turbRef = useRef(null) // <feTurbulence>
+  // Cover swap uses the shared ink-dissolve filter (hooks/useInkFilter), same
+  // treatment as the project cards. coverT rests at 1 (settled/clear); a song
+  // change round-trips it 1→0→1 so the art dissolves out and back in.
   const displayedRef = useRef(null) // mirrors displayedCover for the transition effect
-  const [distorting, setDistorting] = useState(false)
+  const coverT = useMotionValue(1)
+  const { defs: coverInkDefs, filter: coverFilter } = useInkFilter(coverT, { maxScale: 60, maxBlur: 8, octaves: 3 })
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   // ── Scrub / hover state for the progress bar ─────────────────────────────────
@@ -164,11 +166,12 @@ export default function SpotifyCard() {
     return () => { active = false }
   }, [currentIndex, tracks])
 
-  // ── Cover swap as ONE continuous displacement morph ──────────────────────────
+  // ── Cover swap as ONE continuous ink-dissolve morph ──────────────────────────
   // Fires whenever the target cover changes — including first play (playlist →
-  // song cover) and every song change. Preloads the new art, ramps displacement
-  // UP, swaps the <img> AT PEAK distortion, then ramps DOWN, so the change reads
-  // as a single liquid morph rather than "effect, then cut".
+  // song cover) and every song change. Preloads the new art, round-trips coverT
+  // 1→0→1 (the shared ink filter reads 0 as peak distortion), swaps the <img> at
+  // the trough, so the change reads as a single dissolve rather than "effect,
+  // then cut".
   const targetCover = (started && songCover) || playlistMeta?.cover || null
   useEffect(() => {
     if (!targetCover || targetCover === displayedRef.current) return
@@ -179,37 +182,25 @@ export default function SpotifyCard() {
       return () => cancelAnimationFrame(id)
     }
 
-    const pre = new Image() // decode in parallel so the peak swap has no blank frame
+    const pre = new Image() // decode in parallel so the trough swap has no blank frame
     pre.src = targetCover
 
-    let raf = 0
-    let cancelled = false
-    const disp = dispRef.current
-    const DURATION = 760
-    const PEAK = 80
-    if (turbRef.current) turbRef.current.setAttribute('seed', String(Math.floor(Math.random() * 100)))
-
-    const kick = requestAnimationFrame(() => {
-      setDistorting(true)
-      const t0 = performance.now()
-      let swapped = false
-      const tick = (now) => {
-        if (cancelled) return
-        const t = Math.min(1, (now - t0) / DURATION)
-        if (disp) disp.setAttribute('scale', (Math.sin(t * Math.PI) * PEAK).toFixed(2)) // 0→peak→0
-        if (!swapped && t >= 0.5) { // swap under maximum distortion
+    let swapped = false
+    const controls = animate(coverT, [1, 0, 1], {
+      duration: 0.76,
+      times: [0, 0.5, 1],
+      ease: [0.76, 0, 0.24, 1],
+      onUpdate: (v) => {
+        if (!swapped && v <= 0.02) {
           swapped = true
           displayedRef.current = targetCover
           setDisplayedCover(targetCover)
         }
-        if (t < 1) { raf = requestAnimationFrame(tick) }
-        else { if (disp) disp.setAttribute('scale', '0'); setDistorting(false) }
-      }
-      raf = requestAnimationFrame(tick)
+      },
     })
 
-    return () => { cancelled = true; cancelAnimationFrame(kick); cancelAnimationFrame(raf) }
-  }, [targetCover, reduceMotion])
+    return () => controls.stop()
+  }, [targetCover, reduceMotion, coverT])
 
   // Reveal the transport once the card is meaningfully in view (the tile settled).
   useEffect(() => {
@@ -330,17 +321,18 @@ export default function SpotifyCard() {
   // ── Shared pieces ────────────────────────────────────────────────────────────
   const coverInner = (
     <>
+      {coverInkDefs}
       {displayedCover ? (
-        <img
+        <motion.img
           src={displayedCover}
           alt={`${songTitle} cover`}
           className="absolute inset-0 h-full w-full object-cover"
           draggable="false"
-          style={{ filter: distorting ? `url(#${COVER_FILTER_ID})` : 'none', willChange: distorting ? 'filter' : 'auto' }}
+          style={{ filter: reduceMotion ? 'none' : coverFilter }}
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(140deg, rgba(30,215,96,0.26), rgba(245,240,232,0.06) 60%, rgba(245,240,232,0.03))' }}>
-          <svg viewBox="0 0 24 24" className="h-[44%] w-[44%]" fill="none" stroke="rgba(245,240,232,0.78)" strokeWidth="1.6" aria-hidden="true">
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'linear-gradient(140deg, rgba(30,215,96,0.26), rgba(255,255,255,0.06) 60%, rgba(255,255,255,0.03))' }}>
+          <svg viewBox="0 0 24 24" className="h-[44%] w-[44%]" fill="none" stroke="rgba(255,255,255,0.78)" strokeWidth="1.6" aria-hidden="true">
             <path d="M9 18V5l12-2v13" strokeLinecap="round" strokeLinejoin="round" />
             <circle cx="6" cy="18" r="3" />
             <circle cx="18" cy="16" r="3" />
@@ -392,7 +384,7 @@ export default function SpotifyCard() {
           position: 'relative',
           height: trackExpanded ? '5px' : '4px',
           borderRadius: '4px',
-          background: 'rgba(245,240,232,0.16)',
+          background: 'rgba(255,255,255,0.16)',
           overflow: 'visible',
           transition: 'height 0.15s ease',
         }}>
@@ -403,7 +395,7 @@ export default function SpotifyCard() {
               insetBlock: 0,
               left: 0,
               width: `${hoverPct * 100}%`,
-              background: 'rgba(245,240,232,0.28)',
+              background: 'rgba(255,255,255,0.28)',
               borderRadius: '4px',
             }} />
           )}
@@ -427,7 +419,7 @@ export default function SpotifyCard() {
             marginLeft: trackExpanded ? '-6.5px' : '-5px',
             transform: 'translateY(-50%)',
             borderRadius: '50%',
-            background: '#f5f0e8',
+            background: '#ffffff',
             boxShadow: isDragging
               ? '0 0 0 3px rgba(30,215,96,0.35), 0 1px 4px rgba(8,12,40,0.45)'
               : '0 1px 4px rgba(8,12,40,0.45)',
@@ -483,6 +475,7 @@ export default function SpotifyCard() {
       className="flex shrink-0 items-center justify-center rounded-full transition-transform duration-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1ed760] enabled:hover:scale-110 active:scale-95"
       style={{ width: 'clamp(54px, 5.5vw, 72px)', aspectRatio: '1 / 1', background: 'transparent', border: 'none', padding: 0, cursor: ready ? 'pointer' : 'default', opacity: ready ? 1 : 0.5 }}
       aria-label={isPaused ? 'Play' : 'Pause'}
+      data-cursor-label={isPaused ? 'Play' : 'Pause'}
     >
       <img
         key={animToken}
@@ -504,7 +497,7 @@ export default function SpotifyCard() {
   const headerLabel = (
     <p
       className="shrink-0"
-      style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 'var(--text-label)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(245,240,232,0.45)' }}
+      style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 'var(--text-label)', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' }}
     >
       My Playlist
     </p>
@@ -516,6 +509,7 @@ export default function SpotifyCard() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Open playlist on Spotify"
+      data-cursor-label="Spotify"
       className="absolute right-3 top-3 opacity-70 transition-opacity duration-300 hover:opacity-100"
       onClick={(e) => e.stopPropagation()}
       onMouseEnter={() => setSpotifyHovered(true)}
@@ -582,14 +576,6 @@ export default function SpotifyCard() {
       <div aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
         <div ref={hiddenRef} style={{ position: 'absolute', width: '1px', height: '1px' }} />
       </div>
-
-      {/* Displacement filter for the cover swap — scale is animated on song change. */}
-      <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0 }}>
-        <filter id={COVER_FILTER_ID} x="-25%" y="-25%" width="150%" height="150%" colorInterpolationFilters="sRGB">
-          <feTurbulence ref={turbRef} type="fractalNoise" baseFrequency="0.015" numOctaves="2" seed="4" result="noise" />
-          <feDisplacementMap ref={dispRef} in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
 
       {isMobile ? (
         /* ── Mobile: header · [cover+caption · title/progress · prev/play/next] ── */

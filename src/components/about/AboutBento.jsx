@@ -87,7 +87,8 @@ function TechMosaic({ isMobile }) {
             layout
             transition={{ layout: layoutTx }}
             aria-label={it.label}
-            title={it.label}
+            data-cursor-label={it.label}
+            data-cursor-hint={!isMobile && !isBig ? 'Click me!' : undefined}
             className={`ab-mcell${isBig ? ' ab-mcell--big' : ''}`}
             {...interactiveProps}
           >
@@ -175,11 +176,11 @@ function TypewriterBio({ paragraphs, isActive, skip }) {
           className="font-mono"
           style={{ fontSize: 'var(--text-body)', lineHeight: 1.65 }}
         >
-          <span style={{ color: 'rgba(245,240,232,0.75)' }}>{revealed}</span>
+          <span style={{ color: 'rgba(255,255,255,0.75)' }}>{revealed}</span>
           {ghost && (
             <span
               ref={isFrontier ? frontierRef : undefined}
-              style={{ color: 'rgba(245,240,232,0.15)' }}
+              style={{ color: 'rgba(255,255,255,0.15)' }}
             >
               {ghost}
             </span>
@@ -217,7 +218,7 @@ const LABEL = {
   fontSize: 'var(--text-label)',
   letterSpacing: '0.22em',
   textTransform: 'uppercase',
-  color: 'rgba(245,240,232,0.45)',
+  color: 'rgba(255,255,255,0.45)',
 }
 
 export default function AboutBento({ progress, isMobile, profileTileRef }) {
@@ -310,7 +311,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                       fontWeight: s.weight,
                       fontStyle: s.italic ? 'italic' : 'normal',
                       fontFamily: s.italic ? 'Georgia, "Times New Roman", serif' : undefined,
-                      color: s.weight >= 700 ? 'var(--color-cream)' : 'rgba(245,240,232,0.82)',
+                      color: s.weight >= 700 ? 'var(--color-cream)' : 'rgba(255,255,255,0.82)',
                     }}
                   >
                     {s.t}
@@ -328,6 +329,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Resume"
+                    data-cursor-label="Resume"
                     className="icon-btn"
                   >
                     <div className="relative h-full w-full">
@@ -345,6 +347,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Resume"
+                    data-cursor-label="Resume"
                     className="icon-btn"
                   >
                     <div className="relative h-full w-full">
@@ -412,6 +415,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.label}
+                  data-cursor-label={s.label}
                   className="icon-btn"
                 >
                   <div className="relative h-full w-full">

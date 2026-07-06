@@ -1,16 +1,18 @@
 /**
  * projectsData.js — Projects Section Data
  *
- * Array of project objects displayed in the Projects carousel.
- * Each project has a title, subtitle description, tech stack array,
- * optional GitHub/live links, and an optional thumbnail path.
+ * `works` is rendered top-to-bottom by Projects.jsx as full-width glass
+ * cards (ProjectCard.jsx). Each entry: title, subtitle, tech[] (stack
+ * badges), year, role, optional github/live links, thumbnail, and an
+ * optional hoverThumbnail (ink-dissolve crossfade on hover — see the
+ * Pear Protocol entry).
  *
- * The last entry is a special `isGithubCard` — a CTA card that
- * links to the full GitHub profile instead of a specific project.
+ * Stack badge icons come from TECH_ICON_MAP in ProjectCard.jsx — labels
+ * without a mapping render as a two-letter fallback chip. The last entry
+ * is a CTA card linking to the GitHub profile (github set, live null →
+ * the card shows "View Code").
  *
- * TECH_ICON_MAP translates each tech label to a tech-stack-icons name,
- * or a custom two-letter fallback chip; project cards look entries up
- * by the exact strings used in `tech` arrays below.
+ * HOW TO ADD A PROJECT: see ARCHITECTURE.md § Projects.
  */
 
 export const works = [
@@ -86,8 +88,7 @@ export const works = [
     thumbnail: '/thumbnail/pokedex.png'
   },
   {
-    // Special CTA card — links to GitHub profile instead of a project
-    isGithubCard: true,
+    // CTA card — links to the GitHub profile instead of a project
     title: 'View All Work.',
     subtitle: 'Check out all my projects and repositories.',
     github: 'https://github.com/ajiangny',

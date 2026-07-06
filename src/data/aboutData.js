@@ -5,7 +5,8 @@
  *   • GRID_IMAGES / GRID_COLS / GRID_PROFILE_INDEX — gallery-montage grid shown
  *     on the white entry panel (profile photo dead-centre). On scroll the outer
  *     cells dissolve inward, leaving only the profile (see GridMontage.jsx).
- *   • MAIN_SKILLS / OTHER_SKILLS — tech stack icon definitions for SkillIcon
+ *   • TAGLINE_SEGMENTS / BIO_PARAGRAPHS / RESUME_URL / TECH_STACK /
+ *     STATUS_ITEMS / SPOTIFY / SOCIALS — bento tile content (AboutBento.jsx)
  */
 
 // ── Gallery-montage grid — shown on the white entry panel ───────────────────
@@ -25,30 +26,6 @@ export const GRID_IMAGES_MOBILE = [
   '/art/art1.webp', '/art/art3.webp', '/art/art5.webp',
   '/art/art7.webp', '/art/profile.webp', '/art/art9.webp',
   '/art/art11.webp', '/art/art13.webp', '/art/art2.webp',
-];
-
-// ── Primary skills — rendered as large 64px icon tiles ──────────────────────
-export const MAIN_SKILLS = [
-  { name: 'React', icon: 'react' },
-  { name: 'Next.js', icon: 'nextjs' },
-  { name: 'JavaScript', icon: 'js' },
-  { name: 'TypeScript', icon: 'typescript' },
-  { name: 'CSS / Tailwind', icon: 'tailwindcss' },
-  { name: 'Python', icon: 'python' },
-];
-
-// ── Secondary skills — rendered as smaller 36px icon tiles ──────────────────
-export const OTHER_SKILLS = [
-  { name: 'Node.js', icon: 'nodejs' },
-  { name: 'Figma', icon: 'figma' },
-  { name: 'Git', icon: 'git' },
-  { name: 'REST APIs', custom: 'API', hoverColor: '#038BFC' },
-  { name: 'SQL', icon: 'mysql' },
-  { name: 'Firebase', icon: 'firebase' },
-  { name: 'Vercel', icon: 'vercel' },
-  { name: 'VS Code', icon: 'vscode' },
-  { name: 'GitHub', icon: 'github' },
-  { name: 'Framer Motion', icon: 'framer' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -117,9 +94,9 @@ export const STATUS_ITEMS = [
 
 // ── Spotify tile ─────────────────────────────────────────────────────────────
 // Custom glass player bridged to the Spotify iframe API for playback. Live
-// playlist name + cover come from /api/playlist (Spotify Web API, server-side
-// Client Credentials). `track`/`author` are the static fallbacks shown before
-// (or if) that fetch resolves — e.g. under plain `vite` dev with no /api route.
+// playlist name + cover + tracklist come from /api/playlist (public-embed
+// harvest); per-song covers from /api/track (Client Credentials). `track`/
+// `author` are the static fallbacks shown before (or if) those fetches resolve.
 export const SPOTIFY = {
   playlistId: '13dthduoXicGhZ7rRTUz4D',
   url: 'https://open.spotify.com/playlist/13dthduoXicGhZ7rRTUz4D?si=1e9fb7a9c380461a&pt=d7d5f2e01d2d3d37ca62a792c4633f22',
