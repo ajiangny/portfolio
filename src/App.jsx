@@ -7,12 +7,20 @@
  * Wraps everything in:
  *   • LenisContext  — smooth-scroll instance shared across sections
  *   • TransitionProvider — blur/ink-dissolve page-transition state
+ *   • LoadingContext — signals the loading screen when the gradient is warm
+ *
+ * Below-fold sections are deferred until the loading screen dismisses so
+ * their heavy mount cost (700vh About, Gallery pieces, API calls) doesn't
+ * compete with the WebGL prewarm for main-thread time.
  */
+import { useState, useEffect, useCallback } from 'react'
 import { MotionConfig } from 'framer-motion'
 import useLenis from './hooks/useLenis'
 import { LenisContext } from './context/LenisContext'
+import { LoadingContext } from './context/LoadingContext'
 import { TransitionProvider } from './context/TransitionProvider'
 import PageTransition from './components/PageTransition'
+import LoadingScreen from './components/LoadingScreen'
 import Hero from './components/Hero'
 import About from './components/About'
 import Projects from './components/Projects'
@@ -25,25 +33,53 @@ import Cursor from './components/Cursor'
 function App() {
   const lenisRef = useLenis()
 
+  // ---- Loading gate: fonts + WebGL prewarm must both complete ----
+  const [fontsReady, setFontsReady] = useState(false)
+  const [gradientReady, setGradientReady] = useState(false)
+  // Flips true once the loading screen starts its dissolve — at that point
+  // we mount the heavy below-fold sections so they're ready when the veil
+  // clears, but their layout cost no longer blocks the prewarm animation.
+  const [contentMounted, setContentMounted] = useState(false)
+
+  useEffect(() => {
+    document.fonts.ready.then(() => setFontsReady(true))
+  }, [])
+
+  const onGradientReady = useCallback(() => setGradientReady(true), [])
+  const siteReady = fontsReady && gradientReady
+
+  // Mount heavy sections as soon as loading signals ready — the 800ms
+  // dissolve-out animation gives them time to render before the veil clears.
+  useEffect(() => {
+    if (siteReady) setContentMounted(true)
+  }, [siteReady])
+
   return (
     <LenisContext.Provider value={lenisRef}>
       {/* reducedMotion="user" lets Framer Motion honour OS-level
           prefers-reduced-motion for its spring/transform animations */}
       <MotionConfig reducedMotion="user">
       <TransitionProvider>
-        <div className="text-ink min-h-screen overflow-x-clip">
-          <FluidGradient />
-          <Cursor />
-          <SiteHeader />
-          <PageTransition />
-          <main>
-            <Hero />
-            <About />
-            <Projects />
-            <Gallery />
-            <Contact />
-          </main>
-        </div>
+        <LoadingContext.Provider value={{ onReady: onGradientReady }}>
+          <div className="text-ink min-h-screen overflow-x-clip">
+            <FluidGradient />
+            <Cursor />
+            <SiteHeader />
+            <PageTransition />
+            <LoadingScreen ready={siteReady} />
+            <main>
+              <Hero />
+              {contentMounted && (
+                <>
+                  <About />
+                  <Projects />
+                  <Gallery />
+                  <Contact />
+                </>
+              )}
+            </main>
+          </div>
+        </LoadingContext.Provider>
       </TransitionProvider>
       </MotionConfig>
     </LenisContext.Provider>
@@ -51,3 +87,4 @@ function App() {
 }
 
 export default App
+

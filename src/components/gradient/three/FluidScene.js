@@ -79,14 +79,38 @@ export class FluidScene {
   // a developed liquid — without this the field starts empty and the first few
   // seconds look like isolated blobs while the dye builds + folds. One composite
   // at the end paints the warmed-up state.
+  //
+  // Batched async: runs BATCH steps per animation frame so the main thread
+  // can paint the loading screen's logo animation between batches. Uses fewer
+  // Jacobi iterations than runtime — behind the veil the quality difference
+  // is invisible, but the GPU headroom lets the CSS/JS animations stay smooth.
   prewarm({ steps, iters, palette }) {
-    if (!this.supported) return
+    if (!this.supported) return Promise.resolve()
+    const BATCH = 8                     // ~8 steps × ~17 draws ≈ 136 GPU calls/frame → smooth 60fps
+    const warmIters = Math.max(4, Math.ceil(iters / 2))  // half the runtime Jacobi
     const pointer = { x: -1, y: -1, dx: 0, dy: 0, down: false }
-    for (let i = 0; i < steps; i++) {
-      this.sim.step({ pointer, ambient: true, time: i / 30, iters, energy: palette.energy ?? 1 })
-    }
-    this._applyPalette(palette)
-    this.composite.render(null)
+    let done = 0
+
+    return new Promise((resolve) => {
+      const tick = () => {
+        const end = Math.min(done + BATCH, steps)
+        for (let i = done; i < end; i++) {
+          this.sim.step({ pointer, ambient: true, time: i / 30, iters: warmIters, energy: palette.energy ?? 1 })
+        }
+        done = end
+        if (done < steps) {
+          requestAnimationFrame(tick)
+        } else {
+          // Final composite with full-quality Jacobi on the last step so the
+          // revealed frame looks identical to a runtime frame.
+          this._applyPalette(palette)
+          this.composite.render(null)
+          resolve()
+        }
+      }
+      // Start immediately — the first batch is light enough not to block.
+      tick()
+    })
   }
 
   // Reduced-motion: one static frame, no sim step (dye is empty → base only).

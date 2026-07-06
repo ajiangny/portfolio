@@ -17,6 +17,7 @@ import { SECTION_PALETTES, GRADIENT, SIM } from './gradientConfig'
 import { selectPalette } from './paletteSelect'
 import { lerp3 } from './colors'
 import { hoverSignal } from './hoverSignal'
+import { useLoadingContext } from '../../context/LoadingContext'
 
 const ORDER = SECTIONS.map((s) => s.id)
 
@@ -24,6 +25,7 @@ export default function FluidGradient() {
   const canvasRef = useRef(null)
   const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
   const isMobile = useMediaQuery('(max-width: 767px)')
+  const { onReady } = useLoadingContext()
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -131,15 +133,19 @@ export default function FluidGradient() {
 
     if (reduceMotion) {
       scene.renderStatic(paletteNow()) // single static frame
+      onReady()
     } else {
       // Warm the field up front so the first frame is already a developed
       // liquid (Hero holds the centre on load → its high-energy stir).
+      // prewarm is batched-async so the loading screen can animate between chunks.
       scene.prewarm({
         steps: isMobile ? 90 : 150,
         iters: isMobile ? SIM.JACOBI_MOBILE : SIM.JACOBI,
         palette: paletteNow(),
+      }).then(() => {
+        onReady()
+        rafId = requestAnimationFrame(draw)
       })
-      rafId = requestAnimationFrame(draw)
     }
 
     const onVisibility = () => {
@@ -162,7 +168,7 @@ export default function FluidGradient() {
       document.removeEventListener('visibilitychange', onVisibility)
       scene.dispose()
     }
-  }, [reduceMotion, isMobile])
+  }, [reduceMotion, isMobile, onReady])
 
   return (
     <canvas
