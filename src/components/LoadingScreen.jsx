@@ -9,6 +9,8 @@
  * InkReveal. Lenis is paused while visible and started on exit.
  *
  * Reduced motion: plain opacity fade, no dissolve filter.
+ * Mobile (≤767px): same plain fade — the full-viewport turbulence veil is
+ * CPU-rasterized at device DPR and janks on phones (see PageTransition.jsx).
  */
 import { useEffect, useState, useRef } from 'react'
 import {
@@ -18,9 +20,9 @@ import {
   useTransform,
   animate,
   useReducedMotion,
-  AnimatePresence,
 } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 
 const LOGO = '/favicon/logo.svg'
 
@@ -36,6 +38,8 @@ const matrixValues = (t) =>
 
 export default function LoadingScreen({ ready }) {
   const reduceMotion = useReducedMotion()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const plainFade = reduceMotion || isMobile
   const lenisRef = useLenisContext()
   const [dismissed, setDismissed] = useState(false)
   const [minTimePassed, setMinTimePassed] = useState(false)
@@ -71,6 +75,7 @@ export default function LoadingScreen({ ready }) {
   }, [canDismiss, t, reduceMotion, lenisRef])
 
   useMotionValueEvent(t, 'change', (v) => {
+    if (plainFade) return
     matrixRef.current?.setAttribute('values', matrixValues(v))
   })
 
@@ -78,9 +83,9 @@ export default function LoadingScreen({ ready }) {
   // useInkFilter displacement pattern (separate filter so they can have
   // different seeds / feel).
   const veilFilter = useTransform(t, (v) =>
-    !reduceMotion && v > 0 && v < 1 ? 'url(#loader-dissolve)' : 'none'
+    !plainFade && v > 0 && v < 1 ? 'url(#loader-dissolve)' : 'none'
   )
-  const veilOpacity = useTransform(t, (v) => (reduceMotion ? v : v > 0 ? 1 : 0))
+  const veilOpacity = useTransform(t, (v) => (plainFade ? v : v > 0 ? 1 : 0))
 
   // Logo dissolve — runs on a slightly faster sub-curve for a staggered feel
   const logoDisp = useRef(null)
@@ -88,6 +93,7 @@ export default function LoadingScreen({ ready }) {
   const LOGO_MAX_SCALE = 80
   const LOGO_MAX_BLUR = 14
   useMotionValueEvent(t, 'change', (v) => {
+    if (plainFade) return
     // Logo dissolves faster (starts strong as soon as canDismiss fires)
     const k = Math.min(1, Math.max(0, v))
     const inv = 1 - k            // 0 → 1 as veil fades
@@ -96,12 +102,9 @@ export default function LoadingScreen({ ready }) {
     logoBlur.current?.setAttribute('stdDeviation', String(LOGO_MAX_BLUR * logoProg))
   })
   const logoFilter = useTransform(t, (v) =>
-    !reduceMotion && v > 0 && v < 1 ? 'url(#loader-logo-dissolve)' : 'none'
+    !plainFade && v > 0 && v < 1 ? 'url(#loader-logo-dissolve)' : 'none'
   )
   const logoOpacity = useTransform(t, [1, 0.3, 0], [1, 0.6, 0])
-
-  // Gentle pulse while loading (before dissolve).
-  const logoScale = useTransform(t, (v) => (v === 1 ? 1 : 1)) // static during dissolve
 
   if (dismissed) return null
 

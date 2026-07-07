@@ -20,6 +20,7 @@ import {
   useMotionTemplate, useInView, animate,
 } from 'framer-motion'
 import useInkFilter from '../../hooks/useInkFilter'
+import useMediaQuery from '../../hooks/useMediaQuery'
 
 const VB_W = 1440
 const VB_H = 151
@@ -90,7 +91,11 @@ export default function HeroWordmark({ className, style, title = 'Andrew Jiang' 
   const mouseY = useMotionValue(OFF)
 
   // Ink-dissolve entrance, fired once the wordmark scrolls into view.
-  const inView = useInView(svgRef, { once: true, margin: '-100px' })
+  // Mobile: no negative margin — the wordmark seats at the very bottom of the
+  // viewport (y≈807 of 844), so a -100px inset zone (y<744) can never contain
+  // it at scroll 0 and the name stayed invisible until the first scroll.
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const inView = useInView(svgRef, { once: true, margin: isMobile ? '0px' : '-100px' })
   const t = useMotionValue(0)
   const { defs: inkDefs, filter: inkFilter } = useInkFilter(t, { maxScale: 50, maxBlur: 10, octaves: 3 })
   useEffect(() => {

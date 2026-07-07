@@ -36,23 +36,17 @@ function App() {
   // ---- Loading gate: fonts + WebGL prewarm must both complete ----
   const [fontsReady, setFontsReady] = useState(false)
   const [gradientReady, setGradientReady] = useState(false)
-  // Flips true once the loading screen starts its dissolve — at that point
-  // we mount the heavy below-fold sections so they're ready when the veil
-  // clears, but their layout cost no longer blocks the prewarm animation.
-  const [contentMounted, setContentMounted] = useState(false)
 
   useEffect(() => {
     document.fonts.ready.then(() => setFontsReady(true))
   }, [])
 
   const onGradientReady = useCallback(() => setGradientReady(true), [])
+  // Once true, never false again (both inputs only ever set true). Heavy
+  // below-fold sections mount the moment this flips — the 800ms dissolve-out
+  // gives them time to render before the veil clears, and their layout cost
+  // no longer blocks the prewarm animation.
   const siteReady = fontsReady && gradientReady
-
-  // Mount heavy sections as soon as loading signals ready — the 800ms
-  // dissolve-out animation gives them time to render before the veil clears.
-  useEffect(() => {
-    if (siteReady) setContentMounted(true)
-  }, [siteReady])
 
   return (
     <LenisContext.Provider value={lenisRef}>
@@ -69,7 +63,7 @@ function App() {
             <LoadingScreen ready={siteReady} />
             <main>
               <Hero />
-              {contentMounted && (
+              {siteReady && (
                 <>
                   <About />
                   <Projects />

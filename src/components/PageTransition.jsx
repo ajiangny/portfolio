@@ -7,6 +7,9 @@
  * hooks/useInkFilter.jsx), the scroll jump happens under full cover, then the
  * veil dissolves away to reveal the new section.
  * Reduced motion → plain opacity fade, no dissolve filter.
+ * Mobile (≤767px) → same plain fade, and no backdrop blur: the full-viewport
+ * SVG turbulence veil + 24px backdrop-filter together are the most expensive
+ * frames on phones (CPU-rasterized at device DPR, on top of the WebGL sim).
  */
 import { useEffect, useRef } from 'react'
 import {
@@ -14,6 +17,7 @@ import {
   animate, useReducedMotion,
 } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
+import useMediaQuery from '../hooks/useMediaQuery'
 
 // Alpha threshold sweep: alpha = SLOPE·noiseR + intercept, so as the
 // intercept rises the noise blots flip from transparent to opaque one
@@ -26,6 +30,8 @@ const matrixValues = (t) =>
 export default function PageTransition() {
   const { isActive, transitionColor } = useTransitionContext()
   const reduceMotion = useReducedMotion()
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const plainFade = reduceMotion || isMobile
   const t = useMotionValue(0)
   const matrixRef = useRef(null)
 
@@ -38,15 +44,16 @@ export default function PageTransition() {
   }, [isActive, t])
 
   useMotionValueEvent(t, 'change', (v) => {
+    if (plainFade) return
     matrixRef.current?.setAttribute('values', matrixValues(v))
   })
 
-  const backdropFilter = useTransform(t, (v) => (v > 0 ? `blur(${24 * v}px)` : 'none'))
+  const backdropFilter = useTransform(t, (v) => (!isMobile && v > 0 ? `blur(${24 * v}px)` : 'none'))
   // Filter only mid-transition: settled/hidden states render unfiltered for perf.
   const filter = useTransform(t, (v) =>
-    !reduceMotion && v > 0 && v < 1 ? 'url(#veil-dissolve)' : 'none'
+    !plainFade && v > 0 && v < 1 ? 'url(#veil-dissolve)' : 'none'
   )
-  const opacity = useTransform(t, (v) => (reduceMotion ? v : v > 0 ? 1 : 0))
+  const opacity = useTransform(t, (v) => (plainFade ? v : v > 0 ? 1 : 0))
 
   return (
     <motion.div
