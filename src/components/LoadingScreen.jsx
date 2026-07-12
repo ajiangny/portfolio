@@ -9,8 +9,10 @@
  * InkReveal. Lenis is paused while visible and started on exit.
  *
  * Reduced motion: plain opacity fade, no dissolve filter.
- * Mobile (≤767px): same plain fade — the full-viewport turbulence veil is
- * CPU-rasterized at device DPR and janks on phones (see PageTransition.jsx).
+ * Mobile (≤767px): the SVG turbulence veil is CPU-rasterized at device DPR
+ * and janks on phones, so the veil dissolve runs as the same threshold sweep
+ * on a GPU canvas instead (InkVeilCanvas.jsx); the logo keeps a cheap CSS
+ * blur-and-fade (the useInkFilter mobile pattern).
  */
 import { useEffect, useState, useRef } from 'react'
 import {
@@ -23,6 +25,7 @@ import {
 } from 'framer-motion'
 import { useLenisContext } from '../context/LenisContext'
 import useMediaQuery from '../hooks/useMediaQuery'
+import InkVeilCanvas from './InkVeilCanvas'
 
 const LOGO = '/favicon/logo.svg'
 
@@ -39,7 +42,10 @@ const matrixValues = (t) =>
 export default function LoadingScreen({ ready }) {
   const reduceMotion = useReducedMotion()
   const isMobile = useMediaQuery('(max-width: 767px)')
-  const plainFade = reduceMotion || isMobile
+  // Reduced motion → flat opacity fade. Mobile → GPU canvas veil instead of
+  // the SVG filter (which mobile browsers rasterize on the CPU every frame).
+  const plainFade = reduceMotion
+  const canvasVeil = isMobile && !reduceMotion
   const lenisRef = useLenisContext()
   const [dismissed, setDismissed] = useState(false)
   const [minTimePassed, setMinTimePassed] = useState(false)
@@ -75,7 +81,7 @@ export default function LoadingScreen({ ready }) {
   }, [canDismiss, t, reduceMotion, lenisRef])
 
   useMotionValueEvent(t, 'change', (v) => {
-    if (plainFade) return
+    if (plainFade || canvasVeil) return
     matrixRef.current?.setAttribute('values', matrixValues(v))
   })
 
@@ -93,7 +99,7 @@ export default function LoadingScreen({ ready }) {
   const LOGO_MAX_SCALE = 80
   const LOGO_MAX_BLUR = 14
   useMotionValueEvent(t, 'change', (v) => {
-    if (plainFade) return
+    if (plainFade || canvasVeil) return
     // Logo dissolves faster (starts strong as soon as canDismiss fires)
     const k = Math.min(1, Math.max(0, v))
     const inv = 1 - k            // 0 → 1 as veil fades
@@ -101,9 +107,16 @@ export default function LoadingScreen({ ready }) {
     logoDisp.current?.setAttribute('scale', String(LOGO_MAX_SCALE * logoProg))
     logoBlur.current?.setAttribute('stdDeviation', String(LOGO_MAX_BLUR * logoProg))
   })
-  const logoFilter = useTransform(t, (v) =>
-    !plainFade && v > 0 && v < 1 ? 'url(#loader-logo-dissolve)' : 'none'
-  )
+  const logoFilter = useTransform(t, (v) => {
+    if (plainFade || !(v > 0 && v < 1)) return 'none'
+    if (canvasVeil) {
+      // GPU-composited CSS blur (quarter-px steps — see useInkFilter.jsx),
+      // on the logo's faster sub-curve.
+      const logoProg = Math.min(1, (1 - v) * 1.6)
+      return `blur(${Math.round(LOGO_MAX_BLUR * logoProg * 4) / 4}px)`
+    }
+    return 'url(#loader-logo-dissolve)'
+  })
   const logoOpacity = useTransform(t, [1, 0.3, 0], [1, 0.6, 0])
 
   if (dismissed) return null
@@ -120,7 +133,8 @@ export default function LoadingScreen({ ready }) {
         opacity: veilOpacity,
       }}
     >
-      {/* SVG filter definitions */}
+      {/* SVG filter definitions — desktop only; mobile dissolves on the GPU */}
+      {!plainFade && !canvasVeil && (
       <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
         <defs>
           {/* Veil dissolve — same shape as PageTransition */}
@@ -138,16 +152,28 @@ export default function LoadingScreen({ ready }) {
           </filter>
         </defs>
       </svg>
+      )}
 
-      {/* Solid background — hero's dark cobalt base */}
-      <motion.div
-        style={{
-          position: 'absolute',
-          inset: -48,         // bleed past edges like PageTransition
-          background: 'linear-gradient(to bottom, rgb(22,104,222), rgb(14,42,140))',
-          filter: veilFilter,
-        }}
-      />
+      {/* Solid background — hero's dark cobalt base. Mobile renders the same
+          dissolve as a fragment shader (InkVeilCanvas) instead of filtering
+          this div. */}
+      {canvasVeil ? (
+        <InkVeilCanvas
+          t={t}
+          colorTop="rgb(22,104,222)"
+          colorBottom="rgb(14,42,140)"
+          seed={12}
+        />
+      ) : (
+        <motion.div
+          style={{
+            position: 'absolute',
+            inset: -48,         // bleed past edges like PageTransition
+            background: 'linear-gradient(to bottom, rgb(22,104,222), rgb(14,42,140))',
+            filter: veilFilter,
+          }}
+        />
+      )}
 
       {/* Logo — pulses gently while waiting, then ink-dissolves away */}
       <motion.div

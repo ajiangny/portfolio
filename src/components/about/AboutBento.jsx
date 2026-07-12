@@ -44,22 +44,41 @@ function TechIcon({ name, noWhite }) {
   )
 }
 
-// Packed grid of rounded cells. Four are 2×2 anchors (the main stack at rest);
-// clicking a small cell promotes it and demotes the longest-held anchor, so
-// exactly four stay large. The whole field re-tiles in one Framer `layout`
-// spring — gated to an instant cut under reduced-motion.
+const TECH_SWAP_MS = 4200
+
+// Packed grid of rounded cells. Four are 2×2 anchors (the main stack at rest).
+// `queue` is a full least-→most-recently-used ordering of every cell; the
+// last four are the big anchors. Clicking a small cell promotes it (moves it
+// to the back), bumping the front of the big window back out to small. A
+// timer does the same thing automatically — it promotes whichever cell is
+// currently at the FRONT of the queue (the overall least-recently-used one,
+// which is always small since the big four occupy the back), so the
+// longest-held anchor keeps rotating out for the icon that's gone longest
+// without a turn. Paused on hover; off on mobile (flat, non-interactive
+// grid) and under reduced-motion. The whole field re-tiles in one Framer
+// `layout` spring — gated to an instant cut under reduced-motion.
 //
 // Mobile: the tech tile is a small, scroll-panned cell, so the 2×2 reflow is
 // dropped for a flat, uniform, non-interactive grid (the expand is a desktop
 // delight). Cells render as <div> there instead of <button>.
 function TechMosaic({ isMobile }) {
   const reduce = useReducedMotion()
-  const [bigQueue, setBigQueue] = useState(() =>
-    TECH_STACK.filter((it) => it.big).map((it) => it.id),
-  )
-  const bigSet = new Set(bigQueue)
+  const [queue, setQueue] = useState(() => [
+    ...TECH_STACK.filter((it) => !it.big).map((it) => it.id),
+    ...TECH_STACK.filter((it) => it.big).map((it) => it.id),
+  ])
+  const bigSet = new Set(queue.slice(-4))
   const promote = (id) =>
-    setBigQueue((q) => (q.includes(id) ? q : [...q.slice(1), id]))
+    setQueue((q) => (q[q.length - 1] === id ? q : [...q.filter((x) => x !== id), id]))
+
+  const pausedRef = useRef(false)
+  useEffect(() => {
+    if (isMobile || reduce) return
+    const id = setInterval(() => {
+      if (!pausedRef.current) setQueue((q) => [...q.slice(1), q[0]])
+    }, TECH_SWAP_MS)
+    return () => clearInterval(id)
+  }, [isMobile, reduce])
 
   const layoutTx = reduce
     ? { duration: 0 }
@@ -71,11 +90,15 @@ function TechMosaic({ isMobile }) {
   // small cells fill rows 5–6. Any mix of 4 big + 8 small tiles hole-free.
   const sortedStack = useMemo(
     () => [...TECH_STACK].sort((a, b) => (bigSet.has(b.id) ? 1 : 0) - (bigSet.has(a.id) ? 1 : 0)),
-    [bigQueue], // eslint-disable-line react-hooks/exhaustive-deps
+    [queue], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
   return (
-    <div className="ab-mosaic">
+    <div
+      className="ab-mosaic"
+      onMouseEnter={() => { pausedRef.current = true }}
+      onMouseLeave={() => { pausedRef.current = false }}
+    >
       {sortedStack.map((it) => {
         const isBig = !isMobile && bigSet.has(it.id)
         const interactiveProps = isMobile
@@ -88,7 +111,6 @@ function TechMosaic({ isMobile }) {
             transition={{ layout: layoutTx }}
             aria-label={it.label}
             data-cursor-label={it.label}
-            data-cursor-hint={!isMobile && !isBig ? 'Click me!' : undefined}
             className={`ab-mcell${isBig ? ' ab-mcell--big' : ''}`}
             {...interactiveProps}
           >
@@ -243,10 +265,21 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
   const [interactive, setInteractive] = useState(false)
   // Fire the typewriter as soon as the About tile starts its dissolve-in (p > 0.54).
   const [bioActive, setBioActive] = useState(false)
+  // The resume icon self-draws via SVG SMIL, which (like the Spotify play
+  // button) only ever plays on its FIRST decode of a given URL — mounted this
+  // early, it would otherwise finish and freeze long before the tile scrolls
+  // into view. Gate it behind the same tagline reveal threshold and mint a
+  // fresh cache-busting token so it draws when the user actually sees it.
+  const [resumeRevealed, setResumeRevealed] = useState(false)
+  const [resumeToken, setResumeToken] = useState('resume-0')
   useMotionValueEvent(progress, 'change', (p) => {
     const on = p > 0.52
     setInteractive((prev) => (prev === on ? prev : on))
     if (!bioActive && p > 0.54) setBioActive(true)
+    if (!resumeRevealed && p > 0.52) {
+      setResumeRevealed(true)
+      setResumeToken(`resume-${Math.round(performance.now())}`)
+    }
   })
 
   // ── Mobile vertical pan ─────────────────────────────────────────────────────
@@ -279,6 +312,33 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
     const t = Math.max(0, Math.min(1, (p - 0.52) / 0.36))
     return -overflowRef.current * t
   })
+
+  // Cache-busted so the resume icon's SMIL self-draw replays fresh once the
+  // tagline tile is actually visible (mirrors SpotifyCard's play-button reveal).
+  const resumeBtn = (
+    <a
+      href={RESUME_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Resume"
+      data-cursor-label="Resume"
+      className="icon-btn"
+    >
+      <div className="relative h-full w-full">
+        <img
+          key={resumeToken}
+          className="h-full w-full object-contain"
+          src={`/icons/components/resume.svg?v=${resumeToken}`}
+          alt="Resume"
+          draggable="false"
+          style={{
+            opacity: resumeRevealed ? 1 : 0,
+            transition: reduceMotion ? undefined : 'opacity 0.2s ease',
+          }}
+        />
+      </div>
+    </a>
+  )
 
   return (
     <div
@@ -323,38 +383,12 @@ export default function AboutBento({ progress, isMobile, profileTileRef }) {
 
             {isMobile ? (
               <>
-                <div className="flex justify-end">
-                  <a
-                    href={RESUME_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Resume"
-                    data-cursor-label="Resume"
-                    className="icon-btn"
-                  >
-                    <div className="relative h-full w-full">
-                      <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
-                    </div>
-                  </a>
-                </div>
+                <div className="flex justify-end">{resumeBtn}</div>
                 <DogPet size={100} />
               </>
             ) : (
               <>
-                <div className="flex justify-end">
-                  <a
-                    href={RESUME_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Resume"
-                    data-cursor-label="Resume"
-                    className="icon-btn"
-                  >
-                    <div className="relative h-full w-full">
-                      <img className="h-full w-full object-contain" src="/icons/components/resume.svg" alt="Resume" draggable="false" />
-                    </div>
-                  </a>
-                </div>
+                <div className="flex justify-end">{resumeBtn}</div>
                 <DogPet jumpScale={2.25} />
               </>
             )}

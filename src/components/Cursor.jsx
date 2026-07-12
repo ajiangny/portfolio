@@ -6,10 +6,6 @@
  * form fields, sliders) it spring-scales up. Over [data-cursor-label] targets
  * the dot swaps to a solid cream pill revealing the label text.
  *
- * [data-cursor-hint] overrides the label ONCE per page load — the "Click me!"
- * teaching moment for the small tech-mosaic cells; after the pointer leaves,
- * hints never show again and the real labels take over.
- *
  * Mounted once in App. Adds `has-custom-cursor` to <html>, which hides the
  * native cursor via index.css. Position is set directly on motion values
  * (no re-render, zero lag); only the hover STATE changes go through React.
@@ -20,8 +16,6 @@ import { motion, useMotionValue, AnimatePresence } from 'framer-motion'
 const DOT = 10 // px — resting dot diameter
 const INTERACTIVE =
   'a, button, input, textarea, select, [role="button"], [role="slider"], [data-cursor-label]'
-
-let hintShown = false // module-level: the "Click me!" hint fires once per page load
 
 export default function Cursor() {
   const [enabled, setEnabled] = useState(false)
@@ -44,7 +38,6 @@ export default function Cursor() {
     if (!enabled) return
     document.documentElement.classList.add('has-custom-cursor')
 
-    let onHint = false // pointer currently over a hint-bearing target
     const onMove = (e) => {
       x.set(e.clientX)
       y.set(e.clientY)
@@ -52,13 +45,7 @@ export default function Cursor() {
 
       const t = e.target instanceof Element ? e.target : null
       const labelEl = t?.closest('[data-cursor-label]')
-      const isHint = !!labelEl?.hasAttribute('data-cursor-hint')
-      let next = labelEl?.getAttribute('data-cursor-label') ?? null
-      if (isHint && !hintShown) next = labelEl.getAttribute('data-cursor-hint')
-      if (!isHint && onHint) hintShown = true // hint hover ended → retire it
-      onHint = isHint
-
-      setLabel(next)
+      setLabel(labelEl?.getAttribute('data-cursor-label') ?? null)
       setClickable(!!t?.closest(INTERACTIVE))
     }
     const onLeave = () => setVisible(false)

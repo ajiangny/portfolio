@@ -7,9 +7,11 @@
  * hooks/useInkFilter.jsx), the scroll jump happens under full cover, then the
  * veil dissolves away to reveal the new section.
  * Reduced motion → plain opacity fade, no dissolve filter.
- * Mobile (≤767px) → same plain fade, and no backdrop blur: the full-viewport
- * SVG turbulence veil + 24px backdrop-filter together are the most expensive
- * frames on phones (CPU-rasterized at device DPR, on top of the WebGL sim).
+ * Mobile (≤767px) → the same ink dissolve, but rendered as a fragment shader
+ * on a GPU canvas (InkVeilCanvas.jsx) instead of the SVG filter, which mobile
+ * browsers rasterize on the CPU at device DPR every frame. Backdrop blur
+ * stays off on mobile — a full-viewport 24px backdrop-filter on top of the
+ * WebGL sim is still the most expensive frame on phones.
  */
 import { useEffect, useRef } from 'react'
 import {
@@ -18,6 +20,7 @@ import {
 } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import useMediaQuery from '../hooks/useMediaQuery'
+import InkVeilCanvas from './InkVeilCanvas'
 
 // Alpha threshold sweep: alpha = SLOPE·noiseR + intercept, so as the
 // intercept rises the noise blots flip from transparent to opaque one
@@ -31,7 +34,8 @@ export default function PageTransition() {
   const { isActive, transitionColor } = useTransitionContext()
   const reduceMotion = useReducedMotion()
   const isMobile = useMediaQuery('(max-width: 767px)')
-  const plainFade = reduceMotion || isMobile
+  const plainFade = reduceMotion
+  const canvasVeil = isMobile && !reduceMotion
   const t = useMotionValue(0)
   const matrixRef = useRef(null)
 
@@ -44,7 +48,7 @@ export default function PageTransition() {
   }, [isActive, t])
 
   useMotionValueEvent(t, 'change', (v) => {
-    if (plainFade) return
+    if (plainFade || canvasVeil) return
     matrixRef.current?.setAttribute('values', matrixValues(v))
   })
 
@@ -60,26 +64,33 @@ export default function PageTransition() {
       className="fixed inset-0 pointer-events-none z-9999"
       style={{ backdropFilter, opacity }}
     >
-      <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
-        <defs>
-          <filter id="veil-dissolve" x="-10%" y="-10%" width="120%" height="120%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="7" result="noise" />
-            <feColorMatrix ref={matrixRef} in="noise" type="matrix" values={matrixValues(0)} result="thresh" />
-            <feComposite in="SourceGraphic" in2="thresh" operator="in" result="cut" />
-            <feDisplacementMap in="cut" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-        </defs>
-      </svg>
+      {!plainFade && !canvasVeil && (
+        <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <filter id="veil-dissolve" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="7" result="noise" />
+              <feColorMatrix ref={matrixRef} in="noise" type="matrix" values={matrixValues(0)} result="thresh" />
+              <feComposite in="SourceGraphic" in2="thresh" operator="in" result="cut" />
+              <feDisplacementMap in="cut" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        </svg>
+      )}
       {/* Tint bleeds 48px past the viewport so the edge displacement never
-          exposes a gap at the screen borders. */}
-      <motion.div
-        style={{
-          position: 'absolute',
-          inset: -48,
-          backgroundColor: transitionColor,
-          filter,
-        }}
-      />
+          exposes a gap at the screen borders. Mobile renders the dissolve as
+          a fragment shader instead of filtering the tint. */}
+      {canvasVeil ? (
+        <InkVeilCanvas t={t} colorTop={transitionColor} colorBottom={transitionColor} seed={7} />
+      ) : (
+        <motion.div
+          style={{
+            position: 'absolute',
+            inset: -48,
+            backgroundColor: transitionColor,
+            filter,
+          }}
+        />
+      )}
     </motion.div>
   )
 }
