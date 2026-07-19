@@ -94,6 +94,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Hide the page scrollbar site-wide (scrolling still works) */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
 ::selection {
   background: var(--color-cobalt);
   color: var(--color-cream);
