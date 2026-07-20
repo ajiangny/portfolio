@@ -3,7 +3,7 @@
 Single-page portfolio: **React 19 + Vite**, **Tailwind v4** (CSS-first config in
 `src/index.css`), **Framer Motion** for all animation, **Lenis** for smooth
 scroll, **Three.js** for the WebGL fluid background. No router — the whole site
-is five sections stacked in one scroll ([src/App.jsx](src/App.jsx)).
+is five sections stacked in one scroll ([src/App.tsx](src/App.tsx)).
 
 For the motion language (the ink-dissolve system used by every reveal), see
 [README.md](README.md) — that stays the reference for `useInkFilter` /
@@ -17,33 +17,36 @@ Hero → About → Projects → Gallery → Contact
 
 ## 1. App shell & global systems
 
-Everything global is mounted once in `App.jsx`:
+Everything global is mounted once in `App.tsx`:
 
 | System | Files | What it does |
 | --- | --- | --- |
-| Smooth scroll | `hooks/useLenis.js`, `context/LenisContext.js` | One Lenis instance driven by rAF; a context ref (`useLenisContext()`) lets sections read `lenis.scroll`, listen to scroll events, `scrollTo()`, and `stop()/start()` (lightbox). Reduced motion keeps Lenis (sections depend on its events) but disables smoothing. |
-| Section registry | `config/sections.js` | **Single source of truth** for section ids, nav labels, theme colours, and landing offsets. Header + Contact both navigate through `goToSection()`. |
-| Page transition | `context/TransitionProvider.jsx`, `context/TransitionContext.js`, `components/PageTransition.jsx` | `navigate(href, opts, color)` raises a fixed veil (backdrop blur + section-tinted ink dissolve, 600 ms), performs an instant Lenis jump under cover, then dissolves away. A ref lock prevents re-entry mid-transition. |
-| Global nav | `components/SiteHeader.jsx` | Morphing glass pill: full bar on Hero, collapses to a monogram + scroll-progress ring after, re-expands on hover; mobile gets a dropdown. Light/dark text derives from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.js`, only while Hero is centred). |
+| Smooth scroll | `hooks/useLenis.ts`, `context/LenisContext.ts` | One Lenis instance driven by rAF; a context ref (`useLenisContext()`) lets sections read `lenis.scroll`, listen to scroll events, `scrollTo()`, and `stop()/start()` (lightbox). Reduced motion keeps Lenis (sections depend on its events) but disables smoothing. |
+| Section registry | `config/sections.ts` | **Single source of truth** for section ids, nav labels, theme colours, and landing offsets. Header + Contact both navigate through `goToSection()`. |
+| Loading gate | `context/LoadingContext.ts`, `components/LoadingScreen.tsx` | `App.tsx` gates on two signals — `document.fonts.ready` and the fluid gradient's `onReady` callback (fired after `FluidScene.prewarm()`, or immediately under reduced motion). Below-fold sections (About/Projects/Gallery/Contact) don't mount until both fire, so their layout cost doesn't compete with the WebGL prewarm; `LoadingScreen` covers the page meanwhile and ink-dissolves away (min 800ms display). |
+| Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` raises a fixed veil (backdrop blur + section-tinted ink dissolve, 600 ms), performs an instant Lenis jump under cover, then dissolves away. A ref lock prevents re-entry mid-transition. Mobile skips the backdrop blur and renders the dissolve via `InkVeilCanvas` (GPU shader) instead of the SVG filter. |
+| Global nav | `components/SiteHeader.tsx` | Morphing glass pill: full bar on Hero, collapses to a monogram + scroll-progress ring after, re-expands on hover; mobile gets a dropdown. Light/dark text derives from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
 | Fluid background | `components/gradient/*` | One fixed WebGL2 canvas at `z-index:-1` behind the whole site (details below). |
-| Custom cursor | `components/Cursor.jsx` | Fine-pointer only. Blend-difference dot; scales on interactive elements; swaps to a cream label pill over `[data-cursor-label]`; `[data-cursor-hint]` shows a one-time "Click me!" teaching hint. |
-| Active section | `hooks/useActiveSection.js` | Which section holds the viewport centre + hysteresis "settled" flag — drives the header morph, mirrors the gradient's palette math. |
+| Custom cursor | `components/Cursor.tsx` | Fine-pointer only. Blend-difference dot; scales on interactive elements; swaps to a cream label pill over `[data-cursor-label]`; `[data-cursor-hint]` shows a one-time "Click me!" teaching hint. |
+| Active section | `hooks/useActiveSection.ts` | Which section holds the viewport centre + hysteresis "settled" flag — drives the header morph, mirrors the gradient's palette math. |
 
 ### The fluid gradient (`components/gradient/`)
 
-- `FluidGradient.jsx` — React shell: canvas, pointer/touch feed, palette
-  selection per frame, mobile downscaling (~30 fps, half-res), prewarm on load,
-  static frame under reduced motion, pause when tab hidden. Falls back to the
+- `FluidGradient.tsx` — React shell: canvas, pointer/touch feed, palette
+  selection per frame, mobile downscaling (~30 fps, half-res), prewarm on load
+  (`scene.prewarm()` runs a batch of sim steps before the first paint, then
+  calls the loading gate's `onReady`), static frame under reduced motion
+  (calls `onReady` immediately), pause when tab hidden. Falls back to the
   CSS cream body if WebGL2/float buffers are missing.
-- `three/FluidScene.js` — renderer + composite pass (base gradient → ink by dye
+- `three/FluidScene.ts` — renderer + composite pass (base gradient → ink by dye
   density, refraction, film grain).
-- `three/Simulation.js` — stable-fluids solve (splat → divergence → Jacobi →
+- `three/Simulation.ts` — stable-fluids solve (splat → divergence → Jacobi →
   gradient subtract → advect) on half-float ping-pong targets.
-- `three/ShaderPass.js` / `three/shaders.js` — fullscreen-quad plumbing + GLSL.
-- `gradientConfig.js` — **all tuning lives here**: `SECTION_PALETTES`
+- `three/ShaderPass.ts` / `three/shaders.ts` — fullscreen-quad plumbing + GLSL.
+- `gradientConfig.ts` — **all tuning lives here**: `SECTION_PALETTES`
   (per-section `base` 2-stop gradient, `ink` accent, `energy` stir level), `SIM`
   (resolution, forces, dissipation), `GRADIENT` (seam fade, grain).
-- `paletteSelect.js` / `colors.js` / `ambient.js` — pure helpers (palette
+- `paletteSelect.ts` / `colors.ts` / `ambient.ts` — pure helpers (palette
   crossfade by viewport centre, colour lerp, Lissajous drift points). These have
   unit tests in `test/*.test.mjs` (`node test/<file>` to run).
 
@@ -58,6 +61,7 @@ Everything global is mounted once in `App.jsx`:
 | SiteHeader | 200 |
 | Gallery lightbox | 200 (mounts after header, sibling stacking) |
 | PageTransition veil, Cursor | 9999 |
+| LoadingScreen veil | 10000 (above everything, including PageTransition) |
 
 ---
 
@@ -108,7 +112,7 @@ assembled, sr-only Gallery heading, aria labels on all icon-only controls,
 
 ## 3. Sections
 
-### Hero (`Hero.jsx`, `hero/HeroWordmark.jsx`)
+### Hero (`Hero.tsx`, `hero/HeroWordmark.tsx`)
 100vh, transparent. "PORTFOLIO 2026" eyebrow (one-shot InkReveal) + the
 "ANDREW JIANG" wordmark: an inlined SVG (one `<path>` per letter, exported from
 the design file — no font dependency) with per-glyph mouse repulsion in SVG
@@ -116,7 +120,7 @@ user space and an ink-dissolve entrance. The same component is reused in
 Contact. To change the wordmark you must re-export the letter paths into
 `LETTERS` (viewBox 1440×151).
 
-### About (`About.jsx` + `about/*`) — the big one
+### About (`About.tsx` + `about/*`) — the big one
 A **700vh** container whose first 600vh drive `progress` 0→1 via a Lenis
 listener; a sticky 100vh child renders everything. Phases:
 
@@ -142,14 +146,14 @@ socials. Layout is pure CSS grid (`.about-bento` in index.css) with
 desktop / portrait-tablet / mobile template variants; on mobile the
 taller-than-viewport grid pans vertically with leftover scroll.
 
-### Projects (`Projects.jsx`, `projects/ProjectCard.jsx`)
+### Projects (`Projects.tsx`, `projects/ProjectCard.tsx`)
 Normal-flow section (no pinning). "Selected Projects" heading + one glass card
-per entry of `works` (`data/projectsData.js`), each wrapped in an `InkReveal`.
+per entry of `works` (`data/projectsData.ts`), each wrapped in an `InkReveal`.
 Card: 12-col grid — sticky info column (title/subtitle/year/role/stack badges/
 CTA link) + parallax image (120%-tall, drifts −10%). Optional `hoverThumbnail`
 crossfades through the ink filter on hover.
 
-### Gallery (`Gallery.jsx`, `gallery/GalleryLightbox.jsx`, `data/galleryData.js`)
+### Gallery (`Gallery.tsx`, `gallery/GalleryLightbox.tsx`, `data/galleryData.ts`)
 "Drifting print-desk": a **240vh** scroll-pinned section whose visible stage is
 a **fixed** full-viewport layer (z-50) that fades/dissolves in over the seam
 from Projects and out toward Contact. Pieces are absolutely placed from
@@ -161,7 +165,7 @@ the lightbox (Lenis stops while open). Mobile: the stage widens to 200vw inside
 a native horizontal scroller. The last spot is the "View All" card (flips to
 "Coming Soon").
 
-### Contact (`Contact.jsx`)
+### Contact (`Contact.tsx`)
 Min-100vh, transparent. Mail / tagline / socials row (InkReveals) above the
 reused `HeroWordmark`, with a second `DogPet` that drops in from the top of the
 viewport (`spawnDrop`). Socials come from `SOCIALS` in aboutData — one edit
@@ -171,7 +175,7 @@ updates the bento tile and the footer.
 `/api/playlist` harvests the public Spotify embed's `__NEXT_DATA__` (no auth) →
 name, cover, ordered tracklist. `/api/track?id=` uses Client Credentials
 (`SPOTIFY_CLIENT_ID/SECRET` in `.env`) for per-song covers. In dev,
-`vite.config.js` serves these in-process so plain `npm run dev` works; both
+`vite.config.ts` serves these in-process so plain `npm run dev` works; both
 degrade gracefully (card falls back to static `SPOTIFY` data).
 
 ---
@@ -185,12 +189,12 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
    `node scripts/optimize-art.mjs convert public/thumbnail/<in> public/thumbnail/<out>.webp 1152`.
    `hoverThumbnail` (e.g. a gif) only downloads on first hover, so it can be
    heavier — but keep it sane.
-2. Add an object to `works` in [src/data/projectsData.js](src/data/projectsData.js):
+2. Add an object to `works` in [src/data/projectsData.ts](src/data/projectsData.ts):
    `title`, `subtitle`, `tech: []`, `year`, `role`, `github`/`live` (CTA shows
    "Launch Website" if `live`, else "View Code" if `github`), `thumbnail`,
    optional `hoverThumbnail` (e.g. a gif) for the hover crossfade.
 3. Stack badges: if a `tech` label has no entry in `TECH_ICON_MAP`
-   ([ProjectCard.jsx](src/components/projects/ProjectCard.jsx)), it renders as a
+   ([ProjectCard.tsx](src/components/projects/ProjectCard.tsx)), it renders as a
    2-letter chip. To give it an icon, add the svg to `public/icons/default/`
    and map the label → filename there.
 4. Order in the array = order on the page. Keep the GitHub CTA card last.
@@ -203,23 +207,23 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
    `profile.webp` 1400px. Use
    `node scripts/optimize-art.mjs convert public/art/<f> public/art/<f> 1600 0.82`
    (untracked script, puppeteer-based; `probe` lists every file's dims + KB).
-2. Add an entry to `artworks` in [src/data/galleryData.js](src/data/galleryData.js)
+2. Add an entry to `artworks` in [src/data/galleryData.ts](src/data/galleryData.ts)
    with a unique `id`, `medium` label (shown on hover + lightbox), `src`, and
    the file's **real** `w`/`h` (pieces and the lightbox use this aspect ratio).
 3. There must be one scatter spot per artwork **plus one** trailing spot for
    the View All card: if you now have more artworks than spots, append a
    `{ x, y, t }` entry to **both** `DESKTOP_SPOTS` and `MOBILE_SPOTS` in
-   [Gallery.jsx](src/components/Gallery.jsx) (x/y are % of the stage, `t` is
+   [Gallery.tsx](src/components/Gallery.tsx) (x/y are % of the stage, `t` is
    the size tier S/M/L). The View All card always takes the last spot.
 4. Artwork order in `artworks` = spot order, and the lightbox browses in that
    order.
 
 The About gallery wall is separate: it shows `GRID_IMAGES` (desktop 5×3) /
-`GRID_IMAGES_MOBILE` (3×3) from `aboutData.js` — swap paths there, keep
+`GRID_IMAGES_MOBILE` (3×3) from `aboutData.ts` — swap paths there, keep
 `profile.webp` at the `GRID_PROFILE_INDEX` position (the flight depends on it).
 
 ### About bento content
-All text/data in [src/data/aboutData.js](src/data/aboutData.js):
+All text/data in [src/data/aboutData.ts](src/data/aboutData.ts):
 `TAGLINE_SEGMENTS` (per-word weight/italic/break), `BIO_PARAGRAPHS`
 (typewriter), `RESUME_URL` (file at `public/docs/resume.pdf`), `STATUS_ITEMS`,
 `SOCIALS`, `SPOTIFY` (playlist id + fallbacks). `TECH_STACK`: `id` doubles as
@@ -229,21 +233,21 @@ matters** — the four `big: true` anchors at positions 1/4/6/9 tile the 4×6
 desktop grid hole-free; re-check visually if you reorder.
 
 ### Add a whole section
-1. Create the component, render it in `App.jsx`, give the root element an
+1. Create the component, render it in `App.tsx`, give the root element an
    `id`.
-2. Register it in `SECTIONS` ([src/config/sections.js](src/config/sections.js))
+2. Register it in `SECTIONS` ([src/config/sections.ts](src/config/sections.ts))
    with label, `themeRgb` (veil tint), and `scrollOffsetVh` if navigation
    should land past its top.
 3. Add a palette entry in
-   [gradientConfig.js](src/components/gradient/gradientConfig.js) —
+   [gradientConfig.ts](src/components/gradient/gradientConfig.ts) —
    `SECTION_PALETTES` keys must cover every section id (header light/dark logic
    and the background both read it).
 
 ### Tune the background
-Everything is in `gradientConfig.js`: section colours (`SECTION_PALETTES`),
+Everything is in `gradientConfig.ts`: section colours (`SECTION_PALETTES`),
 liveliness (`energy` per section, `SIM.AMBIENT_FORCE`), calmness/perf
 (`SIM.RES*`, `JACOBI*`), grain (`GRADIENT.GRAIN`). Drift paths are in
-`ambient.js`. After palette changes run `node test/gradientConfig.test.mjs`
+`ambient.ts`. After palette changes run `node test/gradientConfig.test.mjs`
 (it sanity-checks luminance/contrast assumptions).
 
 ---
