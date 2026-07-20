@@ -179,8 +179,12 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 ## 4. How to update things (recipes)
 
 ### Add / edit a project
-1. Drop a thumbnail in `public/thumbnail/` — ideally `.webp`, ~576×420 content
-   (the frame crops to `aspect-576/420`, image renders 120% tall for parallax).
+1. Drop a thumbnail in `public/thumbnail/` — `.webp`, **≤1152px wide** (2× the
+   576×420 display frame; the frame crops to `aspect-576/420`, image renders
+   120% tall for parallax). Downscale with
+   `node scripts/optimize-art.mjs convert public/thumbnail/<in> public/thumbnail/<out>.webp 1152`.
+   `hoverThumbnail` (e.g. a gif) only downloads on first hover, so it can be
+   heavier — but keep it sane.
 2. Add an object to `works` in [src/data/projectsData.js](src/data/projectsData.js):
    `title`, `subtitle`, `tech: []`, `year`, `role`, `github`/`live` (CTA shows
    "Launch Website" if `live`, else "View Code" if `github`), `thumbnail`,
@@ -192,8 +196,13 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 4. Order in the array = order on the page. Keep the GitHub CTA card last.
 
 ### Add artwork to the Gallery
-1. Export as `.webp` into `public/art/` (keep them downscaled — big files lag
-   the section transitions).
+1. Export as `.webp` into `public/art/`, **downscaled** — oversized sources lag
+   the About/Gallery transitions (decode + composite cost scales with source
+   pixels, and everything renders over the live WebGL gradient). Targets
+   (longest edge): gallery artworks 1600px · About-wall-only art 800px ·
+   `profile.webp` 1400px. Use
+   `node scripts/optimize-art.mjs convert public/art/<f> public/art/<f> 1600 0.82`
+   (untracked script, puppeteer-based; `probe` lists every file's dims + KB).
 2. Add an entry to `artworks` in [src/data/galleryData.js](src/data/galleryData.js)
    with a unique `id`, `medium` label (shown on hover + lightbox), `src`, and
    the file's **real** `w`/`h` (pieces and the lightbox use this aspect ratio).

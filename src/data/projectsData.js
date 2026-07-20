@@ -24,7 +24,7 @@ export const works = [
     role: 'Development',
     github: null,
     live: 'https://hackknight.org/',
-    thumbnail: '/thumbnail/hackknight.png'
+    thumbnail: '/thumbnail/hackknight.webp'
   },
   {
     title: 'Pear Protocol',
@@ -45,7 +45,7 @@ export const works = [
     role: 'Development',
     github: null,
     live: 'https://taseenc718.github.io/Art_Fundamentals_Tutor/',
-    thumbnail: '/thumbnail/artfundamental.png'
+    thumbnail: '/thumbnail/artfundamental.webp'
   },
   {
     title: 'Bank Statement Parser',
@@ -55,7 +55,7 @@ export const works = [
     role: 'Development',
     github: 'https://github.com/ajiangny/bank_parser',
     live: null,
-    thumbnail: '/thumbnail/bankparser.png'
+    thumbnail: '/thumbnail/bankparser.webp'
   },
   {
     title: 'Code For All Brand',
@@ -75,7 +75,7 @@ export const works = [
     role: 'Development',
     github: null,
     live: 'https://lucki-draw.vercel.app/',
-    thumbnail: '/thumbnail/luckidraw.png'
+    thumbnail: '/thumbnail/luckidraw.webp'
   },
   {
     title: 'Kanto Pokédex',
@@ -85,7 +85,7 @@ export const works = [
     role: 'Development',
     github: null,
     live: 'https://ajiangny.github.io/kanto-pokedex/',
-    thumbnail: '/thumbnail/pokedex.png'
+    thumbnail: '/thumbnail/pokedex.webp'
   },
   {
     // CTA card — links to the GitHub profile instead of a project

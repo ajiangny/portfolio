@@ -115,6 +115,9 @@ export default function ProjectCard({ work }) {
   const thumbnailSrc = work.thumbnail ?? null
   const hoverSrc = work.hoverThumbnail ?? null
   const [isHovered, setIsHovered] = useState(false)
+  // Don't fetch the hover asset (can be a multi-MB gif) until the first
+  // hover — it's invisible until then and shouldn't compete at page load.
+  const [hasHovered, setHasHovered] = useState(false)
 
   // Hover crossfade uses the shared ink-dissolve filter (hooks/useInkFilter)
   // instead of a hard image swap, matching the site-wide transition language.
@@ -147,7 +150,7 @@ export default function ProjectCard({ work }) {
       <div className="lg:col-start-8 lg:col-end-13 lg:row-start-1">
         <div
           className="relative overflow-hidden aspect-576/420 rounded-[16px]"
-          onMouseEnter={() => hoverSrc && setIsHovered(true)}
+          onMouseEnter={() => { if (hoverSrc) { setIsHovered(true); setHasHovered(true) } }}
           onMouseLeave={() => setIsHovered(false)}
         >
           {thumbnailSrc ? (
@@ -157,9 +160,11 @@ export default function ProjectCard({ work }) {
                 alt={work.title}
                 className="absolute inset-x-0 top-0 w-full h-[120%] object-cover"
                 style={reduceMotion ? undefined : { y: imgY }}
+                loading="lazy"
+                decoding="async"
                 draggable="false"
               />
-              {hoverSrc && (
+              {hoverSrc && hasHovered && (
                 <>
                   {inkDefs}
                   <motion.img
