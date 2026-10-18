@@ -18,8 +18,9 @@
  *   6. Keyboard-first like a game: arrows move, Enter
  *      confirms, Esc backs out                                → onKeyDown
  *
- * Shapes, colours and motion come from style/riot.ts. Open with the corner
- * tag, the M key, or (mobile) the header monogram via menuSignal. Choosing an item closes the menu and
+ * Shapes, colours and motion come from style/riot.ts. It is the expanded
+ * form of the site nav: the header monogram opens it (via menuSignal), as
+ * does the M key. The header's inline links are the compact shortcut form. Choosing an item closes the menu and
  * runs the normal goToSection() ink-dissolve transition.
  *
  * z-index 9000: above the SiteHeader (200), below the PageTransition veil and
@@ -33,7 +34,6 @@ import { SECTIONS, goToSection } from '../config/sections'
 import { RIOT, SNAP, ENTER_EASE, WIPE_EASE, jagged } from '../style/riot'
 import Ransom from './style/Ransom'
 import { onMenuOpen } from './style/menuSignal'
-import useMediaQuery from '../hooks/useMediaQuery'
 
 // ── 1. Palette — three flat colours, every element uses exactly one ──
 const MENU = { field: RIOT.cobalt, face: RIOT.face, ink: RIOT.ink }
@@ -77,9 +77,6 @@ export default function StyleMenu() {
   const { navigate } = useTransitionContext()
   const lenisRef = useLenisContext()
   const reduce = useReducedMotion()
-  // Phones open the menu from the header monogram, so the corner tag would
-  // only cover content there.
-  const isMobile = useMediaQuery('(max-width: 767px)')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   // Re-rolled on every selection change so the ransom letters re-shuffle.
@@ -131,34 +128,6 @@ export default function StyleMenu() {
 
   return (
     <>
-      {/* Corner tag — the closed state is already in the menu's language */}
-      {!isMobile && <motion.button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu (M)"
-        aria-expanded={open}
-        whileHover={reduce ? undefined : { rotate: -12, scale: 1.08 }}
-        transition={SNAP}
-        className="font-sans font-bold uppercase"
-        style={{
-          position: 'fixed',
-          right: 24,
-          bottom: 24,
-          zIndex: 210,
-          rotate: -6,
-          padding: '10px 22px',
-          border: 'none',
-          background: MENU.face,
-          color: MENU.field,
-          letterSpacing: '0.2em',
-          fontSize: 'var(--text-label)',
-          clipPath: jagged(3, 9),
-          filter: `drop-shadow(4px 4px 0 ${MENU.ink})`,
-          cursor: 'pointer',
-        }}
-      >
-        Menu
-      </motion.button>}
 
       <AnimatePresence>
         {open && (

@@ -9,8 +9,9 @@
  * indicator tracks the hovered/active link. Glass + text colours adapt to the
  * active section's background (logo inverts to black on light sections).
  * Hovering a link previews that section's palette in the fluid gradient
- * (gated to Hero inside FluidGradient). On mobile it stays a monogram slab
- * that opens the full-screen StyleMenu on tap.
+ * (gated to Hero inside FluidGradient). On mobile it stays a monogram slab.
+ * On every size the monogram opens the full-screen StyleMenu: one nav
+ * system with a compact form (this bar) and an expanded form (the menu).
  *
  * Riot material: the bar is a flat jagged slab (cream on dark sections, ink
  * on light ones) with a hard offset shadow painted by a drop-shadow on the
@@ -176,11 +177,13 @@ export default function SiteHeader() {
               pointerEvents: 'none',
             }}
           />
-          {/* Monogram — home on desktop, menu toggle on mobile */}
+          {/* Monogram — the menu button everywhere: it opens the full-screen
+              StyleMenu (the nav's expanded form; Home lives there). */}
           <button
             type="button"
-            aria-label={isMobile ? 'Open menu' : 'Andrew Jiang — home'}
-            onClick={(e) => (isMobile ? openMenu() : go('hero', e))}
+            aria-label="Open menu"
+            data-cursor-label="Menu"
+            onClick={() => openMenu()}
             style={{
               flex: '0 0 auto',
               width: BAR_H,
