@@ -1,5 +1,5 @@
 /**
- * StyleMenu.tsx — Full-screen "game menu" navigation (prototype)
+ * StyleMenu.tsx — Full-screen "game menu" navigation
  *
  * A Persona-5-inspired menu rebuilt in this site's own language (cobalt /
  * white / ink, Nevera + DM Sans + Plex Mono). It is not a copy of the game's
@@ -18,97 +18,29 @@
  *   6. Keyboard-first like a game: arrows move, Enter
  *      confirms, Esc backs out                                → onKeyDown
  *
- * Open with the corner tag or the M key. Choosing an item closes the menu and
+ * Shapes, colours and motion come from style/riot.ts. Open with the corner
+ * tag, the M key, or (mobile) the header monogram via menuSignal. Choosing an item closes the menu and
  * runs the normal goToSection() ink-dissolve transition.
  *
  * z-index 9000: above the SiteHeader (200), below the PageTransition veil and
  * Cursor (9999) so the dissolve still covers the menu as it leaves.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { useLenisContext } from '../context/LenisContext'
 import { SECTIONS, goToSection } from '../config/sections'
+import { RIOT, SNAP, ENTER_EASE, WIPE_EASE, jagged } from '../style/riot'
+import Ransom from './style/Ransom'
+import { onMenuOpen } from './style/menuSignal'
+import useMediaQuery from '../hooks/useMediaQuery'
 
 // ── 1. Palette — three flat colours, every element uses exactly one ──
-const MENU = {
-  field: 'var(--color-cobalt)', // background plane
-  face: 'var(--color-cream)',   // selected slab + idle text
-  ink: 'var(--color-ink)',      // shadows, outlines, inverted letters
-}
+const MENU = { field: RIOT.cobalt, face: RIOT.face, ink: RIOT.ink }
 
 // ── 2. Composition — one tilted axis for the whole list ──
-const LIST_TILT = -9 // deg; the list's baseline
+const LIST_TILT = -9 // deg; the list's baseline (steeper than the site's TILT)
 const STEP_X = 5     // vw each item shifts right of the one above it
-
-// ── 5. Motion — stiff springs and overshooting eases; short, then still ──
-const SNAP = { type: 'spring', stiffness: 700, damping: 32, mass: 0.6 } as const
-const ENTER_EASE = [0.2, 1.4, 0.4, 1] as const // cubic-bezier with overshoot
-
-// Tiny seeded PRNG so a given item always gets the same jagged shape and the
-// same ransom letters for a given "roll" (no flicker on re-render).
-function rng(seed: number) {
-  let t = seed >>> 0
-  return () => {
-    t = (t + 0x6d2b79f5) >>> 0
-    let r = Math.imul(t ^ (t >>> 15), 1 | t)
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-// ── 3. Shape — a quad whose four corners are nudged inward by up to `amt`% ──
-function jagged(seed: number, amt = 6) {
-  const r = rng(seed)
-  const j = () => (r() * amt).toFixed(1)
-  return `polygon(${j()}% ${j()}%, ${100 - +j()}% ${j()}%, ${100 - +j()}% ${100 - +j()}%, ${j()}% ${100 - +j()}%)`
-}
-
-// ── 4b. Ransom-note label — each letter picks a font, tilt and treatment ──
-const LETTER_FONTS = ['var(--font-display)', 'var(--font-sans)', 'var(--font-mono)']
-
-function Ransom({ text, seed }: { text: string; seed: number }) {
-  const letters = useMemo(() => {
-    const r = rng(seed)
-    return [...text].map((ch, i) => {
-      const boxed = i > 0 && r() < 0.28 // first letter stays plain so it reads
-      return {
-        ch,
-        font: LETTER_FONTS[Math.floor(r() * LETTER_FONTS.length)],
-        rotate: (r() - 0.5) * 16,
-        y: (r() - 0.5) * 0.18,
-        scale: i === 0 ? 1.3 : 0.85 + r() * 0.3,
-        boxed,
-      }
-    })
-  }, [text, seed])
-
-  return (
-    <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', gap: '0.02em' }}>
-      {letters.map((l, i) => (
-        <motion.span
-          key={`${seed}-${i}`}
-          initial={{ scale: 0, rotate: l.rotate * 3 }}
-          animate={{ scale: l.scale, rotate: l.rotate }}
-          transition={{ ...SNAP, delay: i * 0.018 }}
-          style={{
-            display: 'inline-block',
-            fontFamily: l.font,
-            fontWeight: 800,
-            lineHeight: 1,
-            translateY: `${l.y}em`,
-            padding: l.boxed ? '0.04em 0.1em' : 0,
-            background: l.boxed ? MENU.ink : 'transparent',
-            color: l.boxed ? MENU.face : MENU.field,
-            clipPath: l.boxed ? jagged(seed + i, 10) : undefined,
-          }}
-        >
-          {l.ch}
-        </motion.span>
-      ))}
-    </span>
-  )
-}
 
 // ── 4a. Highlight slab — ink shadow offset behind a white face ──
 function Highlight({ seed }: { seed: number }) {
@@ -145,6 +77,9 @@ export default function StyleMenu() {
   const { navigate } = useTransitionContext()
   const lenisRef = useLenisContext()
   const reduce = useReducedMotion()
+  // Phones open the menu from the header monogram, so the corner tag would
+  // only cover content there.
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   // Re-rolled on every selection change so the ransom letters re-shuffle.
@@ -173,6 +108,9 @@ export default function StyleMenu() {
     else lenis.start()
   }, [open, lenisRef])
 
+  // The header monogram (mobile) opens the menu through menuSignal.
+  useEffect(() => onMenuOpen(() => setOpen(true)), [])
+
   // ── 6. Keyboard-first controls ──
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -194,7 +132,7 @@ export default function StyleMenu() {
   return (
     <>
       {/* Corner tag — the closed state is already in the menu's language */}
-      <motion.button
+      {!isMobile && <motion.button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open menu (M)"
@@ -220,7 +158,7 @@ export default function StyleMenu() {
         }}
       >
         Menu
-      </motion.button>
+      </motion.button>}
 
       <AnimatePresence>
         {open && (
@@ -231,7 +169,7 @@ export default function StyleMenu() {
             initial={{ clipPath: 'polygon(0% 100%, 0% 100%, 0% 100%, 0% 100%)' }}
             animate={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
             exit={{ clipPath: 'polygon(100% 0%, 100% 0%, 100% 0%, 100% 0%)' }}
-            transition={{ duration: reduce ? 0 : 0.32, ease: [0.7, 0, 0.2, 1] }}
+            transition={{ duration: reduce ? 0 : 0.32, ease: WIPE_EASE }}
             style={{
               position: 'fixed',
               inset: 0,
@@ -359,7 +297,7 @@ export default function StyleMenu() {
                         style={{ position: 'relative', zIndex: 1, display: 'inline-block', originX: 0 }}
                       >
                         {isActive ? (
-                          <Ransom text={s.label.toUpperCase()} seed={roll * 31 + i} />
+                          <Ransom text={s.label.toUpperCase()} seed={roll * 31 + i} color={MENU.field} />
                         ) : (
                           <span
                             className="font-display"

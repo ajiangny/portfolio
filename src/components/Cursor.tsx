@@ -67,10 +67,12 @@ export default function Cursor() {
   // page, killing the inversion.
   return (
     <>
-      {/* Blend dot — difference against the page inverts it over light surfaces */}
+      {/* Blend diamond — difference against the page inverts it over light
+          surfaces. Riot: a square on its corner, and it spins a quarter-turn
+          (with overshoot) when it lands on something clickable. */}
       <motion.div
         aria-hidden="true"
-        className="pointer-events-none fixed left-0 top-0 z-9999 rounded-full bg-white"
+        className="pointer-events-none fixed left-0 top-0 z-9999 bg-white"
         style={{
           x,
           y,
@@ -82,9 +84,10 @@ export default function Cursor() {
         }}
         animate={{
           scale: label ? 0.5 : clickable ? 2.2 : 1,
+          rotate: clickable ? 135 : 45,
           opacity: visible && !label ? 1 : 0,
         }}
-        transition={{ type: 'spring', stiffness: 550, damping: 35 }}
+        transition={{ type: 'spring', stiffness: 700, damping: 26 }}
       />
 
       {/* Label pill — solid (no blend) so the text stays readable anywhere.
@@ -95,21 +98,23 @@ export default function Cursor() {
           <motion.div
             key={label}
             aria-hidden="true"
-            className="pointer-events-none fixed left-0 top-0 z-9999 whitespace-nowrap rounded-full font-sans font-bold"
+            className="pointer-events-none fixed left-0 top-0 z-9999 whitespace-nowrap font-sans font-bold uppercase"
             style={{
               x,
               y,
               transformOrigin: 'top left',
               background: 'var(--color-cream)',
-              color: '#080c28',
+              color: 'var(--color-slab)',
               padding: '7px 14px',
               fontSize: 12,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.08em',
+              clipPath: 'polygon(4px 0, 100% 3px, calc(100% - 3px) 100%, 0 calc(100% - 4px))',
+              boxShadow: 'inset 0 -4px 0 var(--color-riot)',
             }}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+            initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
+            animate={{ scale: 1, opacity: 1, rotate: -4 }}
             exit={{ scale: 0.6, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 700, damping: 26 }}
           >
             {label}
           </motion.div>

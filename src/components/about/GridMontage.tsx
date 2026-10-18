@@ -216,7 +216,7 @@ function Cell({ src, progress, layout, isProfile, profileHideOpacity, cellRef, r
         />
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ borderRadius: `${layout.radius}px`, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.4)' }}
+          style={{ borderRadius: `${layout.radius}px`, boxShadow: 'inset 0 0 0 4px #ffffff' }}
         />
       </motion.div>
     </motion.div>
@@ -318,13 +318,14 @@ export default function GridMontage({
       h: m.s * m.hFactor * cellW,
       left: containerW / 2 + m.dx * m.stepX * cellW,
       top: containerH / 2 + m.dy * STEP_Y * ASPECT * cellW,
-      radius: Math.max(6, Math.round(10 * m.s)),
+      radius: 0, // riot prints: square corners, cream border, hard shadow
       // Inner rings sit on top; cardinals edge above diagonals of equal ring.
       z: m.isProfile ? 60 : 40 - m.cheby * 8 + (m.dx === 0 || m.dy === 0 ? 2 : 0),
       // Foreground casts a deeper shadow; receding cells flatten out.
+      // Hard, unblurred ink offsets (riot material); nearer rings sit higher.
       shadow: m.isProfile
-        ? '0 18px 50px rgba(16,20,38,0.34)'
-        : `0 ${Math.round(8 + (maxCheby - m.cheby) * 5)}px ${Math.round(22 + (maxCheby - m.cheby) * 14)}px rgba(16,20,38,${(0.16 + (maxCheby - m.cheby) * 0.05).toFixed(2)})`,
+        ? '14px 14px 0 rgba(15,16,22,0.9)'
+        : `${Math.round(5 + (maxCheby - m.cheby) * 3)}px ${Math.round(5 + (maxCheby - m.cheby) * 3)}px 0 rgba(15,16,22,0.9)`,
       // 3D pose — concave wall: cols rotate around Y toward centre, rows around
       // X; magnitude ∝ steps from centre (clamped). Parallax drifts each card
       // outward (radially) as you scroll in; rate ∝ steps from centre.

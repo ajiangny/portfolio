@@ -38,8 +38,8 @@ import {
 import GridMontage from './about/GridMontage'
 import AboutBento from './about/AboutBento'
 
-// Fixed corner radius for the flying profile card (matches the bento tiles).
-const RADIUS = 22
+// Riot slabs are square-cornered: the flying card keeps radius 0 end to end.
+const RADIUS = 0
 
 interface Box { left: number; top: number; w: number; h: number }
 
@@ -58,11 +58,14 @@ const lerpRect = (a: Box, b: Box, t: number): Box => ({
 // one continuous element. Size-based props (radius, shadow offset/blur) are
 // counter-scaled by the live transform scale so the *rendered* value is exact
 // at both ends of the flight.
-const CELL_RADIUS = 10 // GridMontage centre cell (round(10 × scale 1))
-const CELL_BORDER_A = 0.40
-const TILE_BORDER_A = 0.18
-const CELL_SHADOW = { y: 18, blur: 50, r: 16, g: 20, b: 38, a: 0.34 }
-const TILE_SHADOW = { y: 8, blur: 30, r: 8, g: 12, b: 40, a: 0.18 }
+// Both ends use the riot material: hard, unblurred ink offset shadows (the
+// bento tile's shadow is painted by its grid area's ::before, 8px/8px), and
+// the gallery cell's cream print border shrinks away as the card lands.
+const CELL_RADIUS = 0
+const CELL_BORDER_W = 4
+const TILE_BORDER_W = 0
+const CELL_SHADOW = { y: 14, blur: 0, r: 15, g: 16, b: 22, a: 0.9 }
+const TILE_SHADOW = { y: 8, blur: 0, r: 15, g: 16, b: 22, a: 1 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function About() {
@@ -93,9 +96,9 @@ export default function About() {
   // Shell motion values — morph the flying card's radius/border/shadow from the
   // gallery-cell look to the bento-tile look across the flight (see CELL_*/TILE_*).
   const aboutRadius = useMotionValue(RADIUS)
-  const aboutBorderColor = useMotionValue(`rgba(255,255,255,${TILE_BORDER_A})`)
+  const aboutBorderW = useMotionValue(TILE_BORDER_W)
   const aboutShadow = useMotionValue(
-    `0 ${TILE_SHADOW.y}px ${TILE_SHADOW.blur}px rgba(${TILE_SHADOW.r},${TILE_SHADOW.g},${TILE_SHADOW.b},${TILE_SHADOW.a})`,
+    `${TILE_SHADOW.y}px ${TILE_SHADOW.y}px ${TILE_SHADOW.blur}px rgba(${TILE_SHADOW.r},${TILE_SHADOW.g},${TILE_SHADOW.b},${TILE_SHADOW.a})`,
   )
 
   // Resting box of the portrait = the bento profile cell's rect, expressed in
@@ -221,7 +224,7 @@ export default function About() {
     // Morph the shell cell-look → tile-look along the same eased flight. The box
     // is real-sized now, so these are direct (no counter-scaling).
     aboutRadius.set(lerp(CELL_RADIUS, RADIUS, t))
-    aboutBorderColor.set(`rgba(255,255,255,${lerp(CELL_BORDER_A, TILE_BORDER_A, t).toFixed(3)})`)
+    aboutBorderW.set(lerp(CELL_BORDER_W, TILE_BORDER_W, t))
     const sy = lerp(CELL_SHADOW.y, TILE_SHADOW.y, t).toFixed(1)
     const sb = lerp(CELL_SHADOW.blur, TILE_SHADOW.blur, t).toFixed(1)
     const sr = Math.round(lerp(CELL_SHADOW.r, TILE_SHADOW.r, t))
@@ -232,7 +235,7 @@ export default function About() {
     // briefly stacking on it — the stack was the hand-off shadow flicker.
     const shadowFade = clamp01((v - 0.298) / 0.004)
     const sa = (lerp(CELL_SHADOW.a, TILE_SHADOW.a, t) * shadowFade).toFixed(3)
-    aboutShadow.set(`0 ${sy}px ${sb}px rgba(${sr},${sg},${sbl},${sa})`)
+    aboutShadow.set(`${sy}px ${sy}px ${sb}px rgba(${sr},${sg},${sbl},${sa})`)
   })
 
   const grid = isMobile
@@ -257,6 +260,9 @@ export default function About() {
               position: 'absolute',
               inset: 0,
               backgroundColor: '#ffffff',
+              // Riot texture layer: a cobalt halftone screen on the flat panel.
+              backgroundImage: 'radial-gradient(rgba(30,75,210,0.16) 1.6px, transparent 1.8px)',
+              backgroundSize: '14px 14px',
               opacity: panelOpacity,
               zIndex: 0,
               pointerEvents: 'none',
@@ -287,7 +293,7 @@ export default function About() {
           {/* Takes over the gallery centre cell and moves to the bento profile  */}
           {/* tile. Carries the same glass material as the tiles/navbar.         */}
           <motion.div
-            className={settled ? 'ab-tile-hover' : undefined}
+            className={settled ? 'ab-flight-card' : undefined}
             style={{
               position: 'absolute',
               left: aboutLeft,
@@ -298,11 +304,11 @@ export default function About() {
               borderRadius: aboutRadius,
               overflow: 'hidden',
               borderStyle: 'solid',
-              borderWidth: 1,
-              borderColor: aboutBorderColor,
+              borderWidth: aboutBorderW,
+              borderColor: 'var(--color-cream)',
               boxShadow: aboutShadow,
-              background: 'rgba(18, 22, 46, 0.40)',
-              transition: settled ? 'border-radius 0.35s cubic-bezier(0.2, 0, 0, 1), background 0.35s ease, border-color 0.35s ease' : 'none',
+              background: 'var(--color-slab)',
+              transition: settled ? 'box-shadow 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), rotate 0.22s cubic-bezier(0.2, 1.4, 0.4, 1)' : 'none',
               zIndex: settled ? 5 : 3,
               pointerEvents: settled ? 'auto' : 'none',
             }}

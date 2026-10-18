@@ -64,6 +64,13 @@
   --color-text: #3d3d3d;
   --color-text-light: #6b6b6b;
   --color-border: #1a1a1a;
+
+  /* ── Riot palette (src/style/riot.ts) — three flat colours, fixed jobs:
+     riot = background field, cream = foreground face, slab = ink (shadows,
+     outlines, inverted letters). riot-deep is the field's lower diagonal. */
+  --color-riot: #1E4BD2;
+  --color-riot-deep: #10278A;
+  --color-slab: #0F1016;
 }
 
 /* NOTE: no custom `* { margin:0; padding:0 }` reset here — Tailwind v4
@@ -104,8 +111,69 @@ html::-webkit-scrollbar {
 }
 
 ::selection {
-  background: var(--color-cobalt);
+  background: var(--color-slab);
   color: var(--color-cream);
+}
+
+/* ═══════════════════════════════════════════════════
+   Riot material — the one surface recipe the whole UI shares
+   (replaces the old frosted-glass tile). A flat slab with a jagged
+   silhouette and a HARD offset shadow; no blur, no radius.
+
+   Usage: put .slab-wrap on an unclipped wrapper and .slab on the panel
+   inside it. The wrapper paints the shadow (::before, same silhouette,
+   offset) because the panel's own clip-path would clip a box-shadow.
+   Silhouette comes from --slab-cut (pick .cut-a/b/c or set your own).
+   ═══════════════════════════════════════════════════ */
+.cut-a { --slab-cut: polygon(10px 0, 100% 6px, calc(100% - 4px) 100%, 0 calc(100% - 10px)); }
+.cut-b { --slab-cut: polygon(0 4px, calc(100% - 12px) 0, 100% calc(100% - 6px), 6px 100%); }
+.cut-c { --slab-cut: polygon(4px 8px, 100% 0, calc(100% - 10px) calc(100% - 2px), 0 100%); }
+
+.slab-wrap {
+  position: relative;
+  isolation: isolate;
+  --slab-dx: 8px;
+  --slab-dy: 8px;
+}
+.slab-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--slab-shadow, var(--color-slab));
+  clip-path: var(--slab-cut, none);
+  transform: translate(var(--slab-dx), var(--slab-dy));
+  transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), background-color 0.15s linear;
+}
+.slab {
+  background: var(--slab-bg, var(--color-slab));
+  clip-path: var(--slab-cut, none);
+}
+
+/* Costume change on hover: the shadow jumps further out and flips to the
+   face colour — a loud, instant state change instead of a soft tint. */
+@media (hover: hover) {
+  .slab-wrap.slab-hover:hover {
+    --slab-dx: 13px;
+    --slab-dy: 12px;
+    --slab-shadow: var(--color-cream);
+  }
+}
+
+/* Bigger jump without the colour flip — for slabs on light sections, where
+   a cream shadow would vanish into the background. */
+@media (hover: hover) {
+  .slab-wrap.slab-jump:hover {
+    --slab-dx: 18px !important;
+    --slab-dy: 16px !important;
+  }
+}
+
+/* Halftone dot screen — the riot texture layer (flat, never a gradient fill) */
+.halftone {
+  background-image: radial-gradient(currentColor 1.5px, transparent 1.7px);
+  background-size: 12px 12px;
 }
 
 /* ── Custom cursor (Cursor.jsx) — hide the native cursor while active ── */
@@ -155,27 +223,62 @@ html::-webkit-scrollbar {
 .ab-spotify { grid-area: spotify; }
 .ab-social  { grid-area: social; }
 
-/* Glass tile shell — same material as the navbar (SiteHeader) so the bento
-   reads as one system with the global nav. */
+/* Riot slab tiles — each grid area is the unclipped wrapper that paints the
+   hard shadow; the .ab-tile inside is the clipped ink panel (see "Riot
+   material" above). Each area gets its own silhouette so no two tiles share
+   an outline. The profile area keeps a straight-edged cut so the flying
+   portrait (About.tsx) hands off onto an identical rect. */
+.about-bento > * {
+  position: relative;
+  isolation: isolate;
+  --slab-dx: 8px;
+  --slab-dy: 8px;
+}
+.about-bento > *::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--slab-shadow, var(--color-slab));
+  clip-path: var(--slab-cut, none);
+  transform: translate(var(--slab-dx), var(--slab-dy));
+  transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), background-color 0.15s linear;
+}
+/* The profile area is a plain (never-hidden) div — its tile fades in from
+   inside — and the flight overlay already carries the profile's shadow. */
+.about-bento > .ab-profile::before { display: none; }
+.ab-tagline { --slab-cut: polygon(14px 0, 100% 8px, calc(100% - 6px) 100%, 0 calc(100% - 12px)); }
+.ab-tech    { --slab-cut: polygon(0 10px, calc(100% - 14px) 0, 100% calc(100% - 8px), 8px 100%); }
+.ab-about   { --slab-cut: polygon(6px 4px, 100% 0, calc(100% - 12px) 100%, 0 calc(100% - 4px)); }
+.ab-status  { --slab-cut: polygon(0 0, calc(100% - 6px) 3px, 100% 100%, 10px calc(100% - 2px)); }
+.ab-spotify { --slab-cut: polygon(8px 2px, calc(100% - 4px) 0, 100% calc(100% - 10px), 0 100%); }
+.ab-social  { --slab-cut: polygon(0 6px, 100% 0, calc(100% - 8px) calc(100% - 4px), 12px 100%); }
+
 .ab-tile {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(18, 22, 46, 0.40);
-  border-radius: 22px;
+  background: var(--color-slab);
+  clip-path: var(--slab-cut, none);
   overflow: hidden;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 30px rgba(8, 12, 40, 0.18);
-  transition: border-radius 0.35s cubic-bezier(0.2, 0, 0, 1), background 0.35s ease, border-color 0.35s ease;
 }
 
-/* Interactive tiles sharpen corners and darken on hover (desktop pointer only). */
+/* Costume change on hover (desktop pointer only): shadow jumps out and flips
+   to cream; the panel itself flips to the riot field. */
 @media (hover: hover) {
-  .ab-tile-hover:hover {
-    border-radius: 0px !important;
-    background: rgba(18, 22, 46, 0.68);
-    border-color: rgba(255, 255, 255, 0.12);
+  .about-bento > *:has(.ab-tile-hover:hover) {
+    --slab-dx: 13px;
+    --slab-dy: 12px;
+    --slab-shadow: var(--color-cream);
   }
+  .ab-tile-hover { transition: background-color 0.12s linear; }
+  .ab-tile-hover:hover { background: var(--color-riot); }
+}
+
+/* The settled profile card is About.tsx's flight overlay (not inside a grid
+   area), so it carries its own costume change. !important beats the inline
+   motion-value shadow it lands with. */
+@media (hover: hover) {
+  .ab-flight-card:hover { box-shadow: 13px 12px 0 var(--color-cream) !important; }
 }
 
 /* ── Tech-stack mini-bento mosaic ──────────────────────
@@ -200,9 +303,9 @@ html::-webkit-scrollbar {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 0;
   background: transparent;
-  border-radius: 14px;
+  border-radius: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.25s ease, border-color 0.25s ease;
@@ -231,8 +334,8 @@ html::-webkit-scrollbar {
 
 @media (hover: hover) {
   .ab-mcell:hover {
-    background: rgba(255, 255, 255, 0.09);
-    border-color: rgba(255, 255, 255, 0.22);
+    background: var(--color-cream);
+    clip-path: polygon(6% 0, 100% 4%, 94% 100%, 0 96%);
   }
   .ab-mcell:hover .ab-mi-rest { opacity: 0; }
   .ab-mcell:hover .ab-mi-color { opacity: 1; }
@@ -255,10 +358,10 @@ html::-webkit-scrollbar {
   justify-content: center;
   width: 2.75rem; height: 2.75rem;
   padding: 0.375rem;
-  border-radius: 0.75rem;
-  border: 1px solid transparent;
+  border-radius: 0;
+  border: 0;
   background: transparent;
-  transition: transform 300ms ease, border-color 300ms ease, background-color 300ms ease;
+  transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), background-color 0.12s linear;
 }
 
 @media (min-width: 768px) {
@@ -278,9 +381,9 @@ html::-webkit-scrollbar {
 
 @media (hover: hover) {
   .icon-btn:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.09);
+    transform: translateY(-4px) rotate(-6deg);
+    background: var(--color-cream);
+    clip-path: polygon(6% 0, 100% 4%, 94% 100%, 0 96%);
   }
   .icon-btn:hover .icon-btn-img-rest  { opacity: 0; }
   .icon-btn:hover .icon-btn-img-color { opacity: 1; }
@@ -336,14 +439,11 @@ html::-webkit-scrollbar {
     grid-template-rows: repeat(3, minmax(0, 1fr));
     gap: 5px;
   }
-  .ab-mcell { border-radius: 11px; }
   .ab-micon { width: 82%; }
 
-  /* On mobile the 10px gap is tight — the downward box-shadow from each tile
-     bleeds behind the tile below and gets amplified by its backdrop-filter,
-     producing a visible dark band. The frosted glass + border is enough depth
-     at this scale, so drop the shadow entirely. */
-  .ab-tile { box-shadow: none; }
+  /* The 10px mobile gap is tight — a smaller hard shadow keeps the layering
+     without the slab touching the tile below. */
+  .about-bento > * { --slab-dx: 5px; --slab-dy: 5px; }
 }
 
 /* Laptop / medium desktop (768–1499px): flatten to a 4×3 grid — the 2×2 anchors
@@ -363,7 +463,7 @@ html::-webkit-scrollbar {
 .ab-eq span {
   width: 2px;
   background: #1ed760;
-  border-radius: 1px;
+  border-radius: 0;
   animation: ab-eq-bounce 0.9s ease-in-out infinite;
 }
 .ab-eq span:nth-child(1) { height: 40%; animation-delay: -0.2s; }
@@ -382,9 +482,8 @@ html::-webkit-scrollbar {
 
 /* ── Keyboard focus ──────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--color-cobalt);
+  outline: 3px solid var(--color-slab);
   outline-offset: 3px;
-  border-radius: 4px;
 }
 
 /* Dark sections need a light outline to be visible */
@@ -461,19 +560,21 @@ html::-webkit-scrollbar {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
-  transition: box-shadow 0.3s ease-out, border-radius 0.3s ease-out;
+  /* A print: cream border + hard riot-cobalt offset shadow (flat layers). */
+  border: 4px solid var(--color-cream);
+  box-shadow: 7px 7px 0 var(--color-riot);
+  transition: box-shadow 0.22s cubic-bezier(0.2, 1.4, 0.4, 1), transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
+/* Costume change: the print kicks off-angle and its shadow flips to cream. */
 .gallery-piece:hover .gallery-piece-frame {
-  border-radius: 0;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 0.5);
+  transform: rotate(-3deg) scale(1.04);
+  box-shadow: 12px 12px 0 var(--color-cream);
 }
 
 .gallery-piece.is-front .gallery-piece-frame {
-  box-shadow: 0 28px 70px rgb(0 0 0 / 0.55);
+  box-shadow: 12px 12px 0 var(--color-riot);
 }
 
 .gallery-piece-img {
@@ -491,11 +592,7 @@ html::-webkit-scrollbar {
 .gallery-piece-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgb(0 0 0 / 0.55) 0%,
-    transparent 55%
-  );
+  background: none;
   opacity: 0;
   transition: opacity 0.25s ease-out;
   display: flex;
@@ -512,16 +609,13 @@ html::-webkit-scrollbar {
 
 /* ── "View All" floating card ────────────────────── */
 .gallery-piece-frame-viewall {
-  background: rgb(245 240 232 / 0.08);
-  border: 1px dashed rgb(245 240 232 / 0.25);
-  backdrop-filter: blur(4px);
-  transition: box-shadow 0.3s ease-out, background 0.3s ease-out, border-color 0.3s ease-out;
+  background: var(--color-riot);
 }
 
 .gallery-piece:hover .gallery-piece-frame-viewall {
-  background: rgb(245 240 232 / 0.14);
-  border-color: rgb(245 240 232 / 0.5);
+  background: var(--color-cream);
 }
+.gallery-piece:hover .gallery-piece-viewall-label { color: var(--color-slab); }
 
 .gallery-piece-viewall {
   position: absolute;
@@ -535,9 +629,9 @@ html::-webkit-scrollbar {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 700;
-  font-size: clamp(9px, 1vw, 11px);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(12px, 1.6vw, 20px);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255,255,255,0.85);
@@ -556,7 +650,11 @@ html::-webkit-scrollbar {
   font-size: var(--text-meta);
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: rgb(245 240 232 / 0.55);
+  color: var(--color-slab);
+  background: var(--color-cream);
+  padding: 4px 12px;
+  clip-path: polygon(4px 0, 100% 2px, calc(100% - 4px) 100%, 0 calc(100% - 2px));
+  rotate: -3deg;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -565,8 +663,9 @@ html::-webkit-scrollbar {
 .gallery-lightbox-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92);
-  backdrop-filter: blur(16px);
+  background: var(--color-slab);
+  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1.5px, transparent 1.7px);
+  background-size: 12px 12px;
   z-index: 200;
   display: flex;
   align-items: center;
@@ -595,19 +694,19 @@ html::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  background: rgba(255,255,255,0.04);
+  color: var(--color-slab);
+  border: 0;
+  background: var(--color-cream);
+  clip-path: polygon(8% 0, 100% 6%, 92% 100%, 0 94%);
   cursor: pointer;
-  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 1.4, 0.4, 1), background 0.12s linear;
   z-index: 10;
 }
 
 .gallery-lightbox-close:hover {
-  color: rgba(255,255,255,0.9);
-  border-color: rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.1);
+  color: var(--color-cream);
+  background: var(--color-riot);
+  transform: rotate(-10deg) scale(1.1);
 }
 
 /* Main image area */
@@ -633,8 +732,8 @@ html::-webkit-scrollbar {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;
-  border-radius: 0.375rem;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 4px solid var(--color-cream);
+  box-shadow: 10px 10px 0 var(--color-riot);
 }
 
 /* Navigation arrows */
@@ -647,20 +746,19 @@ html::-webkit-scrollbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.4);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 50%;
-  background: rgba(0,0,0,0.3);
-  backdrop-filter: blur(8px);
+  color: var(--color-slab);
+  border: 0;
+  background: var(--color-cream);
+  clip-path: polygon(10% 0, 100% 8%, 90% 100%, 0 92%);
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  transition: color 0.12s linear, background 0.12s linear, scale 0.2s cubic-bezier(0.2, 1.4, 0.4, 1);
   z-index: 5;
 }
 
 .gallery-lightbox-arrow:hover {
-  color: rgba(255,255,255,0.95);
-  border-color: rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.1);
+  color: var(--color-cream);
+  background: var(--color-riot);
+  scale: 1.15;
 }
 
 .gallery-lightbox-arrow-left {
@@ -677,7 +775,6 @@ html::-webkit-scrollbar {
   .gallery-lightbox-arrow {
     width: 2rem;
     height: 2rem;
-    background: rgba(0,0,0,0.6);
   }
 }
 
@@ -715,9 +812,8 @@ html::-webkit-scrollbar {
   flex-shrink: 0;
   width: 3.5rem;
   height: 3.5rem;
-  border-radius: 0.375rem;
   overflow: hidden;
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   opacity: 0.4;
   cursor: pointer;
   transition: opacity 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
@@ -731,8 +827,9 @@ html::-webkit-scrollbar {
 
 .gallery-lightbox-thumb.active {
   opacity: 1;
-  border-color: rgba(255,255,255,0.6);
-  transform: scale(1.08);
+  border-color: var(--color-cream);
+  box-shadow: 4px 4px 0 var(--color-riot);
+  transform: scale(1.08) rotate(-4deg);
 }
 
 .gallery-lightbox-thumb-img {

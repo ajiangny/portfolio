@@ -453,7 +453,10 @@ export default function Gallery() {
             draggable={false}
           />
           <div className="gallery-piece-overlay">
-            <span className="font-mono text-cream/90 text-label uppercase tracking-[0.2em]">
+            <span
+              className="font-mono text-slab bg-cream text-label uppercase tracking-[0.2em] px-2 py-1"
+              style={{ clipPath: 'polygon(3px 0, 100% 2px, calc(100% - 3px) 100%, 0 calc(100% - 2px))', rotate: '-4deg' }}
+            >
               {art.medium}
             </span>
           </div>
@@ -499,6 +502,38 @@ export default function Gallery() {
           visibility: layerVisibility,
         }}
       >
+        {/* Riot back layers — a cobalt slash and an outlined GALLERY stamp,
+            cropped by the viewport, behind the prints. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: '-10%',
+            width: '120%',
+            top: '38%',
+            height: '22vh',
+            rotate: '-6deg',
+            background: 'var(--color-riot)',
+            clipPath: 'polygon(0 6%, 100% 0, 100% 92%, 0 100%)',
+          }}
+        />
+        <div
+          aria-hidden
+          className="font-display select-none"
+          style={{
+            position: 'absolute',
+            left: '-2vw',
+            bottom: '-4vw',
+            rotate: '-6deg',
+            fontSize: 'clamp(6rem, 21vw, 22rem)',
+            lineHeight: 0.8,
+            color: 'transparent',
+            WebkitTextStroke: '2px rgba(255,255,255,0.22)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          GALLERY
+        </div>
         <motion.div
           className="gallery-stage-viewport"
           style={{ pointerEvents: stagePointerEvents, filter: reduceMotion ? 'none' : inkFilter }}

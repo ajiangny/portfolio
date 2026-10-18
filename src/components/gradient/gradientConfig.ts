@@ -20,12 +20,17 @@ export interface SectionPalette {
   energy: number
 }
 
+// Riot palette: every section is two flat tones of ONE family (split on a
+// diagonal in the composite) plus a contrasting flat ink for the fluid.
+// Bookends (Hero, Contact) are the riot cobalt field with ink-black fluid;
+// About deepens toward navy; Projects is the one light page (cream, cobalt
+// ink); Gallery is the ink page with cobalt fluid.
 export const SECTION_PALETTES: Record<string, SectionPalette> = {
-  hero: { base: [rgb(22, 104, 222), rgb(14, 42, 140)], ink: rgb(64, 172, 250), energy: 1.0 },
-  about: { base: [rgb(70, 112, 178), rgb(70, 83, 89)], ink: rgb(188, 203, 220), energy: 0.28 },
-  projects: { base: [rgb(250, 248, 244), rgb(234, 228, 217)], ink: rgb(43, 82, 180), energy: 0.16 },
-  gallery: { base: [rgb(20, 30, 64), rgb(0, 0, 0)], ink: rgb(90, 130, 235), energy: 0.34 },
-  contact: { base: [rgb(40, 40, 46), rgb(0, 0, 0)], ink: rgb(240, 228, 205), energy: 0.34 },
+  hero: { base: [rgb(30, 75, 210), rgb(20, 52, 168)], ink: rgb(15, 16, 22), energy: 1.0 },
+  about: { base: [rgb(24, 58, 176), rgb(16, 39, 138)], ink: rgb(15, 16, 22), energy: 0.28 },
+  projects: { base: [rgb(250, 248, 244), rgb(236, 232, 224)], ink: rgb(30, 75, 210), energy: 0.16 },
+  gallery: { base: [rgb(22, 23, 30), rgb(15, 16, 22)], ink: rgb(30, 75, 210), energy: 0.34 },
+  contact: { base: [rgb(30, 75, 210), rgb(16, 39, 138)], ink: rgb(15, 16, 22), energy: 0.34 },
 }
 
 // Stable-fluids sim tuning.
@@ -66,5 +71,8 @@ export const GRADIENT = {
   SEAM_FADE: 0.85,
   MOBILE_SCALE: 0.5,
   FRAME_MS_MOBILE: 10,
-  GRAIN: 0.06,   // film-grain intensity added in the composite (0 = off)
+  // Dye density at which the posterized composite switches to flat ink
+  // (the halftone band covers the 0.18 below it). Higher = less ink on screen.
+  INK_T: 0.26,
+  INK_T_MOBILE: 0.75,
 }

@@ -1,96 +1,92 @@
 /**
- * PageTransition.tsx — Blur + Ink-Dissolve Page Transition Veil
+ * PageTransition.tsx — Slash-wipe page transition (riot rules 2, 5, 6)
  *
  * A fixed full-screen veil used by TransitionContext during section-to-section
- * navigation: the backdrop blurs up while the section-coloured tint dissolves
- * in through turbulence-thresholded ink blots (same SVG technique as
- * hooks/useInkFilter.tsx), the scroll jump happens under full cover, then the
- * veil dissolves away to reveal the new section.
- * Reduced motion → plain opacity fade, no dissolve filter.
- * Mobile (≤767px) → the same ink dissolve, but rendered as a fragment shader
- * on a GPU canvas (InkVeilCanvas.jsx) instead of the SVG filter, which mobile
- * browsers rasterize on the CPU at device DPR every frame. Backdrop blur
- * stays off on mobile — a full-viewport 24px backdrop-filter on top of the
- * WebGL sim is still the most expensive frame on phones.
+ * navigation. Two flat layers with diagonal leading edges sweep across the
+ * screen left → right: an ink slab first, then the target section's colour
+ * (with a halftone screen) right behind it. The scroll jump happens under
+ * full cover, then both layers keep travelling right and exit the far edge —
+ * the wipe passes *through* the screen instead of reversing.
+ *
+ * The motion is pure clip-path on two divs (compositor-cheap), so desktop and
+ * mobile share one path — no SVG filter, no GPU canvas, no backdrop blur.
+ * Reduced motion → plain opacity fade of the colour layer.
  */
 import { useEffect, useRef } from 'react'
 import {
-  motion, useMotionValue, useMotionValueEvent, useTransform,
-  animate, useReducedMotion,
+  motion, useMotionValue, useMotionValueEvent, useTransform, animate, useReducedMotion,
 } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
-import useMediaQuery from '../hooks/useMediaQuery'
-import InkVeilCanvas from './InkVeilCanvas'
+import { RIOT, WIPE_EASE } from '../style/riot'
 
-// Alpha threshold sweep: alpha = SLOPE·noiseR + intercept, so as the
-// intercept rises the noise blots flip from transparent to opaque one
-// patch at a time — reading as ink flooding the screen.
-const SLOPE = 40
-const interceptAt = (t: number) => -SLOPE - 5 + (SLOPE + 10) * t // coverage 0 → full over t 0 → 1
-const matrixValues = (t: number) =>
-  `1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  ${SLOPE} 0 0 0 ${interceptAt(t)}`
+const SKEW = 22 // % — how far the top of each edge leads the bottom (the slash angle)
+const LAG = 0.18 // the colour layer trails the ink layer by this fraction of the sweep
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
+
+// Panel spanning [left, right] (in % of width), with both vertical edges
+// slanted by SKEW so it reads as a slash, not a box.
+const slab = (left: number, right: number) =>
+  `polygon(${left + SKEW}% 0%, ${right + SKEW}% 0%, ${right}% 100%, ${left}% 100%)`
+
+// Enter: right edge sweeps in from off-left. Exit: left edge follows it out.
+// `lag` delays this layer's entry and advances its exit, so the ink layer is
+// first in and last out.
+function layerPath(t: number, entering: boolean, lag: number, leadOut: boolean) {
+  const START = -SKEW - 2
+  const END = 102
+  if (entering) {
+    const p = clamp01((t - lag) / (1 - LAG))
+    return slab(START, START + (END - START) * p)
+  }
+  const q = 1 - t
+  const p = leadOut ? clamp01(q / (1 - LAG)) : clamp01((q - LAG) / (1 - LAG))
+  return slab(START + (END - START) * p, END)
+}
 
 export default function PageTransition() {
   const { isActive, transitionColor } = useTransitionContext()
   const reduceMotion = useReducedMotion()
-  const isMobile = useMediaQuery('(max-width: 767px)')
-  const plainFade = reduceMotion
-  const canvasVeil = isMobile && !reduceMotion
   const t = useMotionValue(0)
-  const matrixRef = useRef<SVGFEColorMatrixElement | null>(null)
+  const enteringRef = useRef(false)
+
+  const inkClip = useMotionValue(slab(-SKEW - 2, -SKEW - 2))
+  const colorClip = useMotionValue(slab(-SKEW - 2, -SKEW - 2))
 
   useEffect(() => {
+    enteringRef.current = isActive
     const controls = animate(t, isActive ? 1 : 0, {
       duration: 0.6, // matches TransitionProvider's 600ms phases
-      ease: [0.76, 0, 0.24, 1],
+      ease: WIPE_EASE,
     })
     return () => controls.stop()
   }, [isActive, t])
 
   useMotionValueEvent(t, 'change', (v) => {
-    if (plainFade || canvasVeil) return
-    matrixRef.current?.setAttribute('values', matrixValues(v))
+    if (reduceMotion) return
+    const entering = enteringRef.current
+    inkClip.set(layerPath(v, entering, 0, false))
+    colorClip.set(layerPath(v, entering, LAG, true))
   })
 
-  const backdropFilter = useTransform(t, (v) => (!isMobile && v > 0 ? `blur(${24 * v}px)` : 'none'))
-  // Filter only mid-transition: settled/hidden states render unfiltered for perf.
-  const filter = useTransform(t, (v) =>
-    !plainFade && v > 0 && v < 1 ? 'url(#veil-dissolve)' : 'none'
-  )
-  const opacity = useTransform(t, (v) => (plainFade ? v : v > 0 ? 1 : 0))
+  const visible = useTransform(t, (v) => (v > 0 ? 1 : 0))
+  const fade = useTransform(t, (v) => v)
 
   return (
-    <motion.div
-      className="fixed inset-0 pointer-events-none z-9999"
-      style={{ backdropFilter, opacity }}
-    >
-      {!plainFade && !canvasVeil && (
-        <svg aria-hidden="true" width="0" height="0" style={{ position: 'absolute' }}>
-          <defs>
-            <filter id="veil-dissolve" x="-10%" y="-10%" width="120%" height="120%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" seed="7" result="noise" />
-              <feColorMatrix ref={matrixRef} in="noise" type="matrix" values={matrixValues(0)} result="thresh" />
-              <feComposite in="SourceGraphic" in2="thresh" operator="in" result="cut" />
-              <feDisplacementMap in="cut" in2="noise" scale="30" xChannelSelector="R" yChannelSelector="G" />
-            </filter>
-          </defs>
-        </svg>
+    <motion.div className="fixed inset-0 pointer-events-none z-9999" style={{ opacity: reduceMotion ? fade : visible }}>
+      {!reduceMotion && (
+        <motion.div style={{ position: 'absolute', inset: 0, background: RIOT.ink, clipPath: inkClip }} />
       )}
-      {/* Tint bleeds 48px past the viewport so the edge displacement never
-          exposes a gap at the screen borders. Mobile renders the dissolve as
-          a fragment shader instead of filtering the tint. */}
-      {canvasVeil ? (
-        <InkVeilCanvas t={t} colorTop={transitionColor} colorBottom={transitionColor} seed={7} />
-      ) : (
-        <motion.div
-          style={{
-            position: 'absolute',
-            inset: -48,
-            backgroundColor: transitionColor,
-            filter,
-          }}
-        />
-      )}
+      <motion.div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: transitionColor,
+          backgroundImage: 'radial-gradient(rgba(15,16,22,0.18) 1.6px, transparent 1.8px)',
+          backgroundSize: '12px 12px',
+          clipPath: reduceMotion ? 'none' : colorClip,
+        }}
+      />
     </motion.div>
   )
 }
