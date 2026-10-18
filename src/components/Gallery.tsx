@@ -502,21 +502,10 @@ export default function Gallery() {
           visibility: layerVisibility,
         }}
       >
-        {/* Riot back layers — a cobalt slash and an outlined GALLERY stamp,
-            cropped by the viewport, behind the prints. */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: '-10%',
-            width: '120%',
-            top: '38%',
-            height: '22vh',
-            rotate: '-6deg',
-            background: 'var(--color-riot)',
-            clipPath: 'polygon(0 6%, 100% 0, 100% 92%, 0 100%)',
-          }}
-        />
+        {/* Riot back layer — an outlined GALLERY stamp, cropped by the
+            viewport, behind the prints. (No solid band here: this layer
+            fades in over the end of Projects, where a band reads as a
+            stray bar across the last card.) */}
         <div
           aria-hidden
           className="font-display select-none"
