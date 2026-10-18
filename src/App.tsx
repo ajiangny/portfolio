@@ -29,6 +29,7 @@ import Contact from './components/Contact'
 import FluidGradient from './components/gradient/FluidGradient'
 import SiteHeader from './components/SiteHeader'
 import Cursor from './components/Cursor'
+import StyleMenu from './components/StyleMenu'
 
 function App() {
   const lenisRef = useLenis()
@@ -59,6 +60,7 @@ function App() {
             <FluidGradient />
             <Cursor />
             <SiteHeader />
+            <StyleMenu />
             <PageTransition />
             <LoadingScreen ready={siteReady} />
             <main>
