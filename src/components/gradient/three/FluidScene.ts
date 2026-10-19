@@ -62,14 +62,17 @@ export class FluidScene {
         uDyeIntensity: { value: SIM.DYE_INTENSITY },
         uDyeMax: { value: SIM.DYE_MAX },
         uRefraction: { value: SIM.REFRACTION },
-        uTime: { value: 0 },
-        uGrain: { value: GRADIENT.GRAIN },
+        uInkT: { value: GRADIENT.INK_T },
       },
     })
     this.supported = true
   }
 
-  setSimRes(res: number) { this.simRes = res }
+  setSimRes(res: number) {
+    this.simRes = res
+    // Coarser (mobile) grids pool dye more densely — raise the ink threshold.
+    if (this.composite) this.composite.uniforms.uInkT.value = res <= SIM.RES_MOBILE ? GRADIENT.INK_T_MOBILE : GRADIENT.INK_T
+  }
 
   resize(w: number, h: number, dpr: number) {
     if (!this.supported || !this.renderer) return
@@ -94,7 +97,6 @@ export class FluidScene {
     if (!this.supported) return
     this.sim.step({ pointer, ambient, time, iters, energy: palette.energy ?? 1 })
     this._applyPalette(palette)
-    this.composite.uniforms.uTime.value = time // re-seeds the grain each frame
     this.composite.render(null)
   }
 
@@ -137,7 +139,6 @@ export class FluidScene {
   }
 
   // Reduced-motion: one static frame, no sim step (dye is empty → base only).
-  // uTime stays 0 → a single, non-shimmering grain pattern.
   renderStatic(palette: SelectedPalette) {
     if (!this.supported) return
     this._applyPalette(palette)

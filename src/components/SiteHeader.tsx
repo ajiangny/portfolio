@@ -1,5 +1,5 @@
 /**
- * SiteHeader.tsx — Global Morphing Navigation Header
+ * SiteHeader.tsx — Global Morphing Navigation Header (riot slab)
  *
  * One header for the whole site (rendered in App.tsx, fixed, z-200, below the
  * PageTransition curtain). Expanded = AJ monogram (left) + equal links
@@ -9,11 +9,17 @@
  * indicator tracks the hovered/active link. Glass + text colours adapt to the
  * active section's background (logo inverts to black on light sections).
  * Hovering a link previews that section's palette in the fluid gradient
- * (gated to Hero inside FluidGradient). On mobile it stays a monogram pill
- * that opens a dropdown on tap.
+ * (gated to Hero inside FluidGradient). On mobile it stays a monogram slab.
+ * On every size the monogram opens the full-screen StyleMenu: one nav
+ * system with a compact form (this bar) and an expanded form (the menu).
+ *
+ * Riot material: the bar is a flat jagged slab (cream on dark sections, ink
+ * on light ones) with a hard offset shadow painted by a drop-shadow on the
+ * unclipped wrapper; the hover/active indicator is a skewed riot-cobalt slab
+ * that springs between links (selection as a costume change).
  */
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
-import { motion, AnimatePresence, useReducedMotion, useAnimation, useScroll } from 'framer-motion'
+import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { motion, useReducedMotion, useAnimation, useScroll } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, NAV_SECTIONS, goToSection } from '../config/sections'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -21,10 +27,13 @@ import useActiveSection from '../hooks/useActiveSection'
 import { setHoverSection } from './gradient/hoverSignal'
 import { SECTION_PALETTES } from './gradient/gradientConfig'
 import type { Vec3 } from './gradient/colors'
+import { SNAP, jagged } from '../style/riot'
+import { openMenu } from './style/menuSignal'
+import * as sfx from '../style/sfx'
 
 const GUTTER = 40      // px viewport inset at each side when expanded
 const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
-const BAR_H = 46       // px pill height (collapsed width == height → circle)
+const BAR_H = 46       // px slab height (collapsed width == height → square)
 const LOGO = '/favicon/logo.svg'
 
 // Perceived luminance of a normalised (0..1) rgb triple. The header sits at the
@@ -52,13 +61,14 @@ export default function SiteHeader() {
   const section = SECTIONS[index] ?? SECTIONS[0]
   const light = isLightSection(section.id)
 
-  // Colour system adapts to the section background; CSS transitions tween it
-  // across the seam so there's no hard flip.
-  const textColor = light ? 'rgba(20,22,34,0.92)' : 'rgba(255,255,255,0.92)'
-  const glassBg = light ? 'rgba(255,255,255,0.55)' : 'rgba(18,22,46,0.40)'
-  const glassBorder = light ? 'rgba(20,22,34,0.12)' : 'rgba(255,255,255,0.18)'
-  const activeFill = light ? 'rgba(20,22,34,0.92)' : 'rgba(255,255,255,0.95)'
-  const activeText = light ? 'rgba(255,255,255,0.98)' : 'rgba(18,22,46,0.95)'
+  // Flat colours that invert with the section background (riot rule 1): a
+  // cream slab on dark/cobalt sections, an ink slab on light ones. The active
+  // indicator is always the riot cobalt.
+  const textColor = light ? 'var(--color-cream)' : 'var(--color-slab)'
+  const barBg = light ? 'var(--color-slab)' : 'var(--color-cream)'
+  const shadowColor = light ? '#1E4BD2' : '#0F1016'
+  const activeFill = 'var(--color-riot)'
+  const activeText = 'var(--color-cream)'
 
   // Desktop: full bar only while Hero is active; past it, a logo pill that
   // re-expands on hover. Mobile is always the pill; reduced-motion always expanded.
@@ -76,11 +86,11 @@ export default function SiteHeader() {
   }
 
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
 
   // Hover previews the section palette (FluidGradient gates it to Hero).
   const onEnter = (id: string, navIdx: number) => {
     setHoveredId(id)
+    sfx.tick(navIdx)
     setHoverSection(navIdx + 1) // NAV index → SECTIONS index (1..4)
   }
   const onLeave = () => {
@@ -88,23 +98,10 @@ export default function SiteHeader() {
     setHoverSection(-1)
   }
   useEffect(() => () => setHoverSection(-1), [])
-  useEffect(() => { const t = setTimeout(() => setMenuOpen(false), 0); return () => clearTimeout(t) }, [index]) // close menu when section changes
-
-  // Close the mobile dropdown on an outside tap (also lets the screenshot
-  // script's tap('body') dismiss it).
-  const wrapRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (!menuOpen) return
-    const onDown = (e: PointerEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [menuOpen])
 
   const go = (id: string, e: ReactMouseEvent) => {
     e.stopPropagation()
-    setMenuOpen(false)
+    sfx.confirm()
     // Pin the indicator on the clicked link instead of clearing hoveredId —
     // clearing it here would fall back to the (still-old) active section and
     // rubberband the pill back before the transition ever moves it forward.
@@ -140,36 +137,56 @@ export default function SiteHeader() {
       }}
     >
       <div
-        ref={wrapRef}
         onMouseEnter={() => setPillHovered(true)}
         onMouseLeave={() => setPillHovered(false)}
-        style={{ position: 'relative', pointerEvents: 'auto' }}
+        style={{
+          position: 'relative',
+          pointerEvents: 'auto',
+          // Hard offset shadow of the clipped slab (a box-shadow would be clipped).
+          filter: `drop-shadow(5px 5px 0 ${shadowColor})`,
+          transition: 'filter 0.3s linear',
+          rotate: expanded ? '-0.6deg' : '-4deg',
+        }}
       >
         <motion.div
           animate={{ width: pillWidth }}
           transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 200, damping: 30 }}
           style={{
+            position: 'relative',
             height: BAR_H,
-            borderRadius: BAR_H / 2,
-            background: glassBg,
-            border: `1px solid ${glassBorder}`,
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 30px rgba(8,12,40,0.18)',
+            background: barBg,
+            clipPath: 'polygon(8px 0, 100% 3px, calc(100% - 5px) 100%, 0 calc(100% - 4px))',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
-            transition: 'background 0.5s ease, border-color 0.5s ease',
+            transition: 'background 0.3s linear',
           }}
         >
-          {/* Monogram — home on desktop, menu toggle on mobile */}
+          {/* Scroll-progress gauge: a flat riot-cobalt stripe along the
+              collapsed slab's bottom edge, filling left → right. */}
+          <motion.span
+            aria-hidden
+            animate={{ opacity: expanded ? 0 : 1 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 5,
+              background: 'var(--color-riot)',
+              originX: 0,
+              scaleX: scrollYProgress,
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Monogram — the menu button everywhere: it opens the full-screen
+              StyleMenu (the nav's expanded form; Home lives there). */}
           <button
             type="button"
-            aria-label={isMobile ? 'Section navigation' : 'Andrew Jiang — home'}
-            aria-expanded={isMobile ? menuOpen : undefined}
-            onClick={(e) =>
-              isMobile ? setMenuOpen((o) => !o) : go('hero', e)
-            }
+            aria-label="Open menu"
+            data-cursor-label="Menu"
+            onClick={() => openMenu()}
             style={{
               flex: '0 0 auto',
               width: BAR_H,
@@ -185,7 +202,7 @@ export default function SiteHeader() {
               src={LOGO} alt="" width={24} height={24} draggable={false}
               animate={logoAnim}
               onHoverStart={onLogoHover}
-              style={{ filter: light ? 'invert(1)' : 'none', transition: 'filter 0.5s ease' }}
+              style={{ filter: light ? 'none' : 'invert(1)', transition: 'filter 0.3s linear' }}
             />
           </button>
 
@@ -216,12 +233,13 @@ export default function SiteHeader() {
                     {targeted && (
                       <motion.span
                         layoutId="nav-indicator"
-                        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                        transition={reduce ? { duration: 0 } : SNAP}
                         style={{
                           position: 'absolute',
-                          inset: 0,
-                          borderRadius: 999,
+                          inset: '-3px -6px',
+                          skewX: -14,
                           background: activeFill,
+                          clipPath: jagged(i + 4, 10),
                         }}
                       />
                     )}
@@ -237,11 +255,10 @@ export default function SiteHeader() {
                         border: 'none',
                         cursor: 'pointer',
                         padding: '8px 16px',
-                        borderRadius: 999,
                         font: 'inherit',
                         letterSpacing: 'inherit',
                         textTransform: 'inherit',
-                        transition: 'color 0.25s ease',
+                        transition: 'color 0.1s linear',
                       }}
                     >
                       {s.label}
@@ -253,107 +270,7 @@ export default function SiteHeader() {
           )}
         </motion.div>
 
-        {/* Scroll-progress ring around the collapsed logo pill */}
-        <motion.svg
-          width={BAR_H}
-          height={BAR_H}
-          viewBox={`0 0 ${BAR_H} ${BAR_H}`}
-          animate={{ opacity: expanded ? 0 : 1 }}
-          transition={{ duration: 0.25 }}
-          style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', rotate: -90 }}
-        >
-          <motion.circle
-            cx={BAR_H / 2}
-            cy={BAR_H / 2}
-            r={BAR_H / 2 - 1.5}
-            fill="none"
-            stroke={textColor}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            style={{ pathLength: scrollYProgress, transition: 'stroke 0.5s ease' }}
-          />
-        </motion.svg>
 
-        {/* Mobile dropdown and backdrop */}
-        <AnimatePresence>
-          {isMobile && menuOpen && (
-            <motion.div
-              key="mobile-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMenuOpen(false)}
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: light ? 'rgba(255, 255, 255, 0.4)' : 'rgba(18, 22, 46, 0.4)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                zIndex: -1,
-                cursor: 'pointer',
-              }}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isMobile && menuOpen && (
-            <motion.ul
-              key="mobile-menu"
-              initial={{ opacity: 0, y: -8, x: '-50%' }}
-              animate={{ opacity: 1, y: 0, x: '-50%' }}
-              exit={{ opacity: 0, y: -8, x: '-50%' }}
-              transition={{ duration: 0.2 }}
-              className="font-sans font-bold uppercase"
-              style={{
-                position: 'absolute',
-                top: BAR_H + 10,
-                left: '50%',
-                margin: 0,
-                padding: 8,
-                listStyle: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                minWidth: 160,
-                borderRadius: 18,
-                background: glassBg,
-                border: `1px solid ${glassBorder}`,
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                boxShadow: '0 12px 36px rgba(8,12,40,0.28)',
-                letterSpacing: '0.18em',
-                fontSize: 'var(--text-label)',
-              }}
-            >
-              {NAV_SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={(e) => go(s.id, e)}
-                    style={{
-                      width: '100%',
-                      textAlign: 'center',
-                      background: section.id === s.id ? activeFill : 'transparent',
-                      color: section.id === s.id ? activeText : textColor,
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '12px 16px',
-                      borderRadius: 12,
-                      font: 'inherit',
-                      letterSpacing: 'inherit',
-                      textTransform: 'inherit',
-                      textIndent: '0.18em', // Fixes off-center appearance from letter-spacing
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                </li>
-              ))}
-            </motion.ul>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   )

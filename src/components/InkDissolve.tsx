@@ -1,20 +1,18 @@
 /**
- * InkDissolve.tsx — one-shot ink-dissolve reveal (ref: kaiseisadatoki-v4
- * "ink-anim")
+ * InkDissolve.tsx — one-shot "slam" reveal (riot rule 5)
  *
- * Wraps content in the shared ink filter (hooks/useInkFilter.tsx) and fires it
- * once when scrolled into view: content fades in fast (~12% of the settle),
- * then the turbulence displacement + blur resolve over `duration`, reading as
- * ink settling onto the page. Reduced motion → quick plain fade, no filter.
- *
- * For scroll-scrubbed dissolves drive useInkFilter directly.
+ * Was a slow ink-dissolve settle; in the riot system one-shot reveals are
+ * fast and physical instead: content kicks in from the left on a skew,
+ * overshoots its spot and holds still. Kept under the old name/props so every
+ * call site works unchanged (`maxScale`/`maxBlur`/`octaves` are accepted and
+ * ignored). Scroll-scrubbed ink effects (About choreography, hover swaps)
+ * still use hooks/useInkFilter directly — the fluid ink stays the site's
+ * signature; the reveals got faster.
+ * Reduced motion → quick plain fade.
  */
-import { useRef, useEffect, type ReactNode, type CSSProperties } from 'react'
-import {
-  motion, useMotionValue, useTransform, useInView, useReducedMotion, animate,
-  type UseInViewOptions,
-} from 'framer-motion'
-import useInkFilter from '../hooks/useInkFilter'
+import { useRef, type ReactNode, type CSSProperties } from 'react'
+import { motion, useInView, useReducedMotion, type UseInViewOptions } from 'framer-motion'
+import { ENTER_EASE } from '../style/riot'
 
 export interface InkRevealProps {
   children?: ReactNode
@@ -31,33 +29,27 @@ export interface InkRevealProps {
 export default function InkReveal({
   children, className, style,
   duration = 1.8, delay = 0, margin = '-120px',
-  maxScale = 70, maxBlur = 10, octaves = 4,
 }: InkRevealProps) {
   const reduceMotion = useReducedMotion()
   const ref = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin })
-  const t = useMotionValue(0)
-  const { defs, filter } = useInkFilter(t, { maxScale, maxBlur, octaves })
 
-  useEffect(() => {
-    if (!inView) return
-    const controls = animate(t, 1, {
-      duration: reduceMotion ? 0.3 : duration,
-      delay,
-      ease: [0.215, 0.61, 0.355, 1], // power3.out — matches the reference
-    })
-    return () => controls.stop()
-  }, [inView, reduceMotion, t, duration, delay])
-
-  const opacity = useTransform(t, [0, reduceMotion ? 1 : 0.12], [0, 1])
+  // Old durations were tuned for a long settle; a slam wants ~a third of that.
+  const slam = Math.min(0.6, Math.max(0.35, duration * 0.3))
 
   return (
     <motion.div
       ref={ref}
       className={className}
-      style={{ ...style, opacity, filter: reduceMotion ? 'none' : filter }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -60, skewX: -14 }}
+      animate={inView ? { opacity: 1, x: 0, skewX: 0 } : undefined}
+      transition={
+        reduceMotion
+          ? { duration: 0.3, delay }
+          : { duration: slam, delay, ease: ENTER_EASE, opacity: { duration: 0.12, delay } }
+      }
+      style={style}
     >
-      {defs}
       {children}
     </motion.div>
   )

@@ -5,8 +5,8 @@ Single-page portfolio: **React 19 + Vite**, **Tailwind v4** (CSS-first config in
 scroll, **Three.js** for the WebGL fluid background. No router — the whole site
 is five sections stacked in one scroll ([src/App.tsx](src/App.tsx)).
 
-For the motion language (the ink-dissolve system used by every reveal), see
-[README.md](README.md) — that stays the reference for `useInkFilter` /
+For the visual style (the "riot" system) and the remaining ink-dissolve
+effects, see [README.md](README.md) and § "Riot style" below — that stays the reference for `useInkFilter` /
 `InkDissolve` tuning.
 
 ```
@@ -23,11 +23,13 @@ Everything global is mounted once in `App.tsx`:
 | --- | --- | --- |
 | Smooth scroll | `hooks/useLenis.ts`, `context/LenisContext.ts` | One Lenis instance driven by rAF; a context ref (`useLenisContext()`) lets sections read `lenis.scroll`, listen to scroll events, `scrollTo()`, and `stop()/start()` (lightbox). Reduced motion keeps Lenis (sections depend on its events) but disables smoothing. |
 | Section registry | `config/sections.ts` | **Single source of truth** for section ids, nav labels, theme colours, and landing offsets. Header + Contact both navigate through `goToSection()`. |
-| Loading gate | `context/LoadingContext.ts`, `components/LoadingScreen.tsx` | `App.tsx` gates on two signals — `document.fonts.ready` and the fluid gradient's `onReady` callback (fired after `FluidScene.prewarm()`, or immediately under reduced motion). Below-fold sections (About/Projects/Gallery/Contact) don't mount until both fire, so their layout cost doesn't compete with the WebGL prewarm; `LoadingScreen` covers the page meanwhile and ink-dissolves away (min 800ms display). |
-| Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` raises a fixed veil (backdrop blur + section-tinted ink dissolve, 600 ms), performs an instant Lenis jump under cover, then dissolves away. A ref lock prevents re-entry mid-transition. Mobile skips the backdrop blur and renders the dissolve via `InkVeilCanvas` (GPU shader) instead of the SVG filter. |
-| Global nav | `components/SiteHeader.tsx` | Morphing glass pill: full bar on Hero, collapses to a monogram + scroll-progress ring after, re-expands on hover; mobile gets a dropdown. Light/dark text derives from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
+| Loading gate | `context/LoadingContext.ts`, `components/LoadingScreen.tsx` | `App.tsx` gates on two signals — `document.fonts.ready` and the fluid gradient's `onReady` callback (fired after `FluidScene.prewarm()`, or immediately under reduced motion). Below-fold sections (About/Projects/Gallery/Contact) don't mount until both fire, so their layout cost doesn't compete with the WebGL prewarm; `LoadingScreen` covers the page meanwhile (riot field, ticking monogram slab, ransom LOADING) and slash-wipes away (min 800ms display). On a first visit it also asks Sound on / Stay silent and waits for the answer. |
+| Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` sweeps a diagonal ink slab then the section colour across the screen (600 ms, pure clip-path), performs an instant Lenis jump under cover, then both layers continue off the far edge. A ref lock prevents re-entry mid-transition. |
+| Global nav | `components/SiteHeader.tsx` | Morphing riot slab: full bar on Hero, collapses to a monogram square with a cobalt scroll-progress stripe after, re-expands on hover; the active/hover indicator is a skewed cobalt slab. The monogram opens the StyleMenu on every screen size (via `style/menuSignal.ts`); the bar links are the compact shortcut form of the same nav. Cream slab on dark sections, ink on light — derived from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
+| Style menu | `components/StyleMenu.tsx` | Full-screen game-style menu — the expanded form of the nav, opened by the header monogram (every screen size) or the M key. Tilted list, clip-path slabs, ransom-note selected label, keyboard nav; navigates via `goToSection()`. z 9000, under the transition veil. |
+| Sound effects | `style/sfx.ts`, `components/style/SoundToggle.tsx` | Synthesized Web Audio UI sounds (no files): `tick(step)` for selection moves (pitched on a pentatonic scale), `confirm()` for clicks/Enter, `open()`/`close()`/`wipe()` noise slashes for the menu and page transition. OFF until the visitor opts in: first-time visitors get a Sound on / Stay silent choice on the loading screen (which waits for it), and the bottom-right toggle changes it later; choice persists in localStorage. Hooked in StyleMenu, SiteHeader links, PageTransition. |
 | Fluid background | `components/gradient/*` | One fixed WebGL2 canvas at `z-index:-1` behind the whole site (details below). |
-| Custom cursor | `components/Cursor.tsx` | Fine-pointer only. Blend-difference dot; scales on interactive elements; swaps to a cream label pill over `[data-cursor-label]`; `[data-cursor-hint]` shows a one-time "Click me!" teaching hint. |
+| Custom cursor | `components/Cursor.tsx` | Fine-pointer only. Blend-difference diamond; spins a quarter-turn and scales on interactive elements; swaps to a cream slab label tag over `[data-cursor-label]`; `[data-cursor-hint]` shows a one-time "Click me!" teaching hint. |
 | Active section | `hooks/useActiveSection.ts` | Which section holds the viewport centre + hysteresis "settled" flag — drives the header morph, mirrors the gradient's palette math. |
 
 ### The fluid gradient (`components/gradient/`)
@@ -39,13 +41,16 @@ Everything global is mounted once in `App.tsx`:
   (calls `onReady` immediately), pause when tab hidden. Falls back to the
   CSS cream body if WebGL2/float buffers are missing.
 - `three/FluidScene.ts` — renderer + composite pass (base gradient → ink by dye
-  density, refraction, film grain).
+  density, refraction). Riot: the composite is posterized — two flat base
+  tones split on a diagonal, dye thresholded into flat ink with a cream
+  keyline, a halftone band under the threshold; no grain.
 - `three/Simulation.ts` — stable-fluids solve (splat → divergence → Jacobi →
   gradient subtract → advect) on half-float ping-pong targets.
 - `three/ShaderPass.ts` / `three/shaders.ts` — fullscreen-quad plumbing + GLSL.
 - `gradientConfig.ts` — **all tuning lives here**: `SECTION_PALETTES`
   (per-section `base` 2-stop gradient, `ink` accent, `energy` stir level), `SIM`
-  (resolution, forces, dissipation), `GRADIENT` (seam fade, grain).
+  (resolution, forces, dissipation), `GRADIENT` (seam fade, ink threshold
+  `INK_T` / `INK_T_MOBILE`).
 - `paletteSelect.ts` / `colors.ts` / `ambient.ts` — pure helpers (palette
   crossfade by viewport centre, colour lerp, Lissajous drift points). These have
   unit tests in `test/*.test.mjs` (`node test/<file>` to run).
@@ -80,25 +85,29 @@ utilities (`text-cream`, `font-display`, `text-label`…) and CSS vars
 Instrument Sans. Google Fonts loads the latter three (+ Abril Fatface as the
 display fallback).
 
-**Colours**: cream (#FFF), cobalt family (#1B3A8C…), ink. Sections are mostly
-transparent — the gradient IS the background colour system.
+**Colours**: the riot trio — `--color-riot` (#1E4BD2, field),
+`--color-cream` (#FFF, face), `--color-slab` (#0F1016, ink) — plus
+`--color-riot-deep` for the field's lower diagonal. Sections are mostly
+transparent — the posterized fluid IS the background colour system.
 
-**The glass material** — the one surface recipe the whole UI shares (bento
-tiles `.ab-tile`, navbar pill, project cards, mobile menu):
+**The riot material** — the one surface recipe the whole UI shares (bento
+tiles, project cards, header, buttons, tags). A flat slab with a jagged
+`clip-path` silhouette and a HARD offset shadow; no radius, no blur, no
+translucency. Because a clip-path clips its own box-shadow, the shadow is
+painted by an unclipped wrapper: `.slab-wrap` (its `::before` copies the
+silhouette, offset by `--slab-dx/dy`) around a `.slab` panel; pick a
+silhouette with `.cut-a/b/c` or set `--slab-cut`. The bento does the same
+with each grid area as the wrapper (`.about-bento > *::before`) and a
+per-area `--slab-cut`. Small one-off elements use
+`filter: drop-shadow(Npx Npx 0 …)` on a wrapper instead.
 
-```css
-border: 1px solid rgba(255,255,255,0.18);
-background: rgba(18,22,46,0.40);
-border-radius: 22px;
-backdrop-filter: blur(16px);
-box-shadow: 0 8px 30px rgba(8,12,40,0.18);
-```
-
-Hover (pointer devices): corners sharpen to 0, background darkens
-(`.ab-tile-hover`). If you add a new card anywhere, reuse these values.
+Hover is a costume change: the shadow jumps further out (`--slab-dx/dy`)
+and flips to cream (`.slab-hover`, bento tiles) or just jumps on light
+sections (`.slab-jump`); panels flip to riot cobalt. If you add a new card,
+use `.slab-wrap` + `.slab`.
 
 **Component CSS sections** in index.css, in order: font + tokens → Lenis →
-body/selection/cursor → About bento grid (`.about-bento`, `.ab-*`) → icon
+body/selection → riot material (`.slab-*`, `.cut-*`, `.halftone`) → cursor → About bento grid (`.about-bento`, `.ab-*`) → icon
 buttons (`.icon-btn`) → Spotify equalizer → focus-visible + reduced-motion →
 Gallery stage/pieces/lightbox (`.gallery-*`).
 
@@ -147,7 +156,7 @@ desktop / portrait-tablet / mobile template variants; on mobile the
 taller-than-viewport grid pans vertically with leftover scroll.
 
 ### Projects (`Projects.tsx`, `projects/ProjectCard.tsx`)
-Normal-flow section (no pinning). "Selected Projects" heading + one glass card
+Normal-flow section (no pinning). "Selected Projects" `SlashHeading` + one riot slab card
 per entry of `works` (`data/projectsData.ts`), each wrapped in an `InkReveal`.
 Card: 12-col grid — sticky info column (title/subtitle/year/role/stack badges/
 CTA link) + parallax image (120%-tall, drifts −10%). Optional `hoverThumbnail`
@@ -177,6 +186,19 @@ name, cover, ordered tracklist. `/api/track?id=` uses Client Credentials
 (`SPOTIFY_CLIENT_ID/SECRET` in `.env`) for per-song covers. In dev,
 `vite.config.ts` serves these in-process so plain `npm run dev` works; both
 degrade gracefully (card falls back to static `SPOTIFY` data).
+
+---
+
+## Riot style — where each rule lives
+
+| Rule | Files |
+| --- | --- |
+| 1. Three flat colours | `@theme` tokens in `index.css`; `RIOT` in `style/riot.ts`; `SECTION_PALETTES` + posterized `COMPOSITE` shader |
+| 2. One tilted axis | `TILT` in `style/riot.ts`; Hero/Contact bands, `SlashHeading`, StyleMenu `LIST_TILT`, card `lean` in `ProjectCard` |
+| 3. No plain rectangles | `jagged()` / `jaggedPx()`; `.cut-a/b/c`, bento `--slab-cut`s |
+| 4. Selection is a costume change | `.slab-hover`, bento/ab-flight-card hover, header indicator, `Ransom`, StyleMenu `Highlight`, gallery print hover, CTA buttons |
+| 5. Fast overshooting motion | `SNAP`, `ENTER_EASE`, `WIPE_EASE`; `InkReveal` slam; `PageTransition` + `LoadingScreen` wipes; `style/sfx.ts` (hard-attack, fast-decay sounds) |
+| 6. Depth from flat layers | hard shadows everywhere; `.halftone`; outlined stamps (Hero "26", Gallery, StyleMenu); shader halftone band |
 
 ---
 
@@ -246,7 +268,7 @@ desktop grid hole-free; re-check visually if you reorder.
 ### Tune the background
 Everything is in `gradientConfig.ts`: section colours (`SECTION_PALETTES`),
 liveliness (`energy` per section, `SIM.AMBIENT_FORCE`), calmness/perf
-(`SIM.RES*`, `JACOBI*`), grain (`GRADIENT.GRAIN`). Drift paths are in
+(`SIM.RES*`, `JACOBI*`), ink coverage (`GRADIENT.INK_T*`). Drift paths are in
 `ambient.ts`. After palette changes run `node test/gradientConfig.test.mjs`
 (it sanity-checks luminance/contrast assumptions).
 

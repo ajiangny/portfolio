@@ -81,14 +81,16 @@ function ElasticLetter({ d, mouseX, mouseY }: WordmarkLetterProps) {
   const x = useSpring(rawX, SPRING)
   const y = useSpring(rawY, SPRING)
 
-  // Shadow alpha: 0 when cursor is absent or outside radius, peaks at ~0.55 on direct hover.
-  const shadowAlpha = useTransform([mouseX, mouseY], ([mx, my]: number[]) => {
+  // Riot hard shadow: a flat riot-cobalt copy of the glyph that slides out
+  // diagonally as the cursor nears (0 when absent/outside radius, ~14 units
+  // on direct hover). No blur — depth from offset flat layers.
+  const shadowOffset = useTransform([mouseX, mouseY], ([mx, my]: number[]) => {
     if (mx === OFF) return 0
     const dist = Math.hypot(mx - cx.current, my - cy.current)
     if (dist >= RADIUS) return 0
-    return Math.pow(1 - dist / RADIUS, 1.8) * 0.55
+    return Math.round(Math.pow(1 - dist / RADIUS, 1.4) * 14)
   })
-  const letterFilter = useMotionTemplate`drop-shadow(0 6px 22px rgba(8,12,40,${shadowAlpha}))`
+  const letterFilter = useMotionTemplate`drop-shadow(${shadowOffset}px ${shadowOffset}px 0 #1E4BD2)`
 
   return <motion.path ref={ref} d={d} style={{ x, y, filter: letterFilter }} />
 }
