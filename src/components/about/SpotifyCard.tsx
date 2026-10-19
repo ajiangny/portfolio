@@ -7,6 +7,13 @@
  * The hidden iframe is driven as a single-track player: we own the queue and
  * call loadUri() for prev/next + auto-advance, mirroring position/pause state
  * from playback_update. The visible glass card shows the current song.
+ *
+ * Sound on autoplays it: if the visitor picked Sound on (loader or corner
+ * toggle), the queue starts as soon as the embed is ready, and Sound off
+ * pauses it. The Sound on click is the user gesture browsers want before
+ * audio; when it isn't recent enough (a returning visitor whose choice was
+ * remembered) the browser blocks play(), so we retry on their first click or
+ * key press instead.
  */
 import {
   useState, useEffect, useRef,
@@ -18,6 +25,7 @@ import { motion, useMotionValue, animate } from 'framer-motion'
 import { SPOTIFY } from '../../data/aboutData'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useInkFilter from '../../hooks/useInkFilter'
+import { isSoundOn, onSoundChange } from '../../style/sfx'
 
 // ── Spotify iframe API shapes (the embed SDK ships no types) ────────────────
 interface QueueTrack {
@@ -205,6 +213,49 @@ export default function SpotifyCard() {
     init()
     return () => { cancelled = true; ctrl?.destroy?.(); controllerRef.current = null }
   }, [])
+
+  // ── Autoplay with the site's sound switch ───────────────────────────────────
+  // isPausedRef lets the sound listener and the blocked-play check read the
+  // live state without re-subscribing.
+  const isPausedRef = useRef(true)
+  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
+
+  useEffect(() => {
+    if (!ready) return
+    let retry: (() => void) | null = null
+    let check: number | undefined
+    const disarm = () => {
+      if (retry) {
+        window.removeEventListener('click', retry, true)
+        window.removeEventListener('keydown', retry, true)
+        retry = null
+      }
+    }
+    const start = () => {
+      if (!isPausedRef.current) return
+      try { controllerRef.current?.play() } catch { /* noop */ }
+      // No playback_update saying we're playing → the browser refused
+      // (no recent gesture). Try again on the visitor's next interaction.
+      window.clearTimeout(check)
+      check = window.setTimeout(() => {
+        if (!isPausedRef.current || retry || !isSoundOn()) return
+        // Deferred so the click's own handler runs first: a click on Sound off
+        // has already turned sound off, and a click on our play button has
+        // already started it (start() then sees it playing, or play() no-ops).
+        retry = () => { disarm(); setTimeout(() => { if (isSoundOn()) start() }, 0) }
+        window.addEventListener('click', retry, true)
+        window.addEventListener('keydown', retry, true)
+      }, 1500)
+    }
+    if (isSoundOn()) start()
+    const off = onSoundChange((on) => {
+      if (on) { start(); return }
+      disarm()
+      window.clearTimeout(check)
+      if (!isPausedRef.current) controllerRef.current?.togglePlay()
+    })
+    return () => { off(); disarm(); window.clearTimeout(check) }
+  }, [ready])
 
   // ── Lazy per-song cover (single-track lookup) ────────────────────────────────
   useEffect(() => {
