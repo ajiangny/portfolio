@@ -8,6 +8,11 @@
  * off-angle poses (a snap, then a hold — never a smooth pulse) above a
  * ransom-note LOADING that reshuffles on every tick.
  *
+ * First visit only: the loader doubles as a "press start" screen. Two slab
+ * buttons offer SOUND ON / STAY SILENT, and the veil waits for a choice
+ * once loading is done (LOADING becomes READY?). Returning visitors who
+ * already chose are never asked, so they get no extra wait.
+ *
  * Exit: the whole veil is slashed away left → right with a diagonal
  * clip-path edge (the same move as PageTransition), so it's cheap on phones.
  * Lenis is paused while visible and started on exit.
@@ -18,6 +23,7 @@ import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 
 import { useLenisContext } from '../context/LenisContext'
 import { RIOT, SNAP, TILT, WIPE_EASE, jagged } from '../style/riot'
 import Ransom from './style/Ransom'
+import * as sfx from '../style/sfx'
 
 const LOGO = '/favicon/logo.svg'
 
@@ -32,6 +38,13 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
   const [dismissed, setDismissed] = useState(false)
   const [minTimePassed, setMinTimePassed] = useState(false)
   const [tick, setTick] = useState(0)
+  // Ask about sound only if this visitor has never chosen.
+  const [needsChoice] = useState(() => !sfx.hasSoundChoice())
+  const [chosen, setChosen] = useState(false)
+  const choose = (on: boolean) => {
+    sfx.setSound(on)
+    setChosen(true)
+  }
 
   // Enforce minimum display time.
   useEffect(() => {
@@ -44,7 +57,8 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
     lenisRef?.current?.stop()
   }, [lenisRef])
 
-  const canDismiss = ready && minTimePassed
+  const loaded = ready && minTimePassed
+  const canDismiss = loaded && (!needsChoice || chosen)
 
   // Snap-and-hold ticker for the logo pose + ransom reshuffle.
   useEffect(() => {
@@ -57,6 +71,7 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
   const t = useMotionValue(1) // 1 = fully covering, 0 = gone
   useEffect(() => {
     if (!canDismiss) return
+    sfx.wipe() // silent unless sound was just switched on
     const controls = animate(t, 0, {
       duration: reduceMotion ? 0.3 : 0.55,
       ease: WIPE_EASE,
@@ -80,8 +95,8 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
 
   return (
     <motion.div
-      role="status"
-      aria-label="Loading"
+      role={needsChoice ? 'dialog' : 'status'}
+      aria-label={needsChoice ? 'Welcome — choose sound' : 'Loading'}
       style={{ position: 'fixed', inset: 0, zIndex: 10000, overflow: 'hidden', clipPath, opacity }}
     >
       {/* Field: two flat cobalt tones split on the tilted axis (matches the
@@ -142,8 +157,48 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
             </div>
           </motion.div>
           <div style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', rotate: `${TILT}deg` }}>
-            <Ransom text="LOADING" seed={reduceMotion ? 1 : tick + 1} color={RIOT.face} />
+            <Ransom
+              text={loaded && needsChoice && !chosen ? 'READY?' : 'LOADING'}
+              seed={reduceMotion ? 1 : tick + 1}
+              color={RIOT.face}
+            />
           </div>
+
+          {needsChoice && (
+            <div
+              role="group"
+              aria-label="Sound effects"
+              style={{ display: 'flex', gap: 14, marginTop: 8, rotate: `${TILT}deg` }}
+            >
+              {[
+                { on: true, label: 'Sound on', bg: RIOT.face, fg: RIOT.ink, seed: 61 },
+                { on: false, label: 'Stay silent', bg: RIOT.cobalt, fg: RIOT.face, seed: 62 },
+              ].map((b) => (
+                <motion.button
+                  key={b.label}
+                  type="button"
+                  onClick={() => choose(b.on)}
+                  disabled={chosen}
+                  whileHover={reduceMotion ? undefined : { rotate: -6, scale: 1.08 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={SNAP}
+                  className="font-display uppercase"
+                  style={{
+                    padding: '12px 20px 10px',
+                    border: 'none',
+                    background: b.bg,
+                    color: b.fg,
+                    fontSize: 'clamp(0.95rem, 1.6vw, 1.25rem)',
+                    lineHeight: 1,
+                    clipPath: jagged(b.seed, 7),
+                    cursor: 'pointer',
+                  }}
+                >
+                  {b.label}
+                </motion.button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

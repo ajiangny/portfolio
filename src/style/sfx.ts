@@ -13,8 +13,9 @@
  *     a little scale (rule 4 — selection is an event you can hear)
  *
  * Sound is OFF until the visitor turns it on (browsers block audio before a
- * user gesture anyway); the choice is remembered in localStorage. The
- * AudioContext is created lazily on the enabling click.
+ * user gesture anyway). First-time visitors are asked on the loading screen;
+ * the choice is remembered in localStorage and the corner toggle changes it
+ * later. The AudioContext is created lazily on the enabling click.
  */
 
 type Listener = (on: boolean) => void
@@ -49,6 +50,15 @@ function audio() {
 }
 
 export function isSoundOn() { return enabled }
+
+/** Has this visitor ever made a sound choice (on or off)? The loader asks once. */
+export function hasSoundChoice() {
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null
+  } catch {
+    return true // storage blocked: don't keep asking every visit
+  }
+}
 
 export function setSound(on: boolean) {
   enabled = on
