@@ -7,7 +7,8 @@
  *     right (flat layers that parallax at different rates on scroll).
  *   • An ink slash across the bottom that the wordmark sits on.
  *   • A centred "PORTFOLIO 2026" eyebrow on the tilted axis: a cream slab
- *     tag with the year ransomed onto an ink chip, plus a role line.
+ *     tag with the year ransomed onto an ink chip; hovering it flips the
+ *     slab to cobalt and swings the chip, with a stamp sound.
  *   • The "ANDREW JIANG" wordmark (HeroWordmark, per-letter mouse-repulsion,
  *     hard cobalt offset shadows) flush against the bottom edge.
  * Global navigation lives in SiteHeader (App.tsx), not here.
@@ -16,7 +17,7 @@ import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import InkReveal from './InkDissolve'
 import HeroWordmark from './hero/HeroWordmark'
-import { RIOT, TILT, jagged, jaggedPx } from '../style/riot'
+import { RIOT, SNAP, TILT, jagged, jaggedPx } from '../style/riot'
 
 export default function Hero() {
   const heroRef = useRef(null)
@@ -99,15 +100,40 @@ export default function Hero() {
       >
         <InkReveal delay={0.25} duration={1.2}>
           <div style={{ rotate: `${TILT}deg`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.9rem' }}>
-            <div
+            {/* Hover is a costume change (riot rule 4): PORTFOLIO flips to
+                cobalt and kicks forward, the 2026 chip swings the other way,
+                and the shadow jumps out. data-sfx="stamp" gives it its own
+                landing sound (installHoverSfx in style/sfx.ts). */}
+            <motion.div
               className="font-display flex items-center whitespace-nowrap"
-              style={{ fontSize: 'clamp(1.6rem, 4vw, 3.6rem)', lineHeight: 1, filter: 'drop-shadow(6px 6px 0 #0F1016)' }}
+              data-sfx="stamp"
+              initial="rest"
+              animate="rest"
+              whileHover="hover"
+              variants={{
+                rest: { filter: 'drop-shadow(6px 6px 0 #0F1016)' },
+                hover: { filter: 'drop-shadow(13px 12px 0 #0F1016)' },
+              }}
+              transition={SNAP}
+              style={{ fontSize: 'clamp(1.6rem, 4vw, 3.6rem)', lineHeight: 1, pointerEvents: 'auto' }}
             >
-              <span style={{ background: RIOT.face, color: RIOT.ink, padding: '0.12em 0.4em 0.08em', clipPath: jagged(2, 5) }}>
+              <motion.span
+                variants={{
+                  rest: { backgroundColor: 'var(--color-cream)', color: 'var(--color-slab)', x: 0, skewX: 0 },
+                  hover: { backgroundColor: 'var(--color-riot)', color: 'var(--color-cream)', x: -8, skewX: -8 },
+                }}
+                transition={SNAP}
+                style={{ padding: '0.12em 0.4em 0.08em', clipPath: jagged(2, 5) }}
+              >
                 PORTFOLIO
-              </span>
-              <span
+              </motion.span>
+              <motion.span
                 className="font-sans"
+                variants={{
+                  rest: { rotate: 8, scale: 1, x: 0, y: '0.08em' },
+                  hover: { rotate: -12, scale: 1.2, x: 6, y: '-0.12em' },
+                }}
+                transition={SNAP}
                 style={{
                   fontWeight: 800,
                   fontStyle: 'italic',
@@ -115,27 +141,12 @@ export default function Hero() {
                   color: RIOT.face,
                   padding: '0.12em 0.3em 0.08em',
                   marginLeft: '-0.1em',
-                  rotate: '8deg',
-                  translate: '0 0.08em',
                   clipPath: jagged(5, 8),
                 }}
               >
                 2026
-              </span>
-            </div>
-            <span
-              className="font-mono uppercase"
-              style={{
-                fontSize: 'var(--text-label)',
-                letterSpacing: '0.22em',
-                color: RIOT.face,
-                background: RIOT.ink,
-                padding: '5px 12px',
-                clipPath: jagged(9, 6),
-              }}
-            >
-              Developer &amp; Designer · New York
-            </span>
+              </motion.span>
+            </motion.div>
           </div>
         </InkReveal>
       </motion.div>

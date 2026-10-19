@@ -31,6 +31,7 @@ import SiteHeader from './components/SiteHeader'
 import Cursor from './components/Cursor'
 import StyleMenu from './components/StyleMenu'
 import SoundToggle from './components/style/SoundToggle'
+import { installHoverSfx } from './style/sfx'
 
 function App() {
   const lenisRef = useLenis()
@@ -42,6 +43,10 @@ function App() {
   useEffect(() => {
     document.fonts.ready.then(() => setFontsReady(true))
   }, [])
+
+  // Hover ticks for every opted-in surface (About tiles, project cards,
+  // gallery prints, Hero title), gated by the sound toggle inside sfx.
+  useEffect(() => installHoverSfx(), [])
 
   const onGradientReady = useCallback(() => setGradientReady(true), [])
   // Once true, never false again (both inputs only ever set true). Heavy

@@ -42,6 +42,7 @@ export function CircleLink({ href, label, children }: { href: string; label: str
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
+      data-sfx
       className="group/link inline-flex items-center gap-3 w-fit font-display uppercase text-slab bg-cream px-5 py-3 transition-[background-color,color,rotate,scale] duration-200 ease-[cubic-bezier(0.2,1.4,0.4,1)] hover:bg-riot hover:text-cream hover:-rotate-3 hover:scale-105"
       style={{ fontSize: 'clamp(0.95rem, 1.3vw, 1.2rem)', clipPath: jagged(31, 5), lineHeight: 1 }}
     >
@@ -157,6 +158,7 @@ export default function ProjectCard({ work, index = 0 }: { work: Work; index?: n
             boxShadow: '10px 10px 0 var(--color-riot)',
             rotate: `${-lean * 2.5}deg`,
           }}
+          data-sfx
           onMouseEnter={() => { if (hoverSrc) { setIsHovered(true); setHasHovered(true) } }}
           onMouseLeave={() => setIsHovered(false)}
         >
