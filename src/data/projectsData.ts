@@ -25,11 +25,16 @@ export interface Work {
   live?: string | null
   thumbnail: string
   hoverThumbnail?: string
+  /** Riot accent while this card is in view (replaces cobalt site-wide; see
+   *  style/accent.ts). Taken from the project's own art, darkened so cream
+   *  text on it stays readable. Omit to keep cobalt. */
+  accent?: string
 }
 
 export const works: Work[] = [
   {
     title: 'HackKnight 2026',
+    accent: '#5B2D9F',
     subtitle: 'Event platform handling registration and scheduling for 200+ participants with an admin dashboard.',
     tech: ['React', 'TypeScript', 'JavaScript', 'Tailwind', 'Framer Motion', 'Express'],
     year: '2026',
@@ -40,6 +45,7 @@ export const works: Work[] = [
   },
   {
     title: 'Pear Protocol',
+    accent: '#34841B',
     subtitle: 'Engineered and composited a 10,000+ image generative collection using Python pipelines and automated smart contract metadata formatting.',
     tech: ['Python', 'Photoshop'],
     year: null, // TODO: fill in
@@ -51,6 +57,7 @@ export const works: Work[] = [
   },
   {
     title: 'Art Fundamentals Tutor',
+    accent: '#B8621B',
     subtitle: 'AI-powered drawing evaluation workspace using Gemini Pro Vision and Three.js for three-point perspective geometry.',
     tech: ['React', 'TypeScript', 'Three.js', 'Gemini API'],
     year: null, // TODO: fill in
@@ -61,6 +68,7 @@ export const works: Work[] = [
   },
   {
     title: 'Bank Statement Parser',
+    accent: '#1A7A6E',
     subtitle: 'Python desktop app automating financial data extraction with a regex parsing engine and SQLite.',
     tech: ['Python', 'SQLite', 'Flet'],
     year: null, // TODO: fill in
@@ -71,6 +79,7 @@ export const works: Work[] = [
   },
   {
     title: 'Code For All Brand',
+    accent: '#A0359E',
     subtitle: "Redesigned the club's full brand identity, establishing a cohesive visual language through a new logo and graphic assets.",
     tech: ['Figma', 'Illustrator'],
     year: null, // TODO: fill in
@@ -81,6 +90,7 @@ export const works: Work[] = [
   },
   {
     title: 'Blind Box Trading App',
+    accent: '#86760F',
     subtitle: 'A blind box collectible tracker with community trading, real-time chat negotiations, and collection management.',
     tech: ['React', 'Vercel'],
     year: null,
@@ -91,6 +101,7 @@ export const works: Work[] = [
   },
   {
     title: 'Kanto Pokédex',
+    accent: '#C41C1D',
     subtitle: 'Retro pixel-art Pokédex featuring all 151 Kanto Pokémon with live stats from PokéAPI, type filtering, and animated sprites.',
     tech: ['HTML', 'CSS', 'JavaScript'],
     year: null,

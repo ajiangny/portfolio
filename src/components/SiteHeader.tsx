@@ -68,7 +68,7 @@ export default function SiteHeader() {
   // indicator is always the riot cobalt.
   const textColor = light ? 'var(--color-cream)' : 'var(--color-slab)'
   const barBg = light ? 'var(--color-slab)' : 'var(--color-cream)'
-  const shadowColor = light ? '#1E4BD2' : '#0F1016'
+  const shadowColor = light ? 'var(--color-riot)' : '#0F1016'
   const activeFill = 'var(--color-riot)'
   const activeText = 'var(--color-cream)'
 

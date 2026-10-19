@@ -73,6 +73,15 @@
   --color-slab: #0F1016;
 }
 
+/* Registered so a change of --color-riot animates instead of snapping: the
+   Projects section swaps it per card (style/accent.ts sets it on <html>). */
+@property --color-riot {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1E4BD2;
+}
+html { transition: --color-riot 0.45s ease; }
+
 /* NOTE: no custom `* { margin:0; padding:0 }` reset here — Tailwind v4
    preflight already provides it, and an unlayered reset would override
    every Tailwind padding/margin utility (unlayered CSS beats @layer). */
