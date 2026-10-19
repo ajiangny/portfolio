@@ -17,6 +17,7 @@ import { SECTION_PALETTES, GRADIENT, SIM } from './gradientConfig'
 import { selectPalette } from './paletteSelect'
 import { lerp3 } from './colors'
 import { hoverSignal } from './hoverSignal'
+import { accentSignal } from '../../style/accent'
 import { useLoadingContext } from '../../context/LoadingContext'
 
 const ORDER = SECTIONS.map((s) => s.id)
@@ -79,7 +80,14 @@ export default function FluidGradient() {
       scene.resize(w, h, dpr)
     }
 
+    // Projects colour coding: the Projects ink eases toward the accent of the
+    // card in view (style/accent.ts), and back to cobalt when there is none.
+    const PROJECTS = SECTION_PALETTES.projects
+    let projInk = PROJECTS.ink
+
     function paletteNow() {
+      projInk = lerp3(projInk, accentSignal.rgb ?? PROJECTS.ink, 0.08)
+      const palettes = { ...SECTION_PALETTES, projects: { ...PROJECTS, ink: projInk } }
       const centerY = h / 2
       const rects = ORDER.map((id) => {
         const el = document.getElementById(id)
@@ -87,7 +95,7 @@ export default function FluidGradient() {
         const r = el.getBoundingClientRect()
         return { top: r.top, bottom: r.bottom, height: r.height }
       })
-      const pal = selectPalette(rects, centerY, ORDER, SECTION_PALETTES, GRADIENT.SEAM_FADE)
+      const pal = selectPalette(rects, centerY, ORDER, palettes, GRADIENT.SEAM_FADE)
 
       // Hover preview only while Hero (section 0) holds the centre, so it can't
       // bleed into other sections. hoverSignal.section is the destination

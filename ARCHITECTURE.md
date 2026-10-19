@@ -161,6 +161,10 @@ per entry of `works` (`data/projectsData.ts`), each wrapped in an `InkReveal`.
 Card: 12-col grid — sticky info column (title/subtitle/year/role/stack badges/
 CTA link) + parallax image (120%-tall, drifts −10%). Optional `hoverThumbnail`
 crossfades through the ink filter on hover.
+Colour coding: each `works` entry's `accent` takes over from cobalt while its card
+crosses the middle of the screen (`style/accent.ts` overrides `--color-riot` on
+`<html>`, animated via `@property`, and recolours the Projects fluid ink); leaving
+the section restores cobalt.
 
 ### Gallery (`Gallery.tsx`, `gallery/GalleryLightbox.tsx`, `data/galleryData.ts`)
 "Drifting print-desk": a **240vh** scroll-pinned section whose visible stage is
@@ -214,7 +218,8 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 2. Add an object to `works` in [src/data/projectsData.ts](src/data/projectsData.ts):
    `title`, `subtitle`, `tech: []`, `year`, `role`, `github`/`live` (CTA shows
    "Launch Website" if `live`, else "View Code" if `github`), `thumbnail`,
-   optional `hoverThumbnail` (e.g. a gif) for the hover crossfade.
+   optional `hoverThumbnail` (e.g. a gif) for the hover crossfade, optional
+   `accent` (hex; dark enough for cream text) for the colour coding.
 3. Stack badges: if a `tech` label has no entry in `TECH_ICON_MAP`
    ([ProjectCard.tsx](src/components/projects/ProjectCard.tsx)), it renders as a
    2-letter chip. To give it an icon, add the svg to `public/icons/default/`
