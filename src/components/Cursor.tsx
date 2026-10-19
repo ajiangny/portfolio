@@ -72,7 +72,7 @@ export default function Cursor() {
           (with overshoot) when it lands on something clickable. */}
       <motion.div
         aria-hidden="true"
-        className="pointer-events-none fixed left-0 top-0 z-9999 bg-white"
+        className="pointer-events-none fixed left-0 top-0 z-10050 bg-white"
         style={{
           x,
           y,
@@ -98,7 +98,7 @@ export default function Cursor() {
           <motion.div
             key={label}
             aria-hidden="true"
-            className="pointer-events-none fixed left-0 top-0 z-9999 whitespace-nowrap font-sans font-bold uppercase"
+            className="pointer-events-none fixed left-0 top-0 z-10050 whitespace-nowrap font-sans font-bold uppercase"
             style={{
               x,
               y,

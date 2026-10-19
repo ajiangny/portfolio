@@ -97,7 +97,7 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
     <motion.div
       role={needsChoice ? 'dialog' : 'status'}
       aria-label={needsChoice ? 'Welcome — choose sound' : 'Loading'}
-      style={{ position: 'fixed', inset: 0, zIndex: 10000, overflow: 'hidden', clipPath, opacity }}
+      style={{ position: 'fixed', inset: 0, zIndex: 10000 /* under the cursor (Cursor.tsx, z-10050) */, overflow: 'hidden', clipPath, opacity }}
     >
       {/* Field: two flat cobalt tones split on the tilted axis (matches the
           background shader's first frame, so the hand-off is invisible). */}
