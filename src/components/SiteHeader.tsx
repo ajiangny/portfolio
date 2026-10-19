@@ -4,8 +4,9 @@
  * One header for the whole site (rendered in App.tsx, fixed, z-200, below the
  * PageTransition curtain). Expanded = AJ monogram (left) + equal links
  * (about/projects/gallery/contact, right). Fully expanded only while the Hero
- * section is active; past Hero it collapses to a monogram pill wrapped in a
- * scroll-progress ring, and re-expands on hover. A single sliding pill
+ * section is active; past Hero it collapses to a monogram pill with a
+ * scroll-progress stripe, and re-expands after a 1s hover (so passing the
+ * pointer over it, or going for the monogram, doesn't throw the bar open). A single sliding pill
  * indicator tracks the hovered/active link. Glass + text colours adapt to the
  * active section's background (logo inverts to black on light sections).
  * Hovering a link previews that section's palette in the fluid gradient
@@ -18,7 +19,7 @@
  * unclipped wrapper; the hover/active indicator is a skewed riot-cobalt slab
  * that springs between links (selection as a costume change).
  */
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { motion, useReducedMotion, useAnimation, useScroll } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { SECTIONS, NAV_SECTIONS, goToSection } from '../config/sections'
@@ -35,6 +36,7 @@ const GUTTER = 40      // px viewport inset at each side when expanded
 const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
 const BAR_H = 46       // px slab height (collapsed width == height → square)
 const LOGO = '/favicon/logo.svg'
+const EXPAND_DELAY = 1000 // ms of hovering the collapsed slab before it opens into the full bar
 
 // Perceived luminance of a normalised (0..1) rgb triple. The header sits at the
 // top of the viewport, so we read the gradient's TOP base colour (base[0]) for
@@ -71,8 +73,19 @@ export default function SiteHeader() {
   const activeText = 'var(--color-cream)'
 
   // Desktop: full bar only while Hero is active; past it, a logo pill that
-  // re-expands on hover. Mobile is always the pill; reduced-motion always expanded.
+  // re-expands once hovered for EXPAND_DELAY. Mobile is always the pill;
+  // reduced-motion always expanded.
   const [pillHovered, setPillHovered] = useState(false)
+  const hoverTimer = useRef<number | undefined>(undefined)
+  const onPillEnter = () => {
+    window.clearTimeout(hoverTimer.current)
+    hoverTimer.current = window.setTimeout(() => setPillHovered(true), EXPAND_DELAY)
+  }
+  const onPillLeave = () => {
+    window.clearTimeout(hoverTimer.current)
+    setPillHovered(false)
+  }
+  useEffect(() => () => window.clearTimeout(hoverTimer.current), [])
   const expanded = reduce ? true : isMobile ? false : index === 0 || pillHovered
 
   // Whole-page scroll progress drives the ring around the collapsed pill.
@@ -137,8 +150,8 @@ export default function SiteHeader() {
       }}
     >
       <div
-        onMouseEnter={() => setPillHovered(true)}
-        onMouseLeave={() => setPillHovered(false)}
+        onMouseEnter={onPillEnter}
+        onMouseLeave={onPillLeave}
         style={{
           position: 'relative',
           pointerEvents: 'auto',

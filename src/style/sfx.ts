@@ -148,3 +148,39 @@ export function close() {
 export function wipe() {
   sweep(300, 5000, 0.5, 0.42, 0.9)
 }
+
+/** A stamp landing (the Hero title): a tick on top of a short low thump. */
+export function stamp() {
+  blip('sine', 190, 70, 0.12, 0.45)
+  blip('square', 1320, 990, 0.05, 0.14, 0.01)
+}
+
+// ── Hover sounds by delegation ──
+// One listener covers every hoverable surface, so sections opt in by markup
+// instead of each wiring its own handlers: `[data-sfx]` (value "stamp" plays
+// stamp(), anything else ticks) plus the riot hover classes already on the
+// About tiles and Gallery prints. Consecutive ticks walk up the pentatonic
+// scale, so sweeping across a grid plays a phrase rather than one repeated
+// click.
+const HOVER_SFX = '[data-sfx], .ab-tile-hover, .ab-flight-card, .gallery-piece'
+
+/** Install the delegated hover listener; returns the cleanup. */
+export function installHoverSfx() {
+  let current: Element | null = null
+  let step = 0
+  let last = 0
+  const onOver = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return // taps aren't hovers
+    const t = e.target instanceof Element ? e.target.closest(HOVER_SFX) : null
+    if (t === current) return
+    current = t
+    if (!t) return
+    const now = performance.now()
+    if (now - last < 60) return // a fast sweep shouldn't machine-gun
+    last = now
+    if (t.getAttribute('data-sfx') === 'stamp') stamp()
+    else tick(step++)
+  }
+  document.addEventListener('pointerover', onOver, { passive: true })
+  return () => document.removeEventListener('pointerover', onOver)
+}
