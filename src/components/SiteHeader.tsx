@@ -29,6 +29,7 @@ import { SECTION_PALETTES } from './gradient/gradientConfig'
 import type { Vec3 } from './gradient/colors'
 import { SNAP, jagged } from '../style/riot'
 import { openMenu } from './style/menuSignal'
+import * as sfx from '../style/sfx'
 
 const GUTTER = 40      // px viewport inset at each side when expanded
 const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
@@ -89,6 +90,7 @@ export default function SiteHeader() {
   // Hover previews the section palette (FluidGradient gates it to Hero).
   const onEnter = (id: string, navIdx: number) => {
     setHoveredId(id)
+    sfx.tick(navIdx)
     setHoverSection(navIdx + 1) // NAV index → SECTIONS index (1..4)
   }
   const onLeave = () => {
@@ -99,6 +101,7 @@ export default function SiteHeader() {
 
   const go = (id: string, e: ReactMouseEvent) => {
     e.stopPropagation()
+    sfx.confirm()
     // Pin the indicator on the clicked link instead of clearing hoveredId —
     // clearing it here would fall back to the (still-old) active section and
     // rubberband the pill back before the transition ever moves it forward.

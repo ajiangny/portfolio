@@ -18,6 +18,7 @@ import {
 } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { RIOT, WIPE_EASE } from '../style/riot'
+import * as sfx from '../style/sfx'
 
 const SKEW = 22 // % — how far the top of each edge leads the bottom (the slash angle)
 const LAG = 0.18 // the colour layer trails the ink layer by this fraction of the sweep
@@ -54,6 +55,7 @@ export default function PageTransition() {
   const colorClip = useMotionValue(slab(-SKEW - 2, -SKEW - 2))
 
   useEffect(() => {
+    if (isActive) sfx.wipe()
     enteringRef.current = isActive
     const controls = animate(t, isActive ? 1 : 0, {
       duration: 0.6, // matches TransitionProvider's 600ms phases

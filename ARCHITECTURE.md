@@ -27,6 +27,7 @@ Everything global is mounted once in `App.tsx`:
 | Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` sweeps a diagonal ink slab then the section colour across the screen (600 ms, pure clip-path), performs an instant Lenis jump under cover, then both layers continue off the far edge. A ref lock prevents re-entry mid-transition. |
 | Global nav | `components/SiteHeader.tsx` | Morphing riot slab: full bar on Hero, collapses to a monogram square with a cobalt scroll-progress stripe after, re-expands on hover; the active/hover indicator is a skewed cobalt slab. The monogram opens the StyleMenu on every screen size (via `style/menuSignal.ts`); the bar links are the compact shortcut form of the same nav. Cream slab on dark sections, ink on light — derived from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
 | Style menu | `components/StyleMenu.tsx` | Full-screen game-style menu — the expanded form of the nav, opened by the header monogram (every screen size) or the M key. Tilted list, clip-path slabs, ransom-note selected label, keyboard nav; navigates via `goToSection()`. z 9000, under the transition veil. |
+| Sound effects | `style/sfx.ts`, `components/style/SoundToggle.tsx` | Synthesized Web Audio UI sounds (no files): `tick(step)` for selection moves (pitched on a pentatonic scale), `confirm()` for clicks/Enter, `open()`/`close()`/`wipe()` noise slashes for the menu and page transition. OFF until the visitor flips the bottom-right toggle; choice persists in localStorage. Hooked in StyleMenu, SiteHeader links, PageTransition. |
 | Fluid background | `components/gradient/*` | One fixed WebGL2 canvas at `z-index:-1` behind the whole site (details below). |
 | Custom cursor | `components/Cursor.tsx` | Fine-pointer only. Blend-difference diamond; spins a quarter-turn and scales on interactive elements; swaps to a cream slab label tag over `[data-cursor-label]`; `[data-cursor-hint]` shows a one-time "Click me!" teaching hint. |
 | Active section | `hooks/useActiveSection.ts` | Which section holds the viewport centre + hysteresis "settled" flag — drives the header morph, mirrors the gradient's palette math. |
@@ -196,7 +197,7 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 | 2. One tilted axis | `TILT` in `style/riot.ts`; Hero/Contact bands, `SlashHeading`, StyleMenu `LIST_TILT`, card `lean` in `ProjectCard` |
 | 3. No plain rectangles | `jagged()` / `jaggedPx()`; `.cut-a/b/c`, bento `--slab-cut`s |
 | 4. Selection is a costume change | `.slab-hover`, bento/ab-flight-card hover, header indicator, `Ransom`, StyleMenu `Highlight`, gallery print hover, CTA buttons |
-| 5. Fast overshooting motion | `SNAP`, `ENTER_EASE`, `WIPE_EASE`; `InkReveal` slam; `PageTransition` + `LoadingScreen` wipes |
+| 5. Fast overshooting motion | `SNAP`, `ENTER_EASE`, `WIPE_EASE`; `InkReveal` slam; `PageTransition` + `LoadingScreen` wipes; `style/sfx.ts` (hard-attack, fast-decay sounds) |
 | 6. Depth from flat layers | hard shadows everywhere; `.halftone`; outlined stamps (Hero "26", Gallery, StyleMenu); shader halftone band |
 
 ---

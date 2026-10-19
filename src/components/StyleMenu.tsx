@@ -26,7 +26,7 @@
  * z-index 9000: above the SiteHeader (200), below the PageTransition veil and
  * Cursor (9999) so the dissolve still covers the menu as it leaves.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useTransitionContext } from '../context/TransitionContext'
 import { useLenisContext } from '../context/LenisContext'
@@ -34,6 +34,7 @@ import { SECTIONS, goToSection } from '../config/sections'
 import { RIOT, SNAP, ENTER_EASE, WIPE_EASE, jagged } from '../style/riot'
 import Ransom from './style/Ransom'
 import { onMenuOpen } from './style/menuSignal'
+import * as sfx from '../style/sfx'
 
 // ── 1. Palette — three flat colours, every element uses exactly one ──
 const MENU = { field: RIOT.cobalt, face: RIOT.face, ink: RIOT.ink }
@@ -77,7 +78,17 @@ export default function StyleMenu() {
   const { navigate } = useTransitionContext()
   const lenisRef = useLenisContext()
   const reduce = useReducedMotion()
-  const [open, setOpen] = useState(false)
+  const [open, setOpenState] = useState(false)
+  // Every open/close goes through here so it carries its slash sound.
+  const openRef = useRef(false)
+  const setOpen = useCallback((next: boolean) => {
+    if (openRef.current !== next) {
+      if (next) sfx.open()
+      else sfx.close()
+    }
+    openRef.current = next
+    setOpenState(next)
+  }, [])
   const [active, setActive] = useState(0)
   // Re-rolled on every selection change so the ransom letters re-shuffle.
   const [roll, setRoll] = useState(1)
@@ -87,11 +98,14 @@ export default function StyleMenu() {
     if (next === active) return
     setActive(next)
     setRoll((r) => r + 1)
+    sfx.tick(next)
   }, [active])
 
   const confirm = useCallback(
     (i: number) => {
-      setOpen(false)
+      sfx.confirm()
+      openRef.current = false
+      setOpenState(false) // no close slash: the page-transition wipe follows
       goToSection(navigate, SECTIONS[i].id)
     },
     [navigate],
@@ -106,7 +120,7 @@ export default function StyleMenu() {
   }, [open, lenisRef])
 
   // The header monogram (mobile) opens the menu through menuSignal.
-  useEffect(() => onMenuOpen(() => setOpen(true)), [])
+  useEffect(() => onMenuOpen(() => setOpen(true)), [setOpen])
 
   // ── 6. Keyboard-first controls ──
   useEffect(() => {
@@ -124,7 +138,7 @@ export default function StyleMenu() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, active, select, confirm])
+  }, [open, active, select, confirm, setOpen])
 
   return (
     <>
