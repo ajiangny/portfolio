@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spotify login</title>
+<style>body{margin:0;display:grid;place-items:center;min-height:100vh;background:#0f1016;color:#f4eedf;font:14px/1.5 monospace}</style>
+</head>
+<body>
+<p>Logged in. You can close this window.</p>
+<script>
+  // Spotify sends the login popup back here (?code=…&state=… or ?error=…).
+  // Hand the result to the site (spotifyAuth.ts): postMessage to the opener,
+  // plus localStorage in case the browser dropped the opener link.
+  var q = new URLSearchParams(location.search)
+  var msg = { type: 'spotify-auth', code: q.get('code'), state: q.get('state'), error: q.get('error') }
+  try { localStorage.setItem('spotify-auth-result', JSON.stringify(msg)) } catch (e) {}
+  try { if (window.opener) window.opener.postMessage(msg, location.origin) } catch (e) {}
+  setTimeout(function () { window.close() }, 150)
+</script>
+</body>
+</html>

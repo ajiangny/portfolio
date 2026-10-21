@@ -1,11 +1,18 @@
 /**
  * SpotifyPrompt.tsx — "full songs or previews?" before the first Spotify play
  *
- * The hidden embed only streams full tracks to a browser that's logged in to
- * Spotify; everyone else gets 30-second previews. So the first time a visitor
- * presses play we ask, riot style: log in (Spotify opens in a new tab; when
- * they come back, "I'm logged in" reloads the player and plays) or skip and
- * hear previews. The answer is remembered, so it's asked once per browser.
+ * Logged-out visitors only get 30-second previews from Spotify's embed, and
+ * the embed has no volume control. So the first time a visitor presses play
+ * we ask, riot style: log in with Spotify Premium (a popup, spotifyAuth.ts;
+ * the page then plays through the Web Playback SDK, full songs on the Music
+ * slider) or skip to previews that follow the device volume. The answer is
+ * remembered, so it's asked once per browser.
+ *
+ * Without a Client ID on the server it falls back to the old flow: Spotify's
+ * login opens in a tab and "I'm logged in" reloads the embed.
+ *
+ * `notice` reopens it to explain a fallback (the account isn't Premium, or
+ * Spotify refused it) before previews play.
  *
  * Portalled to <body>: the About tiles are transformed, which would trap a
  * position:fixed overlay inside the tile.
@@ -16,34 +23,53 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RIOT, SNAP, TILT, ENTER_EASE, jagged } from '../../style/riot'
 import * as sfx from '../../style/sfx'
 import { rememberSpotifyChoice as remember } from './spotifyChoice'
+import { getClientId, login as sdkLogin } from './spotifyAuth'
 
 const LOGIN_URL = `https://accounts.spotify.com/login?continue=${encodeURIComponent('https://open.spotify.com/')}`
 
 interface Props {
   open: boolean
-  /** Reload the player (to pick up a fresh login) and play. */
-  onLoggedIn: () => void
+  /** Logged in: viaSdk = Premium login done here, else reload the embed. Then play. */
+  onLoggedIn: (viaSdk: boolean) => void
+  /** Why the Premium player couldn't be used; shown before previews play. */
+  notice?: string | null
   /** Play previews as-is. */
   onSkip: () => void
   /** Dismissed without choosing (Esc / backdrop): don't play. */
   onCancel: () => void
 }
 
-export default function SpotifyPrompt({ open, onLoggedIn, onSkip, onCancel }: Props) {
-  const [step, setStep] = useState<'ask' | 'waiting'>('ask')
+type Step = 'ask' | 'connecting' | 'failed' | 'waiting'
+interface Btn { label: string; sub: string; onClick: () => void; bg: string; fg: string; seed: number }
+
+export default function SpotifyPrompt({ open, onLoggedIn, notice, onSkip, onCancel }: Props) {
+  const [step, setStep] = useState<Step>('ask')
+  // Known before the click: the popup must open inside the gesture.
+  const [sdk, setSdk] = useState(false)
+  useEffect(() => { if (open) void getClientId().then((id) => setSdk(!!id)) }, [open])
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setStep('ask'); onCancel() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onCancel])
 
   const login = () => {
     sfx.confirm()
-    remember('login')
-    window.open(LOGIN_URL, '_blank', 'noopener')
-    setStep('waiting')
+    if (!sdk) {
+      remember('login')
+      window.open(LOGIN_URL, '_blank', 'noopener')
+      setStep('waiting')
+      return
+    }
+    setStep('connecting')
+    void sdkLogin().then((ok) => {
+      if (!ok) { setStep('failed'); return }
+      remember('login')
+      setStep('ask')
+      onLoggedIn(true)
+    })
   }
   const skip = () => {
     sfx.confirm()
@@ -54,18 +80,44 @@ export default function SpotifyPrompt({ open, onLoggedIn, onSkip, onCancel }: Pr
   const loggedIn = () => {
     sfx.confirm()
     setStep('ask')
-    onLoggedIn()
+    onLoggedIn(false)
   }
 
-  const buttons = step === 'ask'
-    ? [
-        { label: 'Log in to Spotify', sub: 'full songs', onClick: login, bg: RIOT.face, fg: RIOT.ink, seed: 71 },
-        { label: 'Skip', sub: '30s previews', onClick: skip, bg: RIOT.cobalt, fg: RIOT.face, seed: 72 },
-      ]
-    : [
-        { label: "I'm logged in, play", sub: 'reloads the player', onClick: loggedIn, bg: RIOT.face, fg: RIOT.ink, seed: 73 },
-        { label: 'Play previews', sub: '30s each', onClick: skip, bg: RIOT.cobalt, fg: RIOT.face, seed: 74 },
-      ]
+  const previews: Btn = { label: 'Play previews', sub: '30s each · device volume', onClick: skip, bg: RIOT.cobalt, fg: RIOT.face, seed: 74 }
+  const copy: Record<Step | 'notice', { title: string; body: string; buttons: Btn[] }> = {
+    ask: {
+      title: 'Want the full songs?',
+      body: sdk
+        ? "Log in with Spotify Premium to hear every track in full, with its volume on the Music slider in Settings. If you skip, you'll hear 30-second previews, and Spotify's sound only follows your device volume."
+        : "Spotify only plays 30-second previews unless you're logged in. Log in to hear every track in full, or skip and listen to the previews. Either way, Spotify's sound only follows your device volume.",
+      buttons: [
+        { label: sdk ? 'Log in with Premium' : 'Log in to Spotify', sub: sdk ? 'full songs · volume slider' : 'full songs', onClick: login, bg: RIOT.face, fg: RIOT.ink, seed: 71 },
+        { ...previews, label: 'Skip', seed: 72 },
+      ],
+    },
+    connecting: {
+      title: 'Finish in the Spotify window',
+      body: "Log in in the window that just opened. The music starts here as soon as you're done.",
+      buttons: [previews],
+    },
+    failed: {
+      title: "Login didn't finish",
+      body: "The Spotify window closed before the login went through, or your browser blocked it. Try again, or play the previews, whose sound follows your device volume.",
+      buttons: [{ label: 'Try again', sub: 'opens Spotify', onClick: login, bg: RIOT.face, fg: RIOT.ink, seed: 75 }, previews],
+    },
+    waiting: {
+      title: 'Log in, then come back',
+      body: "Spotify opened in a new tab. Once you've logged in there, come back and press play.",
+      buttons: [{ label: "I'm logged in, play", sub: 'reloads the player', onClick: loggedIn, bg: RIOT.face, fg: RIOT.ink, seed: 73 }, previews],
+    },
+    notice: {
+      title: 'Playing previews instead',
+      body: `${notice ?? ''} You'll hear 30-second previews, and Spotify's sound follows your device volume.`,
+      buttons: [{ ...previews, label: 'OK, play previews', bg: RIOT.face, fg: RIOT.ink }],
+    },
+  }
+  const view = copy[notice ? 'notice' : step]
+  const buttons = view.buttons
 
   return createPortal(
     <AnimatePresence>
@@ -75,7 +127,7 @@ export default function SpotifyPrompt({ open, onLoggedIn, onSkip, onCancel }: Pr
           role="dialog"
           aria-modal="true"
           aria-labelledby="spotify-prompt-title"
-          onClick={onCancel}
+          onClick={() => { setStep('ask'); onCancel() }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -116,12 +168,10 @@ export default function SpotifyPrompt({ open, onLoggedIn, onSkip, onCancel }: Pr
                 Spotify
               </span>
               <h2 id="spotify-prompt-title" className="font-display uppercase" style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', lineHeight: 1 }}>
-                {step === 'ask' ? 'Want the full songs?' : 'Log in, then come back'}
+                {view.title}
               </h2>
               <p className="font-mono" style={{ fontSize: 'var(--text-meta)', lineHeight: 1.6, opacity: 0.85 }}>
-                {step === 'ask'
-                  ? "Spotify only plays 30-second previews unless you're logged in. Log in to hear every track in full, or skip and listen to the previews."
-                  : "Spotify opened in a new tab. Once you've logged in there, come back and press play."}
+                {view.body}
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 4 }}>
                 {buttons.map((b) => (
