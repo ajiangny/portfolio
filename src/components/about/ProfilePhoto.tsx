@@ -1,10 +1,11 @@
 /**
  * ProfilePhoto — the About portrait in riot dress.
  *
- * Rests as a baked halftone cutout (public/art/profile-halftone.webp: ink/cream
- * dot screen, cream keyline, hard ink shadow on the cobalt field). Hovering the
- * card — or tapping it on touch screens — slashes the real photograph in along
- * the tilted axis. The wipe is pure clip-path (`.profile-reveal` in index.css).
+ * Rests as a baked halftone (public/art/profile-halftone.webp: ink/cream dot
+ * screen over a cobalt halftone of the city). Clicking or tapping the card
+ * toggles the real photograph, slashed in along the tilted axis, and it stays
+ * until the next click; hovering peeks it in part way as the hint. The wipe is
+ * pure clip-path (`.profile-reveal` in index.css).
  */
 import { useState } from 'react'
 import * as sfx from '../../style/sfx'
