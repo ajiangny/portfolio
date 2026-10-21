@@ -41,23 +41,34 @@ export default function Cursor() {
     if (!enabled) return
     document.documentElement.classList.add('has-custom-cursor')
 
+    let labelEl: Element | null = null
+    const readLabel = () => {
+      setLabel(labelEl?.getAttribute('data-cursor-label') ?? null)
+      setLeft(labelEl?.getAttribute('data-cursor-side') === 'left')
+    }
     const onMove = (e: MouseEvent) => {
       x.set(e.clientX)
       y.set(e.clientY)
       setVisible(true)
 
       const t = e.target instanceof Element ? e.target : null
-      const labelEl = t?.closest('[data-cursor-label]')
-      setLabel(labelEl?.getAttribute('data-cursor-label') ?? null)
-      setLeft(labelEl?.getAttribute('data-cursor-side') === 'left')
+      labelEl = t?.closest('[data-cursor-label]') ?? null
+      readLabel()
       setClickable(!!t?.closest(INTERACTIVE))
     }
+    // A target can change its label while hovered (the nav speaker flips
+    // "Sound on" / "Sound off" on click), so follow the attribute live.
+    const labelWatch = new MutationObserver((records) => {
+      if (records.some((r) => r.target === labelEl)) readLabel()
+    })
+    labelWatch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-cursor-label'] })
     const onLeave = () => setVisible(false)
 
     window.addEventListener('mousemove', onMove, { passive: true })
     document.documentElement.addEventListener('mouseleave', onLeave)
     return () => {
       document.documentElement.classList.remove('has-custom-cursor')
+      labelWatch.disconnect()
       window.removeEventListener('mousemove', onMove)
       document.documentElement.removeEventListener('mouseleave', onLeave)
     }
