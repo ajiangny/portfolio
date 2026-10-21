@@ -7,25 +7,28 @@
  * options screen: ↑↓ pick a row, ←→ change it, Esc goes back to the list.
  *
  * Rows: Sound (on/off, same switch as the nav bar's speaker), Music (the
- * background track's volume, style/music.ts) and Effects (UI sounds,
- * style/sfx.ts). Both volumes are remembered. Spotify has no volume API, so
- * it isn't on here.
+ * background track's volume, style/music.ts, and Spotify's when the Premium
+ * player is on), Effects (UI sounds, style/sfx.ts) and Spotify (log in with
+ * Premium for full songs on the Web Playback SDK, or log out back to the
+ * previews). Both volumes are remembered. The Spotify row only shows when the
+ * server has a Spotify Client ID.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import { RIOT, SNAP, ENTER_EASE, jagged } from '../../style/riot'
 import Ransom from './Ransom'
 import * as sfx from '../../style/sfx'
 import { getMusicVolume, onMusicVolumeChange, setMusicVolume } from '../../style/music'
+import { getClientId, isLinked, login, onLinkChange, unlink } from '../about/spotifyAuth'
+import { rememberSpotifyChoice } from '../about/spotifyChoice'
 
 const TILT = -9   // matches the menu list
 const STEP_X = 4  // vw each row shifts right of the one above it (halved on phones)
 const STEP = 0.1  // ←→ volume step
 
-type Row = 'sound' | 'music' | 'effects'
-const ROWS: Row[] = ['sound', 'music', 'effects']
-const LABEL: Record<Row, string> = { sound: 'Sound', music: 'Music', effects: 'Effects' }
+type Row = 'sound' | 'music' | 'effects' | 'spotify'
+const LABEL: Record<Row, string> = { sound: 'Sound', music: 'Music', effects: 'Effects', spotify: 'Spotify' }
 
 export default function SettingsPanel({ onBack }: { onBack: () => void }) {
   const narrow = useMediaQuery('(max-width: 767px)')
@@ -34,22 +37,43 @@ export default function SettingsPanel({ onBack }: { onBack: () => void }) {
   const [on, setOn] = useState(sfx.isSoundOn)
   const [music, setMusic] = useState(getMusicVolume)
   const [effects, setEffects] = useState(sfx.getVolume)
+  const [hasSpotify, setHasSpotify] = useState(false)
+  const [linked, setLinked] = useState(isLinked)
+  const [connecting, setConnecting] = useState(false)
+  useEffect(() => { void getClientId().then((id) => setHasSpotify(!!id)) }, [])
+  useEffect(() => onLinkChange(setLinked), [])
+  const ROWS = useMemo<Row[]>(() => (hasSpotify ? ['sound', 'music', 'effects', 'spotify'] : ['sound', 'music', 'effects']), [hasSpotify])
   useEffect(() => sfx.onSoundChange(setOn), [])
   useEffect(() => onMusicVolumeChange(setMusic), [])
   useEffect(() => sfx.onVolumeChange(setEffects), [])
 
+  const rowCount = ROWS.length
   const select = useCallback((i: number) => {
-    const next = (i + ROWS.length) % ROWS.length
+    const next = (i + rowCount) % rowCount
     if (next === active) return
     setActive(next)
     sfx.tick(next)
-  }, [active])
+  }, [active, rowCount])
+
+  // Premium on: the login popup (must open inside this click/keypress).
+  // Premium off: log out, back to the previews.
+  const toggleSpotify = useCallback(() => {
+    if (isLinked()) { sfx.close(); unlink(); return }
+    if (connecting) return
+    sfx.confirm()
+    setConnecting(true)
+    void login().then((ok) => {
+      setConnecting(false)
+      if (ok) rememberSpotifyChoice('login')
+    })
+  }, [connecting])
 
   const nudge = useCallback((row: Row, dir: 1 | -1) => {
     if (row === 'sound') { sfx.setSound(!sfx.isSoundOn()); return }
+    if (row === 'spotify') { toggleSpotify(); return }
     if (row === 'music') setMusicVolume(getMusicVolume() + dir * STEP)
     else { sfx.setVolume(sfx.getVolume() + dir * STEP); sfx.tick(Math.round(sfx.getVolume() * 7)) }
-  }, [])
+  }, [toggleSpotify])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,13 +81,41 @@ export default function SettingsPanel({ onBack }: { onBack: () => void }) {
       if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); onBack() }
       else if (e.key === 'ArrowDown') { e.preventDefault(); select(active + 1) }
       else if (e.key === 'ArrowUp') { e.preventDefault(); select(active - 1) }
-      else if (e.key === 'ArrowRight') { e.preventDefault(); nudge(ROWS[active], 1) }
-      else if (e.key === 'ArrowLeft') { e.preventDefault(); nudge(ROWS[active], -1) }
-      else if (e.key === 'Enter' && ROWS[active] === 'sound') { e.preventDefault(); nudge('sound', 1) }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); if (ROWS[active] !== 'spotify') nudge(ROWS[active], 1) }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); if (ROWS[active] !== 'spotify') nudge(ROWS[active], -1) }
+      else if (e.key === 'Enter' && (ROWS[active] === 'sound' || ROWS[active] === 'spotify')) { e.preventDefault(); nudge(ROWS[active], 1) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [active, onBack, select, nudge])
+  }, [active, onBack, select, nudge, ROWS])
+
+  // An On/Off style chip: solid ink when lit, an outline in the row's text colour when not.
+  const chip = (lit: boolean, text: string, onClick: () => void, labelledBy: string, seed: number, fg: string) => (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={lit}
+      aria-labelledby={labelledBy}
+      className="font-display uppercase"
+      style={{
+        position: 'relative',
+        zIndex: 1,
+        flex: '0 0 auto',
+        padding: '8px 16px 6px',
+        border: 'none',
+        background: lit ? RIOT.ink : 'transparent',
+        color: lit ? RIOT.face : fg,
+        boxShadow: lit ? 'none' : 'inset 0 0 0 2px currentColor',
+        fontSize: 'clamp(1rem, 1.8vw, 1.4rem)',
+        lineHeight: 1,
+        clipPath: jagged(seed, 8),
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {text}
+    </button>
+  )
 
   const value = (row: Row) => row === 'music' ? music : effects
 
@@ -122,29 +174,18 @@ export default function SettingsPanel({ onBack }: { onBack: () => void }) {
             </span>
 
             {row === 'sound' ? (
-              <button
-                type="button"
-                onClick={() => nudge('sound', 1)}
-                aria-pressed={on}
-                aria-labelledby="settings-sound"
-                className="font-display uppercase"
-                style={{
-                  position: 'relative',
-                  zIndex: 1,
-                  padding: '8px 16px 6px',
-                  border: 'none',
-                  // On: a solid ink chip. Off: just an outline in the row's text colour.
-                  background: on ? RIOT.ink : 'transparent',
-                  color: on ? RIOT.face : fg,
-                  boxShadow: on ? 'none' : 'inset 0 0 0 2px currentColor',
-                  fontSize: 'clamp(1rem, 1.8vw, 1.4rem)',
-                  lineHeight: 1,
-                  clipPath: jagged(91, 8),
-                  cursor: 'pointer',
-                }}
-              >
-                {on ? 'On' : 'Off'}
-              </button>
+              chip(on, on ? 'On' : 'Off', () => nudge('sound', 1), 'settings-sound', 91, fg)
+            ) : row === 'spotify' ? (
+              <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 14 }}>
+                {chip(linked, connecting ? 'Logging in…' : linked ? 'Premium' : 'Previews', toggleSpotify, 'settings-spotify', 92, fg)}
+                <span className="font-mono" style={{ color: fg, fontSize: 'var(--text-label)', lineHeight: 1.3, maxWidth: '16em', opacity: 0.85 }}>
+                  {connecting
+                    ? 'Finish in the Spotify window'
+                    : linked
+                      ? 'Full songs, volume on Music. Press to log out.'
+                      : 'Log in with Premium for full songs and volume.'}
+                </span>
+              </span>
             ) : (
               <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 14, background: RIOT.ink, padding: '10px 22px 10px 14px', clipPath: jagged(i * 7 + 93, 6), opacity: on ? 1 : 0.55 }}>
                 <input

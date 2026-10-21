@@ -88,7 +88,7 @@ export default function SpotifyPrompt({ open, onLoggedIn, notice, onSkip, onCanc
     ask: {
       title: 'Want the full songs?',
       body: sdk
-        ? "Log in with Spotify Premium to hear every track in full, with its volume on the Music slider in Settings. If you skip, you'll hear 30-second previews, and Spotify's sound only follows your device volume."
+        ? "Log in with Spotify Premium to hear every track in full, with its volume on the Music slider in Settings. If you skip, you'll hear 30-second previews whose sound only follows your device volume. You can switch to Premium any time in Settings (open the menu from the logo)."
         : "Spotify only plays 30-second previews unless you're logged in. Log in to hear every track in full, or skip and listen to the previews. Either way, Spotify's sound only follows your device volume.",
       buttons: [
         { label: sdk ? 'Log in with Premium' : 'Log in to Spotify', sub: sdk ? 'full songs · volume slider' : 'full songs', onClick: login, bg: RIOT.face, fg: RIOT.ink, seed: 71 },
@@ -102,7 +102,7 @@ export default function SpotifyPrompt({ open, onLoggedIn, notice, onSkip, onCanc
     },
     failed: {
       title: "Login didn't finish",
-      body: "The Spotify window closed before the login went through, or your browser blocked it. Try again, or play the previews, whose sound follows your device volume.",
+      body: "The Spotify window closed before the login went through, or your browser blocked it. Try again, or play the previews, whose sound follows your device volume. You can log in later from Settings in the menu.",
       buttons: [{ label: 'Try again', sub: 'opens Spotify', onClick: login, bg: RIOT.face, fg: RIOT.ink, seed: 75 }, previews],
     },
     waiting: {
