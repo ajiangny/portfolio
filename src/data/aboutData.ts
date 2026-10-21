@@ -72,9 +72,14 @@ export const RESUME_URL = '/docs/resume.pdf';
 // as the icon filename; `noWhite` flags an icon that has no white/ variant yet
 // (rendered white via a CSS filter on the colour svg as a fallback).
 //
-// ORDER MATTERS: this sequence (anchors at positions 1, 4, 6, 9) tiles the
-// 4-col × 6-row grid hole-free at rest (grid-auto-flow: dense). Reorder with
-// care, then re-screenshot.
+// The list mirrors the resume's Technical Skills. Most newer marks are Simple
+// Icons paths (one flat colour, so they sit beside the hand-made TS/JS tiles);
+// Photoshop is a blocky "Ps" box of our own, since Simple Icons dropped Adobe.
+//
+// COUNT MATTERS: 24 items tile every breakpoint hole-free — 6×6 with the four
+// 2×2 anchors (≥1500px), flat 4×6 (768–1499px), flat 6×4 (mobile). The mosaic
+// sorts the anchors first, so order within the list is just reading order.
+// Adding or removing items means re-checking those grids, then re-screenshot.
 export interface TechItem {
   id: string
   label: string
@@ -83,17 +88,33 @@ export interface TechItem {
 }
 
 export const TECH_STACK: TechItem[] = [
-  { id: 'react', label: 'React', big: true },
-  { id: 'typescript', label: 'TypeScript' },
-  { id: 'nodejs', label: 'Node.js' },
+  // Languages
   { id: 'javascript', label: 'JavaScript', big: true },
-  { id: 'expressjs', label: 'Express' },
+  { id: 'typescript', label: 'TypeScript' },
   { id: 'python', label: 'Python', big: true },
-  { id: 'vercel', label: 'Vercel' },
-  { id: 'supabase', label: 'Supabase' },
+  { id: 'java', label: 'Java' },
+  { id: 'cplusplus', label: 'C++' },
+  { id: 'html5', label: 'HTML' },
+  { id: 'css', label: 'CSS' },
+  // Frontend
+  { id: 'react', label: 'React', big: true },
   { id: 'tailwindcss', label: 'Tailwind', big: true },
-  { id: 'postgresql', label: 'PostgreSQL' },
+  { id: 'framer-motion', label: 'Framer Motion' },
   { id: 'threejs', label: 'Three.js' },
+  // Backend
+  { id: 'nodejs', label: 'Node.js' },
+  { id: 'expressjs', label: 'Express' },
+  { id: 'postgresql', label: 'PostgreSQL' },
+  { id: 'sqlite', label: 'SQLite' },
+  { id: 'supabase', label: 'Supabase' },
+  // Tools
+  { id: 'git', label: 'Git' },
+  { id: 'github', label: 'GitHub' },
+  { id: 'docker', label: 'Docker' },
+  { id: 'vercel', label: 'Vercel' },
+  { id: 'figma', label: 'Figma' },
+  { id: 'photoshop', label: 'Photoshop' },
+  { id: 'gemini', label: 'Gemini API' },
   { id: 'claude-code', label: 'Claude Code' },
 ];
 

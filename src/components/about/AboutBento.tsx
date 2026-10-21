@@ -27,6 +27,7 @@ import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
 import DogPet from './DogPet'
 import ProfilePhoto from './ProfilePhoto'
+import * as sfx from '../../style/sfx'
 import {
   TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_STACK, SOCIALS,
 } from '../../data/aboutData'
@@ -120,7 +121,8 @@ function TechMosaic({ isMobile }: { isMobile: boolean }) {
             data-cursor-label={it.label}
             className={`ab-mcell${isBig ? ' ab-mcell--big' : ''}`}
             type={isMobile ? undefined : 'button'}
-            onClick={isMobile ? undefined : () => promote(it.id)}
+            onClick={isMobile ? undefined : () => { if (!isBig) sfx.stamp(); promote(it.id) }}
+            data-sfx={isMobile ? undefined : true}
             aria-pressed={isMobile ? undefined : isBig}
           >
             <motion.span layout className="ab-micon">
@@ -350,6 +352,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }: About
       rel="noopener noreferrer"
       aria-label="Resume"
       data-cursor-label="Resume"
+      data-sfx
       className="icon-btn"
     >
       <div className="relative h-full w-full">
@@ -473,6 +476,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }: About
                   rel="noopener noreferrer"
                   aria-label={s.label}
                   data-cursor-label={s.label}
+                  data-sfx
                   className="icon-btn"
                 >
                   <div className="relative h-full w-full">

@@ -33,6 +33,7 @@ import { SECTION_PALETTES } from './gradient/gradientConfig'
 import type { Vec3 } from './gradient/colors'
 import { SNAP, jagged } from '../style/riot'
 import { openMenu } from './style/menuSignal'
+import SoundIcon from './style/SoundIcon'
 import * as sfx from '../style/sfx'
 import { isSoundOn, onSoundChange, setSound } from '../style/sfx'
 
@@ -105,6 +106,15 @@ export default function SiteHeader() {
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [soundOn, setSoundOn] = useState(isSoundOn)
   useEffect(() => onSoundChange(setSoundOn), [])
+  // Bumped on every toggle so SoundIcon replays its punch + burst. Turning
+  // sound off plays the falling slash first, as the last sound you hear
+  // (turning it on already confirms inside setSound).
+  const [burst, setBurst] = useState(0)
+  const toggleSound = () => {
+    if (soundOn) sfx.close()
+    setSound(!soundOn)
+    setBurst((n) => n + 1)
+  }
 
   // Hover previews the section palette (FluidGradient gates it to Hero).
   const onEnter = (id: string, navIdx: number) => {
@@ -291,14 +301,17 @@ export default function SiteHeader() {
             </motion.ul>
           )}
 
-          {/* Sound toggle — a speaker: waves when on, struck through when off.
+          {/* Sound toggle — an animated speaker (SoundIcon): waves pulse when on,
+              struck through when off, and every click punches + bursts.
               Expanded bar only; the collapsed slab clips it away. Its cursor
               label opens leftward, since the bar's right end is near the
               viewport edge. */}
           {!isMobile && (
           <motion.button
             type="button"
-            onClick={() => setSound(!soundOn)}
+            onClick={toggleSound}
+            className="snd-btn"
+            data-sfx
             aria-pressed={soundOn}
             aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
             data-cursor-label={soundOn ? 'Sound off' : 'Sound on'}
@@ -320,24 +333,7 @@ export default function SiteHeader() {
               transition: 'color 0.3s linear',
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="square" aria-hidden>
-              <path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" stroke="none" />
-              {soundOn ? (
-                <motion.g
-                  key="on"
-                  initial={{ opacity: 0, x: -3 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={SNAP}
-                >
-                  <path d="M15.5 9.5c.8.7 1.2 1.6 1.2 2.5s-.4 1.8-1.2 2.5" />
-                  <path d="M18.5 6.5c1.6 1.4 2.5 3.4 2.5 5.5s-.9 4.1-2.5 5.5" />
-                </motion.g>
-              ) : (
-                <g key="off">
-                  <path d="M16 9l5 6M21 9l-5 6" />
-                </g>
-              )}
-            </svg>
+            <SoundIcon on={soundOn} burst={burst} />
           </motion.button>
           )}
         </motion.div>
