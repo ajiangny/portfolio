@@ -21,7 +21,8 @@
  * Shapes, colours and motion come from style/riot.ts. It is the expanded
  * form of the site nav: the header monogram opens it (via menuSignal), as
  * does the M key. The header's inline links are the compact shortcut form. Choosing an item closes the menu and
- * runs the normal goToSection() ink-dissolve transition.
+ * runs the normal goToSection() ink-dissolve transition. The last entry,
+ * Settings, swaps the list for the sound options (SettingsPanel) instead.
  *
  * z-index 9000: above the SiteHeader (200), below the PageTransition veil and
  * Cursor (9999) so the dissolve still covers the menu as it leaves.
@@ -34,10 +35,15 @@ import { SECTIONS, goToSection } from '../config/sections'
 import { RIOT, SNAP, ENTER_EASE, WIPE_EASE, jagged } from '../style/riot'
 import Ransom from './style/Ransom'
 import { onMenuOpen } from './style/menuSignal'
+import SettingsPanel from './style/SettingsPanel'
 import * as sfx from '../style/sfx'
 
 // ── 1. Palette — three flat colours, every element uses exactly one ──
 const MENU = { field: RIOT.cobalt, face: RIOT.face, ink: RIOT.ink }
+
+// The sections, then Settings (opens a sub-screen rather than navigating).
+const ITEMS = [...SECTIONS.map((s) => ({ id: s.id, label: s.label })), { id: 'settings', label: 'Settings' }]
+const SETTINGS = ITEMS.length - 1
 
 // ── 2. Composition — one tilted axis for the whole list ──
 const LIST_TILT = -9 // deg; the list's baseline (steeper than the site's TILT)
@@ -79,6 +85,7 @@ export default function StyleMenu() {
   const lenisRef = useLenisContext()
   const reduce = useReducedMotion()
   const [open, setOpenState] = useState(false)
+  const [view, setView] = useState<'list' | 'settings'>('list')
   // Every open/close goes through here so it carries its slash sound.
   const openRef = useRef(false)
   const setOpen = useCallback((next: boolean) => {
@@ -88,13 +95,14 @@ export default function StyleMenu() {
     }
     openRef.current = next
     setOpenState(next)
+    if (next) setView('list')
   }, [])
   const [active, setActive] = useState(0)
   // Re-rolled on every selection change so the ransom letters re-shuffle.
   const [roll, setRoll] = useState(1)
 
   const select = useCallback((i: number) => {
-    const next = (i + SECTIONS.length) % SECTIONS.length
+    const next = (i + ITEMS.length) % ITEMS.length
     if (next === active) return
     setActive(next)
     setRoll((r) => r + 1)
@@ -104,6 +112,7 @@ export default function StyleMenu() {
   const confirm = useCallback(
     (i: number) => {
       sfx.confirm()
+      if (i === SETTINGS) { setView('settings'); return }
       openRef.current = false
       setOpenState(false) // no close slash: the page-transition wipe follows
       goToSection(navigate, SECTIONS[i].id)
@@ -131,6 +140,7 @@ export default function StyleMenu() {
         if (e.key === 'm' || e.key === 'M') setOpen(true)
         return
       }
+      if (view === 'settings') return // SettingsPanel owns the keys (Esc = back)
       if (e.key === 'Escape') setOpen(false)
       else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); select(active + 1) }
       else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); select(active - 1) }
@@ -138,7 +148,7 @@ export default function StyleMenu() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, active, select, confirm, setOpen])
+  }, [open, view, active, select, confirm, setOpen])
 
   return (
     <>
@@ -214,8 +224,12 @@ export default function StyleMenu() {
               MENU
             </motion.div>
 
+            {view === 'settings' && (
+              <SettingsPanel onBack={() => { sfx.close(); setView('list') }} />
+            )}
+
             {/* The list — one rotated axis, items stair-stepped along it */}
-            <ul
+            {view === 'list' && <ul
               style={{
                 position: 'absolute',
                 left: '8vw',
@@ -230,7 +244,7 @@ export default function StyleMenu() {
                 gap: 'clamp(0.4rem, 1.6vh, 1.2rem)',
               }}
             >
-              {SECTIONS.map((s, i) => {
+              {ITEMS.map((s, i) => {
                 const isActive = i === active
                 return (
                   <motion.li
@@ -299,7 +313,7 @@ export default function StyleMenu() {
                   </motion.li>
                 )
               })}
-            </ul>
+            </ul>}
 
             {/* Control hints — the game's "button prompt" strip */}
             <motion.div
@@ -320,10 +334,10 @@ export default function StyleMenu() {
               }}
             >
               <span>↑↓ Select</span>
-              <span>⏎ Go</span>
+              <span>{view === 'settings' ? '←→ Adjust' : '⏎ Go'}</span>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => (view === 'settings' ? setView('list') : setOpen(false))}
                 className="font-mono uppercase"
                 style={{
                   background: MENU.face,
@@ -336,7 +350,7 @@ export default function StyleMenu() {
                   clipPath: jagged(5, 12),
                 }}
               >
-                Esc Close
+                {view === 'settings' ? 'Esc Back' : 'Esc Close'}
               </button>
             </motion.div>
           </motion.nav>

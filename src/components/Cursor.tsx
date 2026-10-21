@@ -4,7 +4,9 @@
  * A small white dot with mix-blend-difference tracks the pointer 1:1, so it
  * self-inverts over light surfaces. Over interactive elements (links, buttons,
  * form fields, sliders) it spring-scales up. Over [data-cursor-label] targets
- * the dot swaps to a solid cream pill revealing the label text.
+ * the dot swaps to a solid cream pill revealing the label text; with
+ * data-cursor-side="left" the pill opens to the left of the pointer (for
+ * targets near the right edge, where it would be cut off).
  *
  * Mounted once in App. Adds `has-custom-cursor` to <html>, which hides the
  * native cursor via index.css. Position is set directly on motion values
@@ -22,6 +24,7 @@ export default function Cursor() {
   const [visible, setVisible] = useState(false)
   const [clickable, setClickable] = useState(false)
   const [label, setLabel] = useState<string | null>(null)
+  const [left, setLeft] = useState(false)
   const x = useMotionValue(-100)
   const y = useMotionValue(-100)
 
@@ -38,22 +41,34 @@ export default function Cursor() {
     if (!enabled) return
     document.documentElement.classList.add('has-custom-cursor')
 
+    let labelEl: Element | null = null
+    const readLabel = () => {
+      setLabel(labelEl?.getAttribute('data-cursor-label') ?? null)
+      setLeft(labelEl?.getAttribute('data-cursor-side') === 'left')
+    }
     const onMove = (e: MouseEvent) => {
       x.set(e.clientX)
       y.set(e.clientY)
       setVisible(true)
 
       const t = e.target instanceof Element ? e.target : null
-      const labelEl = t?.closest('[data-cursor-label]')
-      setLabel(labelEl?.getAttribute('data-cursor-label') ?? null)
+      labelEl = t?.closest('[data-cursor-label]') ?? null
+      readLabel()
       setClickable(!!t?.closest(INTERACTIVE))
     }
+    // A target can change its label while hovered (the nav speaker flips
+    // "Sound on" / "Sound off" on click), so follow the attribute live.
+    const labelWatch = new MutationObserver((records) => {
+      if (records.some((r) => r.target === labelEl)) readLabel()
+    })
+    labelWatch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-cursor-label'] })
     const onLeave = () => setVisible(false)
 
     window.addEventListener('mousemove', onMove, { passive: true })
     document.documentElement.addEventListener('mouseleave', onLeave)
     return () => {
       document.documentElement.classList.remove('has-custom-cursor')
+      labelWatch.disconnect()
       window.removeEventListener('mousemove', onMove)
       document.documentElement.removeEventListener('mouseleave', onLeave)
     }
@@ -91,18 +106,23 @@ export default function Cursor() {
       />
 
       {/* Label pill — solid (no blend) so the text stays readable anywhere.
-          Its top-left corner sits exactly on the pointer, and the dot hides
-          while it's up — the pill IS the cursor. */}
+          Its top-left corner (top-right when opening left) sits exactly on
+          the pointer, and the dot hides while it's up — the pill IS the
+          cursor. The outer element follows the pointer; the inner one is the
+          pill, so it can hang off either side. */}
       <AnimatePresence>
         {label && visible && (
           <motion.div
-            key={label}
+            key={`${label}-${left}`}
             aria-hidden="true"
-            className="pointer-events-none fixed left-0 top-0 z-10050 whitespace-nowrap font-sans font-bold uppercase"
+            className="pointer-events-none fixed left-0 top-0 z-10050"
+            style={{ x, y, width: 0, height: 0 }}
+          >
+          <motion.div
+            className="absolute top-0 whitespace-nowrap font-sans font-bold uppercase"
             style={{
-              x,
-              y,
-              transformOrigin: 'top left',
+              [left ? 'right' : 'left']: 0,
+              transformOrigin: left ? 'top right' : 'top left',
               background: 'var(--color-cream)',
               color: 'var(--color-slab)',
               padding: '7px 14px',
@@ -111,12 +131,13 @@ export default function Cursor() {
               clipPath: 'polygon(4px 0, 100% 3px, calc(100% - 3px) 100%, 0 calc(100% - 4px))',
               boxShadow: 'inset 0 -4px 0 var(--color-riot)',
             }}
-            initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
-            animate={{ scale: 1, opacity: 1, rotate: -4 }}
+            initial={{ scale: 0.4, opacity: 0, rotate: left ? 20 : -20 }}
+            animate={{ scale: 1, opacity: 1, rotate: left ? 4 : -4 }}
             exit={{ scale: 0.6, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 700, damping: 26 }}
           >
             {label}
+          </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
