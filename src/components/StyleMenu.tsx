@@ -17,6 +17,8 @@
  *   5. Motion is fast and overshoots, then holds still        → SNAP, ENTER_EASE
  *   6. Keyboard-first like a game: arrows move, Enter
  *      confirms, Esc backs out                                → onKeyDown
+ *   7. A character on the right: one of Andrew's painted
+ *      figures, swapping pose as the highlight moves          → Figure, MENU_FIGURES
  *
  * Shapes, colours and motion come from style/riot.ts. It is the expanded
  * form of the site nav: the header monogram opens it (via menuSignal), as
@@ -36,6 +38,9 @@ import { RIOT, SNAP, ENTER_EASE, WIPE_EASE, jagged } from '../style/riot'
 import Ransom from './style/Ransom'
 import { onMenuOpen } from './style/menuSignal'
 import SettingsPanel from './style/SettingsPanel'
+import Cutout from './style/Cutout'
+import { MENU_FIGURES, CUTOUTS, cutoutSrc, cutoutFit } from '../data/cutoutsData'
+import useMediaQuery from '../hooks/useMediaQuery'
 import * as sfx from '../style/sfx'
 
 // ── 1. Palette — three flat colours, every element uses exactly one ──
@@ -80,10 +85,43 @@ function Highlight({ seed }: { seed: number }) {
   )
 }
 
+// ── 7. The figure — stands on the right, cropped by the bottom edge ──
+// Keyed by pose, so a change slams the new figure in from the right while the
+// old one drops back along the tilt. Behind the list, above the ink band.
+function Figure({ item, isMobile, reduce }: { item: string; isMobile: boolean; reduce: boolean }) {
+  const name = MENU_FIGURES[item] ?? 'cape'
+  const { size, right } = cutoutFit(name)
+  return (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.div
+        key={name}
+        aria-hidden
+        initial={reduce ? { opacity: 0 } : { x: '22vw', skewX: -10, opacity: 0 }}
+        animate={{ x: 0, skewX: 0, opacity: 1 }}
+        exit={reduce ? { opacity: 0 } : { x: '-8vw', opacity: 0, transition: { duration: 0.14, ease: WIPE_EASE } }}
+        transition={reduce ? { duration: 0 } : { ...SNAP, opacity: { duration: 0.08 } }}
+        style={{
+          position: 'absolute',
+          // The bake pads the figure for its keyline + shadow; sink that
+          // padding below the screen edge so the crop reads as deliberate.
+          bottom: '-2.5vh',
+          right: isMobile ? '-24vw' : `${right}vw`,
+          height: `${(isMobile ? 58 : 94) * size}vh`,
+          pointerEvents: 'none',
+        }}
+      >
+        {/* On phones the figure sits behind the list, so it steps back. */}
+        <Cutout name={name} style={isMobile ? { opacity: 0.35 } : undefined} />
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 export default function StyleMenu() {
   const { navigate } = useTransitionContext()
   const lenisRef = useLenisContext()
   const reduce = useReducedMotion()
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const [open, setOpenState] = useState(false)
   const [view, setView] = useState<'list' | 'settings'>('list')
   // Every open/close goes through here so it carries its slash sound.
@@ -127,6 +165,19 @@ export default function StyleMenu() {
     if (open) lenis.stop()
     else lenis.start()
   }, [open, lenisRef])
+
+  // Warm the figure files once the page is idle, so the first open doesn't
+  // pop them in.
+  useEffect(() => {
+    const warm = () => (Object.keys(CUTOUTS) as (keyof typeof CUTOUTS)[]).forEach((n) => { new Image().src = cutoutSrc(n) })
+    // Safari has no requestIdleCallback; fall back to a plain delay.
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 4000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const t = setTimeout(warm, 2500)
+    return () => clearTimeout(t)
+  }, [])
 
   // The header monogram (mobile) opens the menu through menuSignal.
   useEffect(() => onMenuOpen(() => setOpen(true)), [setOpen])
@@ -223,6 +274,8 @@ export default function StyleMenu() {
             >
               MENU
             </motion.div>
+
+            <Figure item={ITEMS[active].id} isMobile={isMobile} reduce={!!reduce} />
 
             {view === 'settings' && (
               <SettingsPanel onBack={() => { sfx.close(); setView('list') }} />

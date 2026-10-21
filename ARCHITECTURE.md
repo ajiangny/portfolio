@@ -26,7 +26,7 @@ Everything global is mounted once in `App.tsx`:
 | Loading gate | `context/LoadingContext.ts`, `components/LoadingScreen.tsx` | `App.tsx` gates on two signals — `document.fonts.ready` and the fluid gradient's `onReady` callback (fired after `FluidScene.prewarm()`, or immediately under reduced motion). Below-fold sections (About/Projects/Gallery/Contact) don't mount until both fire, so their layout cost doesn't compete with the WebGL prewarm; `LoadingScreen` covers the page meanwhile (riot field, ticking monogram slab, ransom LOADING) and slash-wipes away (min 800ms display). On a first visit it also asks Sound on / Stay silent and waits for the answer. |
 | Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` sweeps a diagonal ink slab then the section colour across the screen (600 ms, pure clip-path), performs an instant Lenis jump under cover, then both layers continue off the far edge. A ref lock prevents re-entry mid-transition. |
 | Global nav | `components/SiteHeader.tsx` | Morphing riot slab: full bar on Hero, collapses to a monogram square with a cobalt scroll-progress stripe after, re-expands after a 1s hover (`EXPAND_DELAY`), so clicking the monogram opens the menu without throwing the bar open first; the active/hover indicator is a skewed cobalt slab. The monogram opens the StyleMenu on every screen size (via `style/menuSignal.ts`); the bar links are the compact shortcut form of the same nav. Cream slab on dark sections, ink on light — derived from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
-| Style menu | `components/StyleMenu.tsx` | Full-screen game-style menu — the expanded form of the nav, opened by the header monogram (every screen size) or the M key. Tilted list, clip-path slabs, ransom-note selected label, keyboard nav; navigates via `goToSection()`. z 9000, under the transition veil. |
+| Style menu | `components/StyleMenu.tsx` | Full-screen game-style menu — the expanded form of the nav, opened by the header monogram (every screen size) or the M key. Tilted list, clip-path slabs, ransom-note selected label, keyboard nav; navigates via `goToSection()`. z 9000, under the transition veil. A painted figure (`style/Cutout.tsx`, chosen per highlighted item by `MENU_FIGURES` in `data/cutoutsData.ts`) stands on the right and swaps pose as the highlight moves. |
 | Sound effects | `style/sfx.ts`, speaker button in `SiteHeader.tsx`, `components/style/SettingsPanel.tsx` | Synthesized Web Audio UI sounds (no files): `tick(step)` for selection moves (pitched on a pentatonic scale), `confirm()` for clicks/Enter, `open()`/`close()`/`wipe()` noise slashes for the menu and page transition. OFF until the visitor opts in: first-time visitors get a Sound on / Stay silent choice on the loading screen (which waits for it), and the speaker icon at the expanded nav bar's right end (or Settings in the game menu) changes it later; the speaker's cursor label opens leftward via `data-cursor-side="left"`; choice persists in localStorage. Hooked in StyleMenu, SiteHeader links, PageTransition. |
 | Music + volume | `style/music.ts`, `components/about/SpotifyPrompt.tsx`, `public/audio/bgm.mp3` | Background track (128 kbps, looped with a faded seam) that follows the sound switch with Web Audio gain fades; it ducks (fades out and pauses) while the Spotify player plays and fades back after. The Spotify card never autoplays; its first play asks "log in for full songs or skip to previews" (remembered in localStorage `spotify-choice`; "I'm logged in" rebuilds the embed). The game menu's last entry, Settings (`SettingsPanel`), has Sound on/off plus Music (`setMusicVolume`, `riot-music-volume`) and Effects (`sfx.setVolume`, `riot-volume`) sliders, keyboard-driven like the menu (↑↓ row, ←→ adjust, Esc back). |
 | Spotify Premium player | `components/about/spotifyAuth.ts`, `spotifySdk.ts`, `public/spotify-callback.html`, `api/spotify-client.ts` | "Log in with Premium" in SpotifyPrompt runs OAuth PKCE in a popup (no secret; tokens in localStorage `spotify-token`, auto-refreshed), then SpotifyCard swaps the embed for the Web Playback SDK behind the same controller interface: full songs, and the Music slider sets Spotify's volume. Not Premium / not allowlisted / revoked → back to the embed with a notice. Skippers keep the embed, whose volume only follows the device; the prompt says so and points to Settings, whose Spotify row (shown when a Client ID is set) logs in ("Previews" → "Premium") or out at any time. `onLinkChange` keeps the row and the card in step. |
@@ -227,6 +227,21 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
    2-letter chip. To give it an icon, add the svg to `public/icons/default/`
    and map the label → filename there.
 4. Order in the array = order on the page. Keep the GitHub CTA card last.
+
+### Art cutouts (menu figures)
+1. Cut the figure out of the painting into a transparent PNG (BiRefNet via
+   `rembg` does well on painted figures; clean the edge in your art app).
+   Feet or crop point at the bottom, figure facing left, no floor shadow.
+   Pencil / pen sketches on white paper: keep the paper inside the figure
+   and turn the loose ink (speed lines, dust) into its own alpha, so the
+   lines float over the menu without a white box around them.
+2. Bake it: `python scripts/bake-cutout.py <cutout>.png public/art/cutouts/<name> 1600`
+   writes `<name>-halftone.webp` and `<name>-colour.webp` (keyline, hard
+   shadow, transparent around; ~80-220 KB each).
+3. Register it in `CUTOUTS` in [src/data/cutoutsData.ts](src/data/cutoutsData.ts)
+   and pick the items it stands behind in `MENU_FIGURES`. Wide pieces get
+   a smaller `size` and a `right` offset so they stay on screen.
+   `CUTOUT_TREATMENT` switches every figure between halftone and colour.
 
 ### Change the About portrait
 The portrait rests as a baked halftone (`public/art/profile-halftone.webp`:
