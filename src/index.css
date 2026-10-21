@@ -314,16 +314,16 @@ html::-webkit-scrollbar {
 }
 
 /* ── Tech-stack mini-bento mosaic ──────────────────────
-   Packed 6-col grid inside the tech tile. Cells come in two sizes — four 2×2
+   Packed 4-col grid inside the tech tile. Cells come in two sizes — four 2×2
    anchors (.ab-mcell--big) + the rest 1×1 — and re-tile (grid-auto-flow: dense)
-   as the anchor set changes. TECH_STACK's 24 items fill 6×6 hole-free here,
-   and flat 4×6 / 6×4 at the smaller breakpoints below. Framer Motion owns the position/size motion; this CSS
+   as the anchor set changes. TECH_STACK's DOM order is tuned so the rest state
+   fills 4×6 hole-free. Framer Motion owns the position/size motion; this CSS
    owns only the cell skin + the white→colour icon crossfade on hover. */
 .ab-mosaic {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(6, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
   grid-auto-flow: row dense;
@@ -363,6 +363,28 @@ html::-webkit-scrollbar {
   transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 .ab-mi-color { opacity: 0; }   /* brand-colour svg, revealed on hover */
+
+/* Flip card: each cell holds two logos back to back (front = TECH_STACK item,
+   back = its `alt`). TechMosaic flips one cell at a time on a timer; the turn
+   overshoots a little and lands flat (riot rule 5). Reduced motion swaps the
+   faces with a short fade instead of turning. */
+.ab-micon { perspective: 500px; }
+.ab-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 1.35, 0.45, 1);
+}
+.ab-flip[data-flipped] { transform: rotateY(180deg); }
+.ab-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.ab-face-back { transform: rotateY(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .ab-flip, .ab-flip[data-flipped] { transform: none; transition: none; }
+  .ab-face { backface-visibility: visible; transition: opacity 0.2s linear; }
+  .ab-face-back { transform: none; opacity: 0; }
+  .ab-flip[data-flipped] .ab-face-front { opacity: 0; }
+  .ab-flip[data-flipped] .ab-face-back { opacity: 1; }
+}
 
 @media (hover: hover) {
   .ab-mcell:hover {
@@ -517,12 +539,11 @@ html::-webkit-scrollbar {
   }
 
   /* The mobile tech tile is small and scroll-panned: drop the 2×2 anchors for
-     a flat, uniform 6×4 grid (24 cells, all 1×1). Cells render as non-button
+     a flat, uniform 4×3 grid (12 cells, all 1×1). Cells render as non-button
      <div>s on mobile, so this is decorative — no reflow, no cramped targets. */
   .ab-mosaic {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-template-rows: repeat(4, minmax(0, 1fr));
-    gap: 3px;
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 5px;
   }
   .ab-micon { width: 82%; }
 
@@ -531,12 +552,11 @@ html::-webkit-scrollbar {
   .about-bento > * { --slab-dx: 5px; --slab-dy: 5px; }
 }
 
-/* Laptop / medium desktop (768–1499px): flatten to a 4×6 grid — the 2×2 anchors
+/* Laptop / medium desktop (768–1499px): flatten to a 4×3 grid — the 2×2 anchors
    need a wider tech column (≥1500px) to breathe without icons crowding each other. */
 @media (min-width: 768px) and (max-width: 1499px) {
   .ab-mosaic {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-template-rows: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
   }
   .ab-mcell--big {
     grid-column: span 1;

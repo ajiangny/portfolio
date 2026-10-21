@@ -285,10 +285,11 @@ All text/data in [src/data/aboutData.ts](src/data/aboutData.ts):
 (typewriter), `RESUME_URL` (file at `public/docs/resume.pdf`), `STATUS_ITEMS`,
 `SOCIALS`, `SPOTIFY` (playlist id + fallbacks). `TECH_STACK`: `id` doubles as
 the icon filename in `public/icons/white/` + `public/icons/default/` (white =
-rest, colour = hover; `noWhite: true` if only a colour svg exists). **Count
-matters** — 24 items with four `big: true` anchors tile 6×6 (≥1500px), flat
-4×6 (768–1499px) and flat 6×4 (mobile) hole-free; re-check visually if you
-add or remove one.
+rest, colour = hover; `noWhite: true` if only a colour svg exists). Each cell
+is a two-sided card: `alt` is the logo on its back, and TechMosaic flips one
+card every 1.7s (paused on hover), so 12 cells cycle through all 24 skills.
+**Order matters** — the four `big: true` anchors at positions 1/4/6/9 tile the
+4×6 desktop grid hole-free; re-check visually if you reorder.
 
 ### Add a whole section
 1. Create the component, render it in `App.tsx`, give the root element an

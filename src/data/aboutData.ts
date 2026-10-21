@@ -72,50 +72,40 @@ export const RESUME_URL = '/docs/resume.pdf';
 // as the icon filename; `noWhite` flags an icon that has no white/ variant yet
 // (rendered white via a CSS filter on the colour svg as a fallback).
 //
-// The list mirrors the resume's Technical Skills. Most newer marks are Simple
-// Icons paths (one flat colour, so they sit beside the hand-made TS/JS tiles);
-// Photoshop is a blocky "Ps" box of our own, since Simple Icons dropped Adobe.
+// Every cell is a two-sided card: `alt` is the logo on its back, and the
+// mosaic flips one card at a time on a timer, so the tile cycles through
+// all 24 skills on the resume while keeping 12 cells. Pairs are loosely
+// related so a flip reads as a sibling (React ↔ Framer Motion, Supabase ↔
+// SQLite…). Alt marks are one-colour Simple Icons paths, or a blocky lettered
+// box where Simple Icons has no mark (photoshop.svg).
 //
-// COUNT MATTERS: 24 items tile every breakpoint hole-free — 6×6 with the four
-// 2×2 anchors (≥1500px), flat 4×6 (768–1499px), flat 6×4 (mobile). The mosaic
-// sorts the anchors first, so order within the list is just reading order.
-// Adding or removing items means re-checking those grids, then re-screenshot.
-export interface TechItem {
+// ORDER MATTERS: this sequence (anchors at positions 1, 4, 6, 9) tiles the
+// 4-col × 6-row grid hole-free at rest (grid-auto-flow: dense). Reorder with
+// care, then re-screenshot.
+export interface TechLogo {
   id: string
   label: string
-  big?: boolean
   noWhite?: boolean
 }
 
+export interface TechItem extends TechLogo {
+  big?: boolean
+  alt?: TechLogo
+}
+
 export const TECH_STACK: TechItem[] = [
-  // Languages
-  { id: 'javascript', label: 'JavaScript', big: true },
-  { id: 'typescript', label: 'TypeScript' },
-  { id: 'python', label: 'Python', big: true },
-  { id: 'java', label: 'Java' },
-  { id: 'cplusplus', label: 'C++' },
-  { id: 'html5', label: 'HTML' },
-  { id: 'css', label: 'CSS' },
-  // Frontend
-  { id: 'react', label: 'React', big: true },
-  { id: 'tailwindcss', label: 'Tailwind', big: true },
-  { id: 'framer-motion', label: 'Framer Motion' },
-  { id: 'threejs', label: 'Three.js' },
-  // Backend
-  { id: 'nodejs', label: 'Node.js' },
-  { id: 'expressjs', label: 'Express' },
-  { id: 'postgresql', label: 'PostgreSQL' },
-  { id: 'sqlite', label: 'SQLite' },
-  { id: 'supabase', label: 'Supabase' },
-  // Tools
-  { id: 'git', label: 'Git' },
-  { id: 'github', label: 'GitHub' },
-  { id: 'docker', label: 'Docker' },
-  { id: 'vercel', label: 'Vercel' },
-  { id: 'figma', label: 'Figma' },
-  { id: 'photoshop', label: 'Photoshop' },
-  { id: 'gemini', label: 'Gemini API' },
-  { id: 'claude-code', label: 'Claude Code' },
+  { id: 'react', label: 'React', big: true, alt: { id: 'framer-motion', label: 'Framer Motion' } },
+  { id: 'typescript', label: 'TypeScript', alt: { id: 'cplusplus', label: 'C++' } },
+  { id: 'nodejs', label: 'Node.js', alt: { id: 'docker', label: 'Docker' } },
+  { id: 'javascript', label: 'JavaScript', big: true, alt: { id: 'java', label: 'Java' } },
+  { id: 'expressjs', label: 'Express', alt: { id: 'github', label: 'GitHub' } },
+  { id: 'python', label: 'Python', big: true, alt: { id: 'gemini', label: 'Gemini API' } },
+  { id: 'vercel', label: 'Vercel', alt: { id: 'git', label: 'Git' } },
+  { id: 'supabase', label: 'Supabase', alt: { id: 'sqlite', label: 'SQLite' } },
+  { id: 'tailwindcss', label: 'Tailwind', big: true, alt: { id: 'css', label: 'CSS' } },
+  { id: 'postgresql', label: 'PostgreSQL', alt: { id: 'html5', label: 'HTML' } },
+  { id: 'threejs', label: 'Three.js', alt: { id: 'figma', label: 'Figma' } },
+  { id: 'claude-code', label: 'Claude Code', alt: { id: 'photoshop', label: 'Photoshop' } },
 ];
 
 // ── Status tile ──────────────────────────────────────────────────────────────
