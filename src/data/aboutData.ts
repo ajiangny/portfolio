@@ -10,13 +10,13 @@
  */
 
 // ── Gallery-montage grid — shown on the white entry panel ───────────────────
-// Row-major. The centre cell is the profile photo; it survives the dissolve
+// Row-major. The centre cell is the halftone profile; it survives the dissolve
 // and expands into the About portrait. Desktop is a 5×3 wall, mobile a 3×3.
 export const GRID_COLS = 5;
 export const GRID_PROFILE_INDEX = 7; // row 1, col 2 — dead-centre of 5×3
 export const GRID_IMAGES = [
   '/art/art1.webp', '/art/art2.webp', '/art/art3.webp', '/art/art4.webp', '/art/art5.webp',
-  '/art/art6.webp', '/art/art7.webp', '/art/profile.webp', '/art/art8.webp', '/art/art9.webp',
+  '/art/art6.webp', '/art/art7.webp', '/art/profile-halftone.webp', '/art/art8.webp', '/art/art9.webp',
   '/art/art10.webp', '/art/art11.webp', '/art/art12.webp', '/art/art13.webp', '/art/art14.webp',
 ];
 
@@ -24,7 +24,7 @@ export const GRID_COLS_MOBILE = 3;
 export const GRID_PROFILE_INDEX_MOBILE = 4; // centre of 3×3
 export const GRID_IMAGES_MOBILE = [
   '/art/art1.webp', '/art/art3.webp', '/art/art5.webp',
-  '/art/art7.webp', '/art/profile.webp', '/art/art9.webp',
+  '/art/art7.webp', '/art/profile-halftone.webp', '/art/art9.webp',
   '/art/art11.webp', '/art/art13.webp', '/art/art2.webp',
 ];
 

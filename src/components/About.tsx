@@ -37,6 +37,7 @@ import {
 } from '../data/aboutData'
 import GridMontage from './about/GridMontage'
 import AboutBento from './about/AboutBento'
+import ProfilePhoto from './about/ProfilePhoto'
 
 // Riot slabs are square-cornered: the flying card keeps radius 0 end to end.
 const RADIUS = 0
@@ -313,12 +314,7 @@ export default function About() {
               pointerEvents: settled ? 'auto' : 'none',
             }}
           >
-            <img
-              src="/art/profile.webp"
-              alt="Andrew Jiang"
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ objectPosition: 'top center' }}
-            />
+            <ProfilePhoto />
           </motion.div>
 
         </div>
