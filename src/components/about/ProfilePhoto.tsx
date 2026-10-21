@@ -19,7 +19,6 @@ export default function ProfilePhoto() {
     <div
       className="profile-reveal absolute inset-0"
       data-revealed={revealed || undefined}
-      data-cursor-label="Reveal"
       onPointerUp={(e) => { if (e.pointerType !== 'mouse') setRevealed((r) => !r) }}
     >
       <img
