@@ -229,8 +229,9 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 4. Order in the array = order on the page. Keep the GitHub CTA card last.
 
 ### Change the About portrait
-The portrait rests as a baked halftone (`public/art/profile-halftone.webp`,
-also the montage centre cell) and wipes to the real `profile.webp` on hover,
+The portrait rests as a baked halftone (`public/art/profile-halftone.webp`:
+the figure over a cobalt halftone of the city and clouds; also the montage
+centre cell) and wipes to the real `profile.webp` on hover,
 or on tap for touch (`about/ProfilePhoto.tsx`, `.profile-reveal` in
 `index.css`). After replacing `profile.webp`, re-bake the halftone with
 `python scripts/halftone-profile.py public/art/profile.webp public/art/profile-halftone.webp`
