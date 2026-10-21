@@ -204,7 +204,7 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 | 3. No plain rectangles | `jagged()` / `jaggedPx()`; `.cut-a/b/c`, bento `--slab-cut`s |
 | 4. Selection is a costume change | `.slab-hover`, bento/ab-flight-card hover, header indicator, `Ransom`, StyleMenu `Highlight`, gallery print hover, CTA buttons |
 | 5. Fast overshooting motion | `SNAP`, `ENTER_EASE`, `WIPE_EASE`; `InkReveal` slam; `PageTransition` + `LoadingScreen` wipes; `style/sfx.ts` (hard-attack, fast-decay sounds) |
-| 6. Depth from flat layers | hard shadows everywhere; `.halftone`; outlined stamps (Hero "26", Gallery, StyleMenu); shader halftone band |
+| 6. Depth from flat layers | hard shadows everywhere; `.halftone`; outlined stamps (Hero "26", Gallery, StyleMenu); shader halftone band; baked halftone portrait (`about/ProfilePhoto.tsx`, `scripts/halftone-profile.py`) |
 
 ---
 
@@ -242,6 +242,15 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
    and pick the items it stands behind in `MENU_FIGURES`. Wide pieces get
    a smaller `size` and a `right` offset so they stay on screen.
    `CUTOUT_TREATMENT` switches every figure between halftone and colour.
+
+### Change the About portrait
+The portrait rests as a baked halftone (`public/art/profile-halftone.webp`:
+the figure over a cobalt halftone of the city and clouds; also the montage
+centre cell) and toggles to the real `profile.webp` on click
+or tap (`about/ProfilePhoto.tsx`, `.profile-reveal` in
+`index.css`). After replacing `profile.webp`, re-bake the halftone with
+`python scripts/halftone-profile.py public/art/profile.webp public/art/profile-halftone.webp`
+(setup in the script's header). Both files must keep the same size.
 
 ### Add artwork to the Gallery
 1. Export as `.webp` into `public/art/`, **downscaled** — oversized sources lag

@@ -26,6 +26,7 @@ import useInkFilter from '../../hooks/useInkFilter'
 import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
 import DogPet from './DogPet'
+import ProfilePhoto from './ProfilePhoto'
 import {
   TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_STACK, SOCIALS,
 } from '../../data/aboutData'
@@ -428,12 +429,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }: About
         <div className="ab-profile" ref={profileTileRef} style={isMobile ? undefined : { pointerEvents: 'none' }}>
           {isMobile && (
             <motion.div className="ab-tile relative h-full w-full" style={{ opacity: profileOpacity, borderColor: profileBorderColor }}>
-              <img
-                src="/art/profile.webp"
-                alt="Andrew Jiang"
-                className="absolute inset-0 h-full w-full object-cover"
-                style={{ objectPosition: 'top center' }}
-              />
+              <ProfilePhoto />
             </motion.div>
           )}
         </div>
