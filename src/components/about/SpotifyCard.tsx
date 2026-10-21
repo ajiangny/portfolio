@@ -32,7 +32,7 @@ import { onSoundChange } from '../../style/sfx'
 import { duck, getMusicVolume, onMusicVolumeChange } from '../../style/music'
 import SpotifyPrompt from './SpotifyPrompt'
 import { hasSpotifyChoice } from './spotifyChoice'
-import { isLinked, unlink } from './spotifyAuth'
+import { isLinked, onLinkChange, unlink } from './spotifyAuth'
 import { createSdkController, type SdkError } from './spotifySdk'
 
 // ── Spotify iframe API shapes (the embed SDK ships no types) ────────────────
@@ -263,6 +263,13 @@ export default function SpotifyCard() {
     return () => { cancelled = true; ctrl?.destroy?.(); controllerRef.current = null }
   }, [embedKey, backend])
 
+  // Logging in or out from the menu's Settings swaps the backend (stopped).
+  useEffect(() => onLinkChange((linked) => {
+    setReady(false)
+    setIsPaused(true)
+    setBackend(linked ? 'sdk' : 'embed')
+  }), [])
+
   // The Music slider sets Spotify's volume too (SDK only; the embed has none).
   useEffect(() => onMusicVolumeChange((v) => controllerRef.current?.setVolume?.(v)), [])
 
@@ -304,8 +311,8 @@ export default function SpotifyCard() {
     pendingRef.current = null
     playAfterReadyRef.current = true
     setReady(false)
-    if (viaSdk) setBackend('sdk')
-    setEmbedKey((k) => k + 1)
+    if (viaSdk) setBackend('sdk') // the login already switched it (onLinkChange)
+    else setEmbedKey((k) => k + 1)
   }
   useEffect(() => {
     if (!ready || !playAfterReadyRef.current) return

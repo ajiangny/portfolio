@@ -19,6 +19,13 @@ const SCOPES = 'streaming user-read-email user-read-private user-read-playback-s
 
 interface Token { access: string; refresh: string; expiresAt: number }
 
+const linkListeners = new Set<(linked: boolean) => void>()
+/** Subscribe to login/logout (the menu's Settings and the player both follow it). */
+export function onLinkChange(fn: (linked: boolean) => void) {
+  linkListeners.add(fn)
+  return () => { linkListeners.delete(fn) }
+}
+
 let clientIdPromise: Promise<string | null> | null = null
 
 /** The app's Client ID from /api/spotify-client, or null if none is set. */
@@ -37,7 +44,9 @@ function readToken(): Token | null {
 }
 function saveToken(d: { access_token: string; refresh_token?: string; expires_in: number }, prev?: Token | null) {
   const t: Token = { access: d.access_token, refresh: d.refresh_token ?? prev?.refresh ?? '', expiresAt: Date.now() + d.expires_in * 1000 }
+  const wasLinked = isLinked()
   try { localStorage.setItem(TOKEN_KEY, JSON.stringify(t)) } catch { /* ignore */ }
+  if (!wasLinked) linkListeners.forEach((fn) => fn(true))
   return t
 }
 
@@ -45,7 +54,9 @@ function saveToken(d: { access_token: string; refresh_token?: string; expires_in
 export function isLinked() { return !!readToken()?.refresh }
 
 export function unlink() {
+  const wasLinked = isLinked()
   try { localStorage.removeItem(TOKEN_KEY) } catch { /* ignore */ }
+  if (wasLinked) linkListeners.forEach((fn) => fn(false))
 }
 
 /** A valid access token, refreshed when it's about to expire; null if logged out. */
