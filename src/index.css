@@ -855,7 +855,7 @@ html::-webkit-scrollbar {
   }
 }
 
-/* ── Volume slider (SoundToggle) — on an ink slab: a faint cream rail filled
+/* ── Volume sliders (menu Settings) — on an ink slab: a faint cream rail filled
    with the riot accent up to the thumb (--fill), and a cream diamond thumb. ── */
 .riot-range {
   -webkit-appearance: none;
@@ -890,5 +890,6 @@ html::-webkit-scrollbar {
   border: 2px solid var(--color-slab);
   transform: rotate(45deg);
 }
+.riot-range-lg { width: clamp(110px, 22vw, 320px); height: 18px; }
 .riot-range:focus-visible { outline: 2px solid var(--color-cream); outline-offset: 4px; }
 

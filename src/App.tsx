@@ -30,7 +30,6 @@ import FluidGradient from './components/gradient/FluidGradient'
 import SiteHeader from './components/SiteHeader'
 import Cursor from './components/Cursor'
 import StyleMenu from './components/StyleMenu'
-import SoundToggle from './components/style/SoundToggle'
 import { installHoverSfx } from './style/sfx'
 import { installMusic } from './style/music'
 
@@ -70,7 +69,6 @@ function App() {
             <Cursor />
             <SiteHeader />
             <StyleMenu />
-            <SoundToggle />
             <PageTransition />
             <LoadingScreen ready={siteReady} />
             <main>

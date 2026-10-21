@@ -13,6 +13,9 @@
  * (gated to Hero inside FluidGradient). On mobile it stays a monogram slab.
  * On every size the monogram opens the full-screen StyleMenu: one nav
  * system with a compact form (this bar) and an expanded form (the menu).
+ * A speaker button at the bar's right end toggles site sound; it stays
+ * visible in the collapsed slab (monogram + speaker) and on mobile. Volume
+ * lives in the menu's Settings.
  *
  * Riot material: the bar is a flat jagged slab (cream on dark sections, ink
  * on light ones) with a hard offset shadow painted by a drop-shadow on the
@@ -31,6 +34,7 @@ import type { Vec3 } from './gradient/colors'
 import { SNAP, jagged } from '../style/riot'
 import { openMenu } from './style/menuSignal'
 import * as sfx from '../style/sfx'
+import { isSoundOn, onSoundChange, setSound } from '../style/sfx'
 
 const GUTTER = 40      // px viewport inset at each side when expanded
 const MAX_W = 2200     // px expanded pill cap (stays wide on 2560+ monitors)
@@ -99,6 +103,8 @@ export default function SiteHeader() {
   }
 
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [soundOn, setSoundOn] = useState(isSoundOn)
+  useEffect(() => onSoundChange(setSoundOn), [])
 
   // Hover previews the section palette (FluidGradient gates it to Hero).
   const onEnter = (id: string, navIdx: number) => {
@@ -132,7 +138,8 @@ export default function SiteHeader() {
     setHoveredId((prev) => (prev === section.id ? null : prev))
   }, [section.id])
 
-  const pillWidth = isMobile ? BAR_H : expanded ? expandedW : BAR_H
+  // Collapsed = monogram + speaker side by side.
+  const pillWidth = isMobile ? BAR_H * 2 : expanded ? expandedW : BAR_H * 2
 
   return (
     // Full-width, pointer-events-none strip so the fixed header never blocks
@@ -227,6 +234,8 @@ export default function SiteHeader() {
               className="font-sans font-bold uppercase"
               style={{
                 flex: 1,
+                minWidth: 0, // shrink to nothing when collapsed so the speaker stays in view
+                overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-evenly',
@@ -281,6 +290,47 @@ export default function SiteHeader() {
               })}
             </motion.ul>
           )}
+
+          {/* Sound toggle — a speaker: waves when on, struck through when off. */}
+          <button
+            type="button"
+            onClick={() => setSound(!soundOn)}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
+            data-cursor-label={soundOn ? 'Sound off' : 'Sound on'}
+            style={{
+              flex: '0 0 auto',
+              width: BAR_H,
+              height: BAR_H,
+              marginLeft: isMobile || !expanded ? 'auto' : 0,
+              display: 'grid',
+              placeItems: 'center',
+              background: 'transparent',
+              border: 'none',
+              color: textColor,
+              cursor: 'pointer',
+              transition: 'color 0.3s linear',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="square" aria-hidden>
+              <path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor" stroke="none" />
+              {soundOn ? (
+                <motion.g
+                  key="on"
+                  initial={{ opacity: 0, x: -3 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={SNAP}
+                >
+                  <path d="M15.5 9.5c.8.7 1.2 1.6 1.2 2.5s-.4 1.8-1.2 2.5" />
+                  <path d="M18.5 6.5c1.6 1.4 2.5 3.4 2.5 5.5s-.9 4.1-2.5 5.5" />
+                </motion.g>
+              ) : (
+                <g key="off">
+                  <path d="M16 9l5 6M21 9l-5 6" />
+                </g>
+              )}
+            </svg>
+          </button>
         </motion.div>
 
 

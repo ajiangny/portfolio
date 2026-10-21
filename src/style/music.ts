@@ -6,13 +6,21 @@
  * aside (duck), and fades back in when Spotify stops, so the two never play
  * over each other. Every start, stop and loop seam is a gain ramp through
  * Web Audio (an <audio>'s own volume is read-only on iOS), so nothing cuts
- * in or out abruptly. Loudness follows the site volume slider (sfx.getVolume).
+ * in or out abruptly. Its loudness is the Music slider in the menu's Settings
+ * (setMusicVolume, remembered), separate from the Effects slider (sfx).
  */
-import { getVolume, isSoundOn, onSoundChange, onVolumeChange } from './sfx'
+import { isSoundOn, onSoundChange } from './sfx'
 
 const SRC = '/audio/bgm.mp3'
 const LEVEL = 0.35      // at full volume; the track is mastered loud, sit it under the SFX
-const level = () => LEVEL * getVolume()
+const VOLUME_KEY = 'riot-music-volume'
+let volume = 0.8
+try {
+  const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? '')
+  if (v >= 0 && v <= 1) volume = v
+} catch { /* storage blocked */ }
+const volumeListeners = new Set<(v: number) => void>()
+const level = () => LEVEL * volume
 const FADE_IN = 1.6     // s
 const FADE_OUT = 0.9    // s
 const SEAM = 2.5        // s faded out before the end and back in after the loop
@@ -98,6 +106,21 @@ function armRetry() {
   window.addEventListener('keydown', go, true)
 }
 
+export function getMusicVolume() { return volume }
+
+export function setMusicVolume(v: number) {
+  volume = Math.max(0, Math.min(1, v))
+  try { localStorage.setItem(VOLUME_KEY, String(volume)) } catch { /* ignore */ }
+  // Drags glide to the new level instead of stepping.
+  if (wanted() && el && !el.paused && !seamOut) ramp(level(), 0.12)
+  volumeListeners.forEach((fn) => fn(volume))
+}
+
+export function onMusicVolumeChange(fn: (v: number) => void) {
+  volumeListeners.add(fn)
+  return () => { volumeListeners.delete(fn) }
+}
+
 /** Step aside while another player (Spotify) is playing. */
 export function duck(on: boolean) {
   if (ducked === on) return
@@ -109,8 +132,5 @@ export function duck(on: boolean) {
 /** Start following the sound switch; call once at app start. */
 export function installMusic() {
   if (isSoundOn()) fadeIn()
-  const offSound = onSoundChange((on) => { if (on && !ducked) fadeIn(); else fadeOut() })
-  // Slider drags glide to the new level instead of stepping.
-  const offVolume = onVolumeChange(() => { if (wanted() && el && !el.paused && !seamOut) ramp(level(), 0.12) })
-  return () => { offSound(); offVolume() }
+  return onSoundChange((on) => { if (on && !ducked) fadeIn(); else fadeOut() })
 }

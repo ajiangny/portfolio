@@ -24,7 +24,7 @@ const STORAGE_KEY = 'riot-sound'
 const VOLUME_KEY = 'riot-volume'
 const SFX_LEVEL = 0.32 // master gain at full volume
 let enabled = false
-let volume = 0.8 // 0..1, shared with the background music (style/music.ts)
+let volume = 0.8 // 0..1, the Effects slider (music has its own, style/music.ts)
 const volumeListeners = new Set<(v: number) => void>()
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
@@ -73,7 +73,7 @@ export function setSound(on: boolean) {
   if (on) confirm() // audible proof it worked (and unlocks the context)
 }
 
-/** Site volume, 0..1: scales the SFX and the background music together. */
+/** Effects volume, 0..1 (the menu's Settings slider). */
 export function getVolume() { return volume }
 
 export function setVolume(v: number) {
