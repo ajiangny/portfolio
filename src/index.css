@@ -291,7 +291,7 @@ html::-webkit-scrollbar {
 }
 
 /* Profile portrait (ProfilePhoto.tsx): halftone at rest, the real photo
-   slashes in on hover / tap. The hidden state is a zero-width sliver on the
+   slashes in when clicked / tapped and stays until the next click. The hidden state is a zero-width sliver on the
    left edge, leaning on the -6deg axis; the shown state overshoots the box so
    the slanted edge clears the corners. Hard wipe ease, no fade. */
 .profile-reveal-photo {
@@ -300,11 +300,6 @@ html::-webkit-scrollbar {
 }
 .profile-reveal[data-revealed] .profile-reveal-photo {
   clip-path: polygon(0 0, 112% 0, 100% 100%, -12% 100%);
-}
-@media (hover: hover) {
-  .profile-reveal:hover .profile-reveal-photo {
-    clip-path: polygon(0 0, 112% 0, 100% 100%, -12% 100%);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .profile-reveal-photo { transition: none; }

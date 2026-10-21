@@ -231,8 +231,8 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 ### Change the About portrait
 The portrait rests as a baked halftone (`public/art/profile-halftone.webp`:
 the figure over a cobalt halftone of the city and clouds; also the montage
-centre cell) and wipes to the real `profile.webp` on hover,
-or on tap for touch (`about/ProfilePhoto.tsx`, `.profile-reveal` in
+centre cell) and toggles to the real `profile.webp` on click
+or tap (`about/ProfilePhoto.tsx`, `.profile-reveal` in
 `index.css`). After replacing `profile.webp`, re-bake the halftone with
 `python scripts/halftone-profile.py public/art/profile.webp public/art/profile-halftone.webp`
 (setup in the script's header). Both files must keep the same size.

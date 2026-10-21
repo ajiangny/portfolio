@@ -7,19 +7,30 @@
  * the tilted axis. The wipe is pure clip-path (`.profile-reveal` in index.css).
  */
 import { useState } from 'react'
+import * as sfx from '../../style/sfx'
 
 export const PROFILE_HALFTONE = '/art/profile-halftone.webp'
 export const PROFILE_PHOTO = '/art/profile.webp'
 
 export default function ProfilePhoto() {
-  // Touch has no hover, so a tap toggles the reveal instead.
   const [revealed, setRevealed] = useState(false)
+  const toggle = () => {
+    setRevealed((r) => !r)
+    sfx.confirm()
+  }
 
   return (
     <div
       className="profile-reveal absolute inset-0"
       data-revealed={revealed || undefined}
-      onPointerUp={(e) => { if (e.pointerType !== 'mouse') setRevealed((r) => !r) }}
+      role="button"
+      tabIndex={0}
+      aria-pressed={revealed}
+      aria-label="Show the original photo"
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() }
+      }}
     >
       <img
         src={PROFILE_HALFTONE}
