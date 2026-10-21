@@ -290,6 +290,29 @@ html::-webkit-scrollbar {
   .ab-flight-card:hover { box-shadow: 13px 12px 0 var(--color-cream) !important; }
 }
 
+/* Profile portrait (ProfilePhoto.tsx): halftone at rest, the real photo
+   slashes in when clicked / tapped and stays until the next click; hovering
+   peeks it in part way as the hint. The hidden state is a zero-width sliver on the
+   left edge, leaning on the -6deg axis; the shown state overshoots the box so
+   the slanted edge clears the corners. Hard wipe ease, no fade. */
+.profile-reveal-photo {
+  clip-path: polygon(0 0, 0 0, -12% 100%, -12% 100%);
+  transition: clip-path 0.26s cubic-bezier(0.7, 0, 0.2, 1);
+}
+.profile-reveal[data-revealed] .profile-reveal-photo {
+  clip-path: polygon(0 0, 112% 0, 100% 100%, -12% 100%);
+}
+/* Hover hint: the photo peeks in a third of the way, so the card reads as
+   clickable; a click completes the wipe and holds it. */
+@media (hover: hover) {
+  .profile-reveal:not([data-revealed]):hover .profile-reveal-photo {
+    clip-path: polygon(0 0, 36% 0, 24% 100%, -12% 100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-reveal-photo { transition: none; }
+}
+
 /* ── Tech-stack mini-bento mosaic ──────────────────────
    Packed 4-col grid inside the tech tile. Cells come in two sizes — four 2×2
    anchors (.ab-mcell--big) + the rest 1×1 — and re-tile (grid-auto-flow: dense)
