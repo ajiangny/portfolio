@@ -13,9 +13,9 @@
  * (gated to Hero inside FluidGradient). On mobile it stays a monogram slab.
  * On every size the monogram opens the full-screen StyleMenu: one nav
  * system with a compact form (this bar) and an expanded form (the menu).
- * A speaker button at the bar's right end toggles site sound; it stays
- * visible in the collapsed slab (monogram + speaker) and on mobile. Volume
- * lives in the menu's Settings.
+ * A speaker button at the bar's right end toggles site sound. It shows only
+ * in the expanded bar; collapsed (and on mobile) the slab is just the
+ * monogram, and sound lives in the menu's Settings with the volume sliders.
  *
  * Riot material: the bar is a flat jagged slab (cream on dark sections, ink
  * on light ones) with a hard offset shadow painted by a drop-shadow on the
@@ -138,8 +138,8 @@ export default function SiteHeader() {
     setHoveredId((prev) => (prev === section.id ? null : prev))
   }, [section.id])
 
-  // Collapsed = monogram + speaker side by side.
-  const pillWidth = isMobile ? BAR_H * 2 : expanded ? expandedW : BAR_H * 2
+  // Collapsed = just the monogram square.
+  const pillWidth = isMobile ? BAR_H : expanded ? expandedW : BAR_H
 
   return (
     // Full-width, pointer-events-none strip so the fixed header never blocks
@@ -234,7 +234,7 @@ export default function SiteHeader() {
               className="font-sans font-bold uppercase"
               style={{
                 flex: 1,
-                minWidth: 0, // shrink to nothing when collapsed so the speaker stays in view
+                minWidth: 0,
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
@@ -291,18 +291,26 @@ export default function SiteHeader() {
             </motion.ul>
           )}
 
-          {/* Sound toggle — a speaker: waves when on, struck through when off. */}
-          <button
+          {/* Sound toggle — a speaker: waves when on, struck through when off.
+              Expanded bar only; the collapsed slab clips it away. Its cursor
+              label opens leftward, since the bar's right end is near the
+              viewport edge. */}
+          {!isMobile && (
+          <motion.button
             type="button"
             onClick={() => setSound(!soundOn)}
             aria-pressed={soundOn}
             aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}
             data-cursor-label={soundOn ? 'Sound off' : 'Sound on'}
+            data-cursor-side="left"
+            tabIndex={expanded ? 0 : -1}
+            animate={{ opacity: expanded ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
             style={{
               flex: '0 0 auto',
               width: BAR_H,
               height: BAR_H,
-              marginLeft: isMobile || !expanded ? 'auto' : 0,
+              pointerEvents: expanded ? 'auto' : 'none',
               display: 'grid',
               placeItems: 'center',
               background: 'transparent',
@@ -330,7 +338,8 @@ export default function SiteHeader() {
                 </g>
               )}
             </svg>
-          </button>
+          </motion.button>
+          )}
         </motion.div>
 
 
