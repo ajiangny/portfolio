@@ -232,11 +232,15 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 1. Cut the figure out of the painting into a transparent PNG (BiRefNet via
    `rembg` does well on painted figures; clean the edge in your art app).
    Feet or crop point at the bottom, figure facing left, no floor shadow.
+   Pencil / pen sketches on white paper: keep the paper inside the figure
+   and turn the loose ink (speed lines, dust) into its own alpha, so the
+   lines float over the menu without a white box around them.
 2. Bake it: `python scripts/bake-cutout.py <cutout>.png public/art/cutouts/<name> 1600`
    writes `<name>-halftone.webp` and `<name>-colour.webp` (keyline, hard
    shadow, transparent around; ~80-220 KB each).
 3. Register it in `CUTOUTS` in [src/data/cutoutsData.ts](src/data/cutoutsData.ts)
-   and pick the items it stands behind in `MENU_FIGURES`.
+   and pick the items it stands behind in `MENU_FIGURES`. Wide pieces get
+   a smaller `size` and a `right` offset so they stay on screen.
    `CUTOUT_TREATMENT` switches every figure between halftone and colour.
 
 ### Add artwork to the Gallery

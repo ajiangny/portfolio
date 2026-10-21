@@ -39,7 +39,7 @@ import Ransom from './style/Ransom'
 import { onMenuOpen } from './style/menuSignal'
 import SettingsPanel from './style/SettingsPanel'
 import Cutout from './style/Cutout'
-import { MENU_FIGURES, CUTOUTS, cutoutSrc } from '../data/cutoutsData'
+import { MENU_FIGURES, CUTOUTS, cutoutSrc, cutoutFit } from '../data/cutoutsData'
 import useMediaQuery from '../hooks/useMediaQuery'
 import * as sfx from '../style/sfx'
 
@@ -90,6 +90,7 @@ function Highlight({ seed }: { seed: number }) {
 // old one drops back along the tilt. Behind the list, above the ink band.
 function Figure({ item, isMobile, reduce }: { item: string; isMobile: boolean; reduce: boolean }) {
   const name = MENU_FIGURES[item] ?? 'cape'
+  const { size, right } = cutoutFit(name)
   return (
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.div
@@ -104,8 +105,8 @@ function Figure({ item, isMobile, reduce }: { item: string; isMobile: boolean; r
           // The bake pads the figure for its keyline + shadow; sink that
           // padding below the screen edge so the crop reads as deliberate.
           bottom: '-2.5vh',
-          right: isMobile ? '-24vw' : '-5vw',
-          height: isMobile ? '58vh' : '94vh',
+          right: isMobile ? '-24vw' : `${right}vw`,
+          height: `${(isMobile ? 58 : 94) * size}vh`,
           pointerEvents: 'none',
         }}
       >
