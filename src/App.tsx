@@ -32,6 +32,7 @@ import Cursor from './components/Cursor'
 import StyleMenu from './components/StyleMenu'
 import SoundToggle from './components/style/SoundToggle'
 import { installHoverSfx } from './style/sfx'
+import { installMusic } from './style/music'
 
 function App() {
   const lenisRef = useLenis()
@@ -47,6 +48,8 @@ function App() {
   // Hover ticks for every opted-in surface (About tiles, project cards,
   // gallery prints, Hero title), gated by the sound toggle inside sfx.
   useEffect(() => installHoverSfx(), [])
+  // Background music follows the sound switch (style/music.ts).
+  useEffect(() => installMusic(), [])
 
   const onGradientReady = useCallback(() => setGradientReady(true), [])
   // Once true, never false again (both inputs only ever set true). Heavy

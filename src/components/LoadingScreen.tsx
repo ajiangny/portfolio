@@ -167,7 +167,7 @@ export default function LoadingScreen({ ready }: { ready: boolean }) {
           {needsChoice && (
             <div
               role="group"
-              aria-label="Sound effects"
+              aria-label="Sound"
               style={{ display: 'flex', gap: 14, marginTop: 8, rotate: `${TILT}deg` }}
             >
               {[

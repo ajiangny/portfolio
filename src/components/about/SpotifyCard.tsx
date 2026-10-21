@@ -8,12 +8,10 @@
  * call loadUri() for prev/next + auto-advance, mirroring position/pause state
  * from playback_update. The visible glass card shows the current song.
  *
- * Sound on autoplays it: if the visitor picked Sound on (loader or corner
- * toggle), the queue starts as soon as the embed is ready, and Sound off
- * pauses it. The Sound on click is the user gesture browsers want before
- * audio; when it isn't recent enough (a returning visitor whose choice was
- * remembered) the browser blocks play(), so we retry on their first click or
- * key press instead.
+ * It never autoplays: the site's own track (style/music.ts) is the
+ * background music, and fades out while this plays. The first press of play
+ * asks whether to log in to Spotify for full songs or skip to the 30-second
+ * previews (SpotifyPrompt).
  */
 import {
   useState, useEffect, useRef,
@@ -25,7 +23,10 @@ import { motion, useMotionValue, animate } from 'framer-motion'
 import { SPOTIFY } from '../../data/aboutData'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import useInkFilter from '../../hooks/useInkFilter'
-import { isSoundOn, onSoundChange } from '../../style/sfx'
+import { onSoundChange } from '../../style/sfx'
+import { duck } from '../../style/music'
+import SpotifyPrompt from './SpotifyPrompt'
+import { hasSpotifyChoice } from './spotifyChoice'
 
 // ── Spotify iframe API shapes (the embed SDK ships no types) ────────────────
 interface QueueTrack {
@@ -147,6 +148,8 @@ export default function SpotifyCard() {
   }
 
   // ── Init: fetch the tracklist, then create the controller on the first uri ──
+  // embedKey bumps rebuild the embed (after a Spotify login, see onLoggedIn).
+  const [embedKey, setEmbedKey] = useState(0)
   useEffect(() => {
     let cancelled = false
     let ctrl: EmbedController | null = null
@@ -212,49 +215,43 @@ export default function SpotifyCard() {
 
     init()
     return () => { cancelled = true; ctrl?.destroy?.(); controllerRef.current = null }
-  }, [])
+  }, [embedKey])
 
-  // ── Autoplay with the site's sound switch ───────────────────────────────────
-  // isPausedRef lets the sound listener and the blocked-play check read the
-  // live state without re-subscribing.
+  // ── Sharing the air with the background music (style/music.ts) ──────────
+  // While Spotify plays, the site track fades out; when it stops, it fades
+  // back in. Sound off silences everything, Spotify included (the embed has
+  // no volume control, so that one is a pause rather than a fade).
   const isPausedRef = useRef(true)
-  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
+  useEffect(() => { isPausedRef.current = isPaused; duck(!isPaused) }, [isPaused])
+  useEffect(() => () => duck(false), [])
+  useEffect(() => onSoundChange((on) => {
+    if (!on && !isPausedRef.current) controllerRef.current?.togglePlay()
+  }), [])
 
+  // ── First play asks: log in for full songs, or skip to previews ──────────
+  const [askOpen, setAskOpen] = useState(false)
+  const pendingRef = useRef<(() => void) | null>(null)
+  const playAfterReadyRef = useRef(false)
+  // Runs `action` now if the visitor already chose, else after they choose.
+  const withChoice = (action: () => void) => {
+    if (hasSpotifyChoice()) { action(); return }
+    pendingRef.current = action
+    setAskOpen(true)
+  }
+  const onSkip = () => { setAskOpen(false); pendingRef.current?.(); pendingRef.current = null }
+  const onCancel = () => { setAskOpen(false); pendingRef.current = null }
+  // A fresh embed picks up the new login cookie; play once it's ready.
+  const onLoggedIn = () => {
+    setAskOpen(false)
+    pendingRef.current = null
+    playAfterReadyRef.current = true
+    setReady(false)
+    setEmbedKey((k) => k + 1)
+  }
   useEffect(() => {
-    if (!ready) return
-    let retry: (() => void) | null = null
-    let check: number | undefined
-    const disarm = () => {
-      if (retry) {
-        window.removeEventListener('click', retry, true)
-        window.removeEventListener('keydown', retry, true)
-        retry = null
-      }
-    }
-    const start = () => {
-      if (!isPausedRef.current) return
-      try { controllerRef.current?.play() } catch { /* noop */ }
-      // No playback_update saying we're playing → the browser refused
-      // (no recent gesture). Try again on the visitor's next interaction.
-      window.clearTimeout(check)
-      check = window.setTimeout(() => {
-        if (!isPausedRef.current || retry || !isSoundOn()) return
-        // Deferred so the click's own handler runs first: a click on Sound off
-        // has already turned sound off, and a click on our play button has
-        // already started it (start() then sees it playing, or play() no-ops).
-        retry = () => { disarm(); setTimeout(() => { if (isSoundOn()) start() }, 0) }
-        window.addEventListener('click', retry, true)
-        window.addEventListener('keydown', retry, true)
-      }, 1500)
-    }
-    if (isSoundOn()) start()
-    const off = onSoundChange((on) => {
-      if (on) { start(); return }
-      disarm()
-      window.clearTimeout(check)
-      if (!isPausedRef.current) controllerRef.current?.togglePlay()
-    })
-    return () => { off(); disarm(); window.clearTimeout(check) }
+    if (!ready || !playAfterReadyRef.current) return
+    playAfterReadyRef.current = false
+    goTo(indexRef.current)
   }, [ready])
 
   // ── Lazy per-song cover (single-track lookup) ────────────────────────────────
@@ -371,12 +368,16 @@ export default function SpotifyCard() {
     return () => clearTimeout(id)
   }, [isPaused, started])
 
-  const handleTogglePlay = (e: ReactMouseEvent) => { e.stopPropagation(); controllerRef.current?.togglePlay() }
-  const handleNext = (e: ReactMouseEvent) => { e.stopPropagation(); goTo(indexRef.current + 1) }
+  const handleTogglePlay = (e: ReactMouseEvent) => {
+    e.stopPropagation()
+    if (isPaused) withChoice(() => controllerRef.current?.togglePlay())
+    else controllerRef.current?.togglePlay()
+  }
+  const handleNext = (e: ReactMouseEvent) => { e.stopPropagation(); withChoice(() => goTo(indexRef.current + 1)) }
   const handlePrev = (e: ReactMouseEvent) => {
     e.stopPropagation()
     if (positionRef.current > 3000) { controllerRef.current?.seek(0); return }
-    goTo(indexRef.current - 1)
+    withChoice(() => goTo(indexRef.current - 1))
   }
   const handleBarMouseDown = (e: ReactMouseEvent) => {
     e.preventDefault()
@@ -674,6 +675,7 @@ export default function SpotifyCard() {
 
   return (
     <>
+      <SpotifyPrompt open={askOpen} onLoggedIn={onLoggedIn} onSkip={onSkip} onCancel={onCancel} />
       {/* Hidden Spotify API mount — createController() replaces the inner node
           with its <iframe>; the 0×0 overflow-hidden wrapper clips it away. */}
       <div aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>

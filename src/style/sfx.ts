@@ -21,7 +21,11 @@
 type Listener = (on: boolean) => void
 
 const STORAGE_KEY = 'riot-sound'
+const VOLUME_KEY = 'riot-volume'
+const SFX_LEVEL = 0.32 // master gain at full volume
 let enabled = false
+let volume = 0.8 // 0..1, shared with the background music (style/music.ts)
+const volumeListeners = new Set<(v: number) => void>()
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let noiseBuf: AudioBuffer | null = null
@@ -29,6 +33,8 @@ const listeners = new Set<Listener>()
 
 try {
   enabled = localStorage.getItem(STORAGE_KEY) === 'on'
+  const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? '')
+  if (v >= 0 && v <= 1) volume = v
 } catch { /* storage blocked — stay off */ }
 
 function audio() {
@@ -38,7 +44,7 @@ function audio() {
     if (!AC) return null
     ctx = new AC()
     master = ctx.createGain()
-    master.gain.value = 0.32
+    master.gain.value = SFX_LEVEL * volume
     master.connect(ctx.destination)
     // One second of white noise, reused by every slash/click.
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
@@ -65,6 +71,21 @@ export function setSound(on: boolean) {
   try { localStorage.setItem(STORAGE_KEY, on ? 'on' : 'off') } catch { /* ignore */ }
   listeners.forEach((fn) => fn(on))
   if (on) confirm() // audible proof it worked (and unlocks the context)
+}
+
+/** Site volume, 0..1: scales the SFX and the background music together. */
+export function getVolume() { return volume }
+
+export function setVolume(v: number) {
+  volume = Math.max(0, Math.min(1, v))
+  try { localStorage.setItem(VOLUME_KEY, String(volume)) } catch { /* ignore */ }
+  if (ctx && master) master.gain.setTargetAtTime(SFX_LEVEL * volume, ctx.currentTime, 0.03)
+  volumeListeners.forEach((fn) => fn(volume))
+}
+
+export function onVolumeChange(fn: (v: number) => void) {
+  volumeListeners.add(fn)
+  return () => { volumeListeners.delete(fn) }
 }
 
 /** Subscribe to on/off changes; returns the unsubscribe function. */
