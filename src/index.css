@@ -360,9 +360,31 @@ html::-webkit-scrollbar {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 .ab-mi-color { opacity: 0; }   /* brand-colour svg, revealed on hover */
+
+/* Flip card: each cell holds two logos back to back (front = TECH_STACK item,
+   back = its `alt`). TechMosaic flips one cell at a time on a timer; the turn
+   overshoots a little and lands flat (riot rule 5). Reduced motion swaps the
+   faces with a short fade instead of turning. */
+.ab-micon { perspective: 500px; }
+.ab-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 1.35, 0.45, 1);
+}
+.ab-flip[data-flipped] { transform: rotateY(180deg); }
+.ab-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.ab-face-back { transform: rotateY(180deg); }
+@media (prefers-reduced-motion: reduce) {
+  .ab-flip, .ab-flip[data-flipped] { transform: none; transition: none; }
+  .ab-face { backface-visibility: visible; transition: opacity 0.2s linear; }
+  .ab-face-back { transform: none; opacity: 0; }
+  .ab-flip[data-flipped] .ab-face-front { opacity: 0; }
+  .ab-flip[data-flipped] .ab-face-back { opacity: 1; }
+}
 
 @media (hover: hover) {
   .ab-mcell:hover {
@@ -371,9 +393,16 @@ html::-webkit-scrollbar {
   }
   .ab-mcell:hover .ab-mi-rest { opacity: 0; }
   .ab-mcell:hover .ab-mi-color { opacity: 1; }
+  .ab-mcell:hover .ab-mi { transform: rotate(-8deg) scale(1.08); }
 }
 
-.ab-mcell:active { filter: brightness(1.15); }
+/* The icon kicks off-axis on hover and squashes on press (springy, like
+   .icon-btn). Framer animates the cell's layout, so motion stays on the svgs. */
+.ab-mcell:active .ab-mi { transform: rotate(4deg) scale(0.86); transition-duration: 0.06s; }
+@media (prefers-reduced-motion: reduce) {
+  .ab-mi { transition: opacity 0.18s ease; }
+  .ab-mcell:hover .ab-mi, .ab-mcell:active .ab-mi { transform: none; }
+}
 
 /* Hide scrollbar in About tile scroll region (scrolling still works) */
 .ab-about-scroll { scrollbar-width: none; }
@@ -419,6 +448,51 @@ html::-webkit-scrollbar {
   }
   .icon-btn:hover .icon-btn-img-rest  { opacity: 0; }
   .icon-btn:hover .icon-btn-img-color { opacity: 1; }
+}
+
+/* Icons answer the pointer: a press squashes them (every icon button, socials,
+   resume, the tech mosaic and project stack badges). */
+.icon-btn:active { transform: translateY(1px) scale(0.9) rotate(4deg); transition-duration: 0.06s; }
+
+/* Project-card stack badges: hop and tilt on hover, squash on press. */
+.tech-badge { transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@media (hover: hover) {
+  .tech-badge:hover { transform: translateY(-5px) rotate(-8deg) scale(1.12); }
+}
+.tech-badge:active { transform: scale(0.88) rotate(4deg); transition-duration: 0.06s; }
+@media (prefers-reduced-motion: reduce) {
+  .tech-badge:hover, .tech-badge:active { transform: none; }
+}
+
+/* ── Nav speaker (SoundIcon.tsx) ──────────────────────────────────────────────
+   On: the two waves pulse outward in turn, like a broadcast. Hover kicks the
+   cone off-axis and doubles the pulse rate; the click punch + slash burst live
+   in SoundIcon (Framer). Reduced motion: still glyph. */
+.snd-cone {
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.snd-wave {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: snd-pulse 1.3s cubic-bezier(0.2, 1.4, 0.4, 1) infinite;
+}
+.snd-wave-2 { animation-delay: 0.16s; }
+@keyframes snd-pulse {
+  0%   { opacity: 0.25; transform: translateX(-2px) scale(0.8); }
+  35%  { opacity: 1;    transform: translateX(0) scale(1); }
+  100% { opacity: 0.25; transform: translateX(1px) scale(1.04); }
+}
+@media (hover: hover) {
+  .snd-btn:hover .snd-cone { transform: rotate(-10deg) scale(1.12); }
+  .snd-btn:hover .snd-wave { animation-duration: 0.65s; }
+}
+.snd-btn:active .snd-icon { scale: 0.85; }
+@media (prefers-reduced-motion: reduce) {
+  .snd-wave { animation: none; }
+  .snd-cone { transition: none; }
+  .snd-btn:hover .snd-cone { transform: none; }
 }
 
 /* Portrait tablet (768–1099px): the 4-column desktop template gets too

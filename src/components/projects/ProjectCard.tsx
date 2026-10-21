@@ -72,6 +72,23 @@ const TECH_ICON_MAP: Record<string, string> = {
   'Three.js': 'threejs.svg',
   'Vercel': 'vercel.svg',
   'JavaScript': 'javascript.svg',
+  'Framer Motion': 'framer-motion.svg',
+  'Photoshop': 'photoshop.svg',
+  'Gemini API': 'gemini.svg',
+  'SQLite': 'sqlite.svg',
+  'Figma': 'figma.svg',
+  'HTML': 'html5.svg',
+  'CSS': 'css.svg',
+  'Illustrator': 'illustrator.svg',
+  'Flet': 'flet.svg',
+  'Node.js': 'nodejs.svg',
+  'PostgreSQL': 'postgresql.svg',
+  'Supabase': 'supabase.svg',
+  'Java': 'java.svg',
+  'C++': 'cplusplus.svg',
+  'Docker': 'docker.svg',
+  'Git': 'git.svg',
+  'GitHub': 'github.svg',
 };
 
 function TechIconBadge({ name }: { name: string }) {
@@ -80,9 +97,10 @@ function TechIconBadge({ name }: { name: string }) {
   if (iconFile) {
     return (
       <div
-        className="flex items-center justify-center w-9 h-9 bg-cream p-1.5 shrink-0"
+        className="tech-badge flex items-center justify-center w-9 h-9 bg-cream p-1.5 shrink-0"
         style={{ clipPath: jagged(name.length * 7, 10) }}
-        title={name}
+        data-sfx
+        data-cursor-label={name}
       >
         <img src={`/icons/default/${iconFile}`} alt={name} className="w-full h-full object-contain" />
       </div>
@@ -92,9 +110,10 @@ function TechIconBadge({ name }: { name: string }) {
   // Fallback placeholder: 2-letter abbreviation
   return (
     <div
-      className="flex items-center justify-center w-9 h-9 bg-cream shrink-0"
+      className="tech-badge flex items-center justify-center w-9 h-9 bg-cream shrink-0"
       style={{ clipPath: jagged(name.length * 7, 10) }}
-      title={name}
+      data-sfx
+      data-cursor-label={name}
     >
       <span className="font-mono text-[11px] text-slab font-bold uppercase tracking-tighter">
         {name.substring(0, 2)}

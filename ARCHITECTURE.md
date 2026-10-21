@@ -27,7 +27,7 @@ Everything global is mounted once in `App.tsx`:
 | Page transition | `context/TransitionProvider.tsx`, `context/TransitionContext.ts`, `components/PageTransition.tsx` | `navigate(href, opts, color)` sweeps a diagonal ink slab then the section colour across the screen (600 ms, pure clip-path), performs an instant Lenis jump under cover, then both layers continue off the far edge. A ref lock prevents re-entry mid-transition. |
 | Global nav | `components/SiteHeader.tsx` | Morphing riot slab: full bar on Hero, collapses to a monogram square with a cobalt scroll-progress stripe after, re-expands after a 1s hover (`EXPAND_DELAY`), so clicking the monogram opens the menu without throwing the bar open first; the active/hover indicator is a skewed cobalt slab. The monogram opens the StyleMenu on every screen size (via `style/menuSignal.ts`); the bar links are the compact shortcut form of the same nav. Cream slab on dark sections, ink on light — derived from the **gradient's** top base colour (`SECTION_PALETTES`), not `themeRgb`. Hovering a link previews that section's palette in the background (via `gradient/hoverSignal.ts`, only while Hero is centred). |
 | Style menu | `components/StyleMenu.tsx` | Full-screen game-style menu — the expanded form of the nav, opened by the header monogram (every screen size) or the M key. Tilted list, clip-path slabs, ransom-note selected label, keyboard nav; navigates via `goToSection()`. z 9000, under the transition veil. A painted figure (`style/Cutout.tsx`, chosen per highlighted item by `MENU_FIGURES` in `data/cutoutsData.ts`) stands on the right and swaps pose as the highlight moves. |
-| Sound effects | `style/sfx.ts`, speaker button in `SiteHeader.tsx`, `components/style/SettingsPanel.tsx` | Synthesized Web Audio UI sounds (no files): `tick(step)` for selection moves (pitched on a pentatonic scale), `confirm()` for clicks/Enter, `open()`/`close()`/`wipe()` noise slashes for the menu and page transition. OFF until the visitor opts in: first-time visitors get a Sound on / Stay silent choice on the loading screen (which waits for it), and the speaker icon at the expanded nav bar's right end (or Settings in the game menu) changes it later; the speaker's cursor label opens leftward via `data-cursor-side="left"`; choice persists in localStorage. Hooked in StyleMenu, SiteHeader links, PageTransition. |
+| Sound effects | `style/sfx.ts`, speaker button in `SiteHeader.tsx`, `components/style/SettingsPanel.tsx` | Synthesized Web Audio UI sounds (no files): `tick(step)` for selection moves (pitched on a pentatonic scale), `confirm()` for clicks/Enter, `open()`/`close()`/`wipe()` noise slashes for the menu and page transition. OFF until the visitor opts in: first-time visitors get a Sound on / Stay silent choice on the loading screen (which waits for it), and the speaker icon at the expanded nav bar's right end (`components/style/SoundIcon.tsx`: waves pulse while on, the strike draws in when off, every click punches and bursts; still under reduced motion) or Settings in the game menu changes it later; the speaker's cursor label opens leftward via `data-cursor-side="left"`; choice persists in localStorage. Hooked in StyleMenu, SiteHeader links, PageTransition. |
 | Music + volume | `style/music.ts`, `components/about/SpotifyPrompt.tsx`, `public/audio/bgm.mp3` | Background track (128 kbps, looped with a faded seam) that follows the sound switch with Web Audio gain fades; it ducks (fades out and pauses) while the Spotify player plays and fades back after. The Spotify card never autoplays; its first play asks "log in for full songs or skip to previews" (remembered in localStorage `spotify-choice`; "I'm logged in" rebuilds the embed). The game menu's last entry, Settings (`SettingsPanel`), has Sound on/off plus Music (`setMusicVolume`, `riot-music-volume`) and Effects (`sfx.setVolume`, `riot-volume`) sliders, keyboard-driven like the menu (↑↓ row, ←→ adjust, Esc back). |
 | Spotify Premium player | `components/about/spotifyAuth.ts`, `spotifySdk.ts`, `public/spotify-callback.html`, `api/spotify-client.ts` | "Log in with Premium" in SpotifyPrompt runs OAuth PKCE in a popup (no secret; tokens in localStorage `spotify-token`, auto-refreshed), then SpotifyCard swaps the embed for the Web Playback SDK behind the same controller interface: full songs, and the Music slider sets Spotify's volume. Not Premium / not allowlisted / revoked → back to the embed with a notice. Skippers keep the embed, whose volume only follows the device; the prompt says so and points to Settings, whose Spotify row (shown when a Client ID is set) logs in ("Previews" → "Premium") or out at any time. `onLinkChange` keeps the row and the card in step. |
 | Fluid background | `components/gradient/*` | One fixed WebGL2 canvas at `z-index:-1` behind the whole site (details below). |
@@ -225,7 +225,11 @@ degrade gracefully (card falls back to static `SPOTIFY` data).
 3. Stack badges: if a `tech` label has no entry in `TECH_ICON_MAP`
    ([ProjectCard.tsx](src/components/projects/ProjectCard.tsx)), it renders as a
    2-letter chip. To give it an icon, add the svg to `public/icons/default/`
-   and map the label → filename there.
+   (and `white/` if it should also join the About Tech Stack tile) and map
+   the label → filename there. Prefer a one-colour [Simple Icons](https://simpleicons.org)
+   path in the brand colour; for marks Simple Icons doesn't carry (Adobe,
+   Flet), copy the blocky lettered box of `photoshop.svg`. Badges hop and tilt
+   on hover and tick via `data-sfx`.
 4. Order in the array = order on the page. Keep the GitHub CTA card last.
 
 ### Art cutouts (menu figures)
@@ -281,9 +285,11 @@ All text/data in [src/data/aboutData.ts](src/data/aboutData.ts):
 (typewriter), `RESUME_URL` (file at `public/docs/resume.pdf`), `STATUS_ITEMS`,
 `SOCIALS`, `SPOTIFY` (playlist id + fallbacks). `TECH_STACK`: `id` doubles as
 the icon filename in `public/icons/white/` + `public/icons/default/` (white =
-rest, colour = hover; `noWhite: true` if only a colour svg exists). **Order
-matters** — the four `big: true` anchors at positions 1/4/6/9 tile the 4×6
-desktop grid hole-free; re-check visually if you reorder.
+rest, colour = hover; `noWhite: true` if only a colour svg exists). Each cell
+is a two-sided card: `alt` is the logo on its back, and TechMosaic flips one
+card every 1.7s (paused on hover), so 12 cells cycle through all 24 skills.
+**Order matters** — the four `big: true` anchors at positions 1/4/6/9 tile the
+4×6 desktop grid hole-free; re-check visually if you reorder.
 
 ### Add a whole section
 1. Create the component, render it in `App.tsx`, give the root element an

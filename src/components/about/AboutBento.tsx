@@ -27,6 +27,7 @@ import SpotifyCard from './SpotifyCard'
 import StatusTicker from './StatusTicker'
 import DogPet from './DogPet'
 import ProfilePhoto from './ProfilePhoto'
+import * as sfx from '../../style/sfx'
 import {
   TAGLINE_SEGMENTS, BIO_PARAGRAPHS, RESUME_URL, TECH_STACK, SOCIALS,
 } from '../../data/aboutData'
@@ -52,6 +53,10 @@ function TechIcon({ name, noWhite }: { name: string; noWhite?: boolean }) {
 }
 
 const TECH_SWAP_MS = 4200
+const TECH_FLIP_MS = 1700
+// Flip order: a fixed scramble of cell indices so neighbours rarely turn back
+// to back, and every card gets a turn before any turns twice.
+const FLIP_ORDER = [3, 8, 1, 10, 5, 0, 7, 11, 2, 9, 4, 6]
 
 // Packed grid of rounded cells. Four are 2×2 anchors (the main stack at rest).
 // `queue` is a full least-→most-recently-used ordering of every cell; the
@@ -87,6 +92,27 @@ function TechMosaic({ isMobile }: { isMobile: boolean }) {
     return () => clearInterval(id)
   }, [isMobile, reduce])
 
+  // Flip one card at a time to its `alt` logo (and back on its next turn), so
+  // the 12 cells cycle through all 24 skills. Paused while hovered, so the
+  // logo under the pointer never turns away. Runs on mobile too; reduced
+  // motion gets a crossfade instead of the turn (CSS).
+  const [flipped, setFlipped] = useState<Set<string>>(() => new Set())
+  useEffect(() => {
+    let turn = 0
+    const id = setInterval(() => {
+      if (pausedRef.current || document.hidden) return
+      const it = TECH_STACK[FLIP_ORDER[turn++ % FLIP_ORDER.length] % TECH_STACK.length]
+      if (!it.alt) return
+      setFlipped((prev) => {
+        const next = new Set(prev)
+        if (next.has(it.id)) next.delete(it.id)
+        else next.add(it.id)
+        return next
+      })
+    }, TECH_FLIP_MS)
+    return () => clearInterval(id)
+  }, [])
+
   const layoutTx: Transition = reduce
     ? { duration: 0 }
     : { type: 'spring', stiffness: 300, damping: 32 }
@@ -111,20 +137,28 @@ function TechMosaic({ isMobile }: { isMobile: boolean }) {
     >
       {sortedStack.map((it) => {
         const isBig = !isMobile && bigSet.has(it.id)
+        const isFlipped = !!it.alt && flipped.has(it.id)
+        const shown = isFlipped && it.alt ? it.alt : it
         return (
           <Cell
             key={it.id}
             layout
             transition={{ layout: layoutTx }}
-            aria-label={it.label}
-            data-cursor-label={it.label}
+            aria-label={shown.label}
+            data-cursor-label={shown.label}
             className={`ab-mcell${isBig ? ' ab-mcell--big' : ''}`}
             type={isMobile ? undefined : 'button'}
-            onClick={isMobile ? undefined : () => promote(it.id)}
+            onClick={isMobile ? undefined : () => { if (!isBig) sfx.stamp(); promote(it.id) }}
+            data-sfx={isMobile ? undefined : true}
             aria-pressed={isMobile ? undefined : isBig}
           >
             <motion.span layout className="ab-micon">
-              <TechIcon name={it.id} noWhite={it.noWhite} />
+              <span className="ab-flip" data-flipped={isFlipped || undefined}>
+                <span className="ab-face ab-face-front"><TechIcon name={it.id} noWhite={it.noWhite} /></span>
+                {it.alt && (
+                  <span className="ab-face ab-face-back"><TechIcon name={it.alt.id} noWhite={it.alt.noWhite} /></span>
+                )}
+              </span>
             </motion.span>
           </Cell>
         )
@@ -350,6 +384,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }: About
       rel="noopener noreferrer"
       aria-label="Resume"
       data-cursor-label="Resume"
+      data-sfx
       className="icon-btn"
     >
       <div className="relative h-full w-full">
@@ -473,6 +508,7 @@ export default function AboutBento({ progress, isMobile, profileTileRef }: About
                   rel="noopener noreferrer"
                   aria-label={s.label}
                   data-cursor-label={s.label}
+                  data-sfx
                   className="icon-btn"
                 >
                   <div className="relative h-full w-full">
