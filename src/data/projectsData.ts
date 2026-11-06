@@ -56,26 +56,26 @@ export const works: Work[] = [
     hoverThumbnail: '/thumbnail/pear.gif'
   },
   {
-    title: 'Art Fundamentals Tutor',
-    accent: '#B8621B',
-    subtitle: 'AI-powered drawing evaluation workspace using Gemini Pro Vision and Three.js for three-point perspective geometry.',
-    tech: ['React', 'TypeScript', 'Three.js', 'Gemini API'],
-    year: null, // TODO: fill in
+    title: "Ronin's Revenge",
+    accent: '#8E1F2F',
+    subtitle: 'Solo-built Unity game with a reactive C# dialogue engine choosing from 600+ conversations, made with parallel AI agents wired into the live Editor and 1,300+ ElevenLabs-generated voice lines, sound effects and music tracks.',
+    tech: ['Unity', 'C#', 'Claude Code', 'Node.js', 'ElevenLabs'],
+    year: '2026',
     role: 'Development',
-    github: null,
-    live: 'https://taseenc718.github.io/Art_Fundamentals_Tutor/',
-    thumbnail: '/thumbnail/artfundamental.webp'
+    github: 'https://github.com/ajiangny/ronins_revenge',
+    live: null,
+    thumbnail: '/thumbnail/ronins.webp'
   },
   {
-    title: 'Bank Statement Parser',
-    accent: '#1A7A6E',
-    subtitle: 'Python desktop app automating financial data extraction with a regex parsing engine and SQLite.',
-    tech: ['Python', 'SQLite', 'Flet'],
-    year: null, // TODO: fill in
+    title: 'Color Palette Explorer',
+    accent: '#1E6A8D',
+    subtitle: "Matches any image to 7,600 public-domain paintings with pgvector search reranked by Earth Mover's Distance, then explains the artists' colour use with cited, RAG-grounded Gemini answers.",
+    tech: ['Python', 'React', 'TypeScript', 'Supabase', 'Gemini API'],
+    year: '2026',
     role: 'Development',
-    github: 'https://github.com/ajiangny/bank_parser',
+    github: 'https://github.com/ajiangny/RAG-Palette-Explorer',
     live: null,
-    thumbnail: '/thumbnail/bankparser.webp'
+    thumbnail: '/thumbnail/palette.webp'
   },
   {
     title: 'Code For All Brand',
