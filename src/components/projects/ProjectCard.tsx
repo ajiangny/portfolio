@@ -89,6 +89,10 @@ const TECH_ICON_MAP: Record<string, string> = {
   'Docker': 'docker.svg',
   'Git': 'git.svg',
   'GitHub': 'github.svg',
+  'Unity': 'unity.svg',
+  'C#': 'csharp.svg',
+  'Claude Code': 'claude-code.svg',
+  'ElevenLabs': 'elevenlabs.svg',
 };
 
 function TechIconBadge({ name }: { name: string }) {
